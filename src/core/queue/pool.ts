@@ -73,8 +73,7 @@ export class WorkerPool {
   get size(): number {
     if (this.resolvedSize === null) {
       const opt = this.sizeOption;
-      const raw =
-        typeof opt === 'function' ? opt() : (opt ?? computePoolSize(readDevice()));
+      const raw = typeof opt === 'function' ? opt() : (opt ?? computePoolSize(readDevice()));
       this.resolvedSize = Math.max(1, Math.floor(raw));
     }
     return this.resolvedSize;

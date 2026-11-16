@@ -274,7 +274,11 @@ export function createQueueStore(options: QueueStoreOptions): QueueStore {
 
       start() {
         active = true;
-        joinRun(get().jobs.filter((j) => j.status === 'waiting').map((j) => j.id));
+        joinRun(
+          get()
+            .jobs.filter((j) => j.status === 'waiting')
+            .map((j) => j.id),
+        );
         pump();
       },
 

@@ -41,8 +41,12 @@ describe('computePoolSize', () => {
   });
 
   it('does not cap a tablet-width touch screen with plenty of memory, or a narrow desktop window', () => {
-    expect(computePoolSize(desktop({ cores: 8, coarsePointer: true, viewportWidth: 1024 }))).toBe(8);
-    expect(computePoolSize(desktop({ cores: 8, coarsePointer: false, viewportWidth: 500 }))).toBe(8);
+    expect(computePoolSize(desktop({ cores: 8, coarsePointer: true, viewportWidth: 1024 }))).toBe(
+      8,
+    );
+    expect(computePoolSize(desktop({ cores: 8, coarsePointer: false, viewportWidth: 500 }))).toBe(
+      8,
+    );
   });
 
   it('never goes below 1', () => {
@@ -75,7 +79,14 @@ describe('heavy jobs', () => {
     const b = new Blob([new Uint8Array(500)]);
     expect(inputBytes(a)).toBe(1000);
     expect(inputBytes({ file: a, name: 'x' })).toBe(1000);
-    expect(inputBytes({ files: [{ blob: a, name: 'a' }, { blob: b, name: 'b' }] })).toBe(1500);
+    expect(
+      inputBytes({
+        files: [
+          { blob: a, name: 'a' },
+          { blob: b, name: 'b' },
+        ],
+      }),
+    ).toBe(1500);
     expect(inputBytes({ data: new ArrayBuffer(64), view: new Uint8Array(32) })).toBe(96);
     expect(inputBytes(null)).toBe(0);
   });

@@ -127,9 +127,9 @@ describe('job queue', () => {
 
   it('writes progress to the store at least every 250 ms while working', async () => {
     const { queue } = setup({ size: 1 });
-    const [id = ''] = queue.getState().add('image', 'work', [
-      { label: 'slow.jpg', input: { ms: 1500, steps: 60 } },
-    ]);
+    const [id = ''] = queue
+      .getState()
+      .add('image', 'work', [{ label: 'slow.jpg', input: { ms: 1500, steps: 60 } }]);
     const times: number[] = [];
     let last = -1;
     const unsubscribe = queue.subscribe((s) => {
@@ -208,19 +208,21 @@ describe('job queue', () => {
     expect(pool.stats().live).toBe(0);
 
     // Stopped: new jobs wait for start().
-    const [late = ''] = queue.getState().add('image', 'work', [{ label: 'late', input: { ms: 10 } }]);
+    const [late = ''] = queue
+      .getState()
+      .add('image', 'work', [{ label: 'late', input: { ms: 10 } }]);
     await sleep(100);
     expect(job(queue, late).status).toBe('waiting');
   });
 
   it('retry: a failed or cancelled job goes back to waiting and the queue resumes', async () => {
     const { queue } = setup({ size: 2 });
-    const [bad = ''] = queue.getState().add('image', 'throw', [
-      { label: 'bad', input: { message: 'Broken file' } },
-    ]);
-    const [slow = ''] = queue.getState().add('image', 'work', [
-      { label: 'slow', input: { ms: 800, value: 'slow' } },
-    ]);
+    const [bad = ''] = queue
+      .getState()
+      .add('image', 'throw', [{ label: 'bad', input: { message: 'Broken file' } }]);
+    const [slow = ''] = queue
+      .getState()
+      .add('image', 'work', [{ label: 'slow', input: { ms: 800, value: 'slow' } }]);
     queue.getState().start();
     await waitUntil(() => job(queue, bad).status === 'failed');
     queue.getState().cancel(); // stops the queue; `slow` is cancelled
@@ -255,7 +257,8 @@ describe('job queue', () => {
     const order: string[] = [];
     cleanups.push(
       queue.subscribe((s) => {
-        for (const j of s.jobs) if (j.status === 'working' && !order.includes(j.id)) order.push(j.id);
+        for (const j of s.jobs)
+          if (j.status === 'working' && !order.includes(j.id)) order.push(j.id);
       }),
     );
     queue.getState().start();
@@ -324,7 +327,10 @@ describe('job queue', () => {
     await waitUntil(() => isIdle(queue));
 
     for (const id of [...ok1, ...ok2, ...ok3]) expect(job(queue, id).status).toBe('done');
-    expect(job(queue, thrown)).toMatchObject({ status: 'failed', error: 'This file is not an image' });
+    expect(job(queue, thrown)).toMatchObject({
+      status: 'failed',
+      error: 'This file is not an image',
+    });
     expect(job(queue, crashed)).toMatchObject({ status: 'failed', error: queueStrings.tooLarge });
     expect(job(queue, oom)).toMatchObject({ status: 'failed', error: queueStrings.tooLarge });
     expect(job(queue, weird)).toMatchObject({ status: 'failed', error: queueStrings.failed });
@@ -343,7 +349,9 @@ describe('job queue', () => {
       },
     });
     const [pdf = ''] = queue.getState().add('pdf', 'merge', [{ label: 'a.pdf', input: {} }]);
-    const [img = ''] = queue.getState().add('image', 'work', [{ label: 'a.jpg', input: { ms: 10 } }]);
+    const [img = ''] = queue
+      .getState()
+      .add('image', 'work', [{ label: 'a.jpg', input: { ms: 10 } }]);
     queue.getState().start();
     await waitUntil(() => isIdle(queue));
     expect(job(queue, pdf)).toMatchObject({ status: 'failed', error: queueStrings.unavailable });
@@ -397,7 +405,11 @@ describe('job queue', () => {
   it('time left is null at the start, then within ±30% of the real remaining time', async () => {
     const { queue } = setup({ size: 4 });
     // Warm the workers first, so their start-up time isn't part of the measurement.
-    queue.getState().add('image', 'work', Array.from({ length: 4 }, () => ({ label: 'w', input: { ms: 5 } })));
+    queue.getState().add(
+      'image',
+      'work',
+      Array.from({ length: 4 }, () => ({ label: 'w', input: { ms: 5 } })),
+    );
     queue.getState().start();
     await waitUntil(() => isIdle(queue));
     queue.getState().clear();
@@ -406,7 +418,10 @@ describe('job queue', () => {
     const ids = queue.getState().add(
       'image',
       'work',
-      Array.from({ length: 12 }, (_, i) => ({ label: `even-${i}`, input: { ms: JOB_MS, steps: 50 } })),
+      Array.from({ length: 12 }, (_, i) => ({
+        label: `even-${i}`,
+        input: { ms: JOB_MS, steps: 50 },
+      })),
     );
     expect(queue.getState().stats.etaSeconds).toBeNull();
     const samples: Array<{ at: number; eta: number }> = [];

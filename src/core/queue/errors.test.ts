@@ -5,8 +5,12 @@ import { queueStrings } from './strings';
 describe('job errors', () => {
   it('recognises out-of-memory errors', () => {
     expect(isOutOfMemoryError(new RangeError('Array buffer allocation failed'))).toBe(true);
-    expect(isOutOfMemoryError(new RangeError('WebAssembly.Memory(): could not allocate memory'))).toBe(true);
-    expect(isOutOfMemoryError(new RangeError('Invalid typed array length: 99999999999'))).toBe(true);
+    expect(
+      isOutOfMemoryError(new RangeError('WebAssembly.Memory(): could not allocate memory')),
+    ).toBe(true);
+    expect(isOutOfMemoryError(new RangeError('Invalid typed array length: 99999999999'))).toBe(
+      true,
+    );
     expect(isOutOfMemoryError(new Error('out of memory'))).toBe(true);
     expect(isOutOfMemoryError(new Error('Unsupported file'))).toBe(false);
     expect(isOutOfMemoryError('out of memory?')).toBe(false);
