@@ -436,18 +436,50 @@ export function textScreenshot(width: number, height: number, seed = 7): TestIma
   return { width, height, data: ctx.getImageData(0, 0, width, height).data };
 }
 
-/** Largest jump between neighbouring pixels (any channel, across and down). */
-export function maxNeighbourStep(img: Pixels): number {
+/**
+ * Largest jump between neighbouring pixels (across and down): in BT.601 luma, which is what the
+ * eye sees as banding, and in any single RGB channel.
+ */
+export function neighbourSteps(img: Pixels): { luma: number; rgb: number } {
   const { width, height, data } = img;
-  let max = 0;
+  const L = (p: number) => 0.299 * data[p]! + 0.587 * data[p + 1]! + 0.114 * data[p + 2]!;
+  let luma = 0;
+  let rgb = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const p = (y * width + x) * 4;
-      for (let c = 0; c < 3; c++) {
-        if (x + 1 < width) max = Math.max(max, Math.abs(data[p + c]! - data[p + 4 + c]!));
-        if (y + 1 < height) max = Math.max(max, Math.abs(data[p + c]! - data[p + width * 4 + c]!));
+      for (const q of [x + 1 < width ? p + 4 : -1, y + 1 < height ? p + width * 4 : -1]) {
+        if (q < 0) continue;
+        luma = Math.max(luma, Math.abs(L(p) - L(q)));
+        for (let c = 0; c < 3; c++) rgb = Math.max(rgb, Math.abs(data[p + c]! - data[q + c]!));
       }
     }
   }
-  return max;
+  return { luma, rgb };
+}
+
+export type PictureSpec =
+  | { kind: 'scene'; width: number; height: number; options?: PhotoOptions }
+  | { kind: 'texture'; width: number; height: number; options?: PhotoOptions }
+  | { kind: 'product'; width: number; height: number }
+  | { kind: 'sky'; width: number; height: number }
+  | { kind: 'text'; width: number; height: number }
+  | { kind: 'logo'; width: number; height: number; transparent?: boolean };
+
+/** Builds a test picture from a plain description (so a worker can make it without copying pixels). */
+export function makePicture(spec: PictureSpec): TestImage {
+  switch (spec.kind) {
+    case 'scene':
+      return photoScene(spec.width, spec.height, spec.options);
+    case 'texture':
+      return photoLike(spec.width, spec.height, spec.options);
+    case 'product':
+      return productOnWhite(spec.width, spec.height);
+    case 'sky':
+      return skyGradient(spec.width, spec.height);
+    case 'text':
+      return textScreenshot(spec.width, spec.height);
+    case 'logo':
+      return logoArt(spec.width, spec.height, spec.transparent);
+  }
 }
