@@ -5,6 +5,7 @@ import { downloadBlob } from './download';
 import { ExportError } from './errors';
 import { ExportBar } from './ExportBar';
 import { canSaveToFolder, saveToFolder } from './folder';
+import { strings } from '@/ui';
 import { exportStrings } from './strings';
 import { zipFiles } from './zip';
 
@@ -41,7 +42,7 @@ describe('<ExportBar>', () => {
     render(<ExportBar files={[only]} onExport={onExport} />);
 
     expect(screen.queryByRole('button', { name: /zip/i })).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: exportStrings.download }));
+    await userEvent.click(screen.getByRole('button', { name: strings.download }));
 
     expect(downloadBlob).toHaveBeenCalledWith(only.blob, 'photo.webp');
     expect(onExport).toHaveBeenCalledWith('single');
@@ -50,10 +51,10 @@ describe('<ExportBar>', () => {
   it('offers a ZIP for several files, and a single download only for the selected one', () => {
     const { rerender } = render(<ExportBar files={three} />);
     expect(screen.getByRole('button', { name: 'Download all 3 as ZIP' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: exportStrings.download })).toBeNull();
+    expect(screen.queryByRole('button', { name: strings.download })).toBeNull();
 
     rerender(<ExportBar files={three} selected={1} />);
-    expect(screen.getByRole('button', { name: exportStrings.download })).toBeTruthy();
+    expect(screen.getByRole('button', { name: strings.download })).toBeTruthy();
   });
 
   it('shows ZIP progress, then downloads the ZIP', async () => {

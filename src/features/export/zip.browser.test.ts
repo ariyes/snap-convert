@@ -20,10 +20,20 @@ const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   return c >>> 0;
 });
 
-/** Independent CRC-32, to check what fflate wrote. */
-function crc32(data: Uint8Array): number {
+/**
+ * Independent CRC-32, to check what fflate wrote. Yields every 256 KB so big entries don't block
+ * the test tab, which other test files share (timing tests there would fail).
+ */
+async function crc32(data: Uint8Array): Promise<number> {
+  const step = 256 * 1024;
   let c = 0xffffffff;
-  for (const byte of data) c = (CRC_TABLE[(c ^ byte) & 0xff] ?? 0) ^ (c >>> 8);
+  for (let start = 0; start < data.length; start += step) {
+    if (start > 0) await new Promise((resolve) => setTimeout(resolve, 0));
+    const end = Math.min(start + step, data.length);
+    for (let i = start; i < end; i += 1) {
+      c = (CRC_TABLE[(c ^ (data[i] ?? 0)) & 0xff] ?? 0) ^ (c >>> 8);
+    }
+  }
   return (c ^ 0xffffffff) >>> 0;
 }
 
@@ -34,7 +44,7 @@ async function expectStoredDataMatchesCrc(zip: Blob, entry: CentralEntry): Promi
   expect(local.getUint32(0, true)).toBe(0x04034b50);
   const start = entry.offset + 30 + local.getUint16(26, true) + local.getUint16(28, true);
   const data = new Uint8Array(await zip.slice(start, start + entry.size).arrayBuffer());
-  expect(crc32(data)).toBe(entry.crc);
+  expect(await crc32(data)).toBe(entry.crc);
   return data;
 }
 
@@ -77,6 +87,8 @@ async function unzip(zip: Blob): Promise<Record<string, Uint8Array>> {
 }
 
 const text = (s: string, type = 'text/plain') => new Blob([s], { type });
+/** One blob shared by the 65,536-file limit tests, so they don't stall the shared test tab. */
+const emptyBlob = new Blob([]);
 
 describe('zipFiles (real browser, in a worker)', () => {
   it('zips files with safe, unique names and the right content', async () => {
@@ -176,7 +188,7 @@ describe('zipFiles (real browser, in a worker)', () => {
 
   it('passes limit errors from the worker as ExportError codes', async () => {
     const files = Array.from({ length: MAX_ZIP_ENTRIES + 1 }, () => ({
-      blob: new Blob([]),
+      blob: emptyBlob,
       name: 'a.txt',
     }));
     const result = zipFiles(files);
@@ -188,7 +200,7 @@ describe('zipFiles (real browser, in a worker)', () => {
 describe('buildZip limits', () => {
   it('refuses more than 65,535 files', async () => {
     const files = Array.from({ length: MAX_ZIP_ENTRIES + 1 }, () => ({
-      blob: new Blob([]),
+      blob: emptyBlob,
       name: 'a.txt',
     }));
     await expect(buildZip(files)).rejects.toMatchObject({ code: 'zip-too-many-files' });
@@ -233,13 +245,18 @@ describe('ZIP memory use', () => {
       const fileCount = 50; // 500 MB in total
       const block = new Uint8Array(MB);
       for (let i = 0; i < block.length; i += 1) block[i] = Math.imul(i, 2654435761) >>> 24; // noisy bytes
-      const files = Array.from({ length: fileCount }, (_, i) => ({
-        blob: new Blob(
-          Array.from({ length: fileSize / MB }, () => block),
-          { type: 'image/jpeg' },
-        ),
-        name: `photo-${i}.jpg`,
-      }));
+      const files: Array<{ blob: Blob; name: string }> = [];
+      for (let i = 0; i < fileCount; i += 1) {
+        // One blob per task, so building 500 MB doesn't block the shared test tab.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        files.push({
+          blob: new Blob(
+            Array.from({ length: fileSize / MB }, () => block),
+            { type: 'image/jpeg' },
+          ),
+          name: `photo-${i}.jpg`,
+        });
+      }
       const input = fileCount * fileSize;
 
       await cdp().send('HeapProfiler.collectGarbage');

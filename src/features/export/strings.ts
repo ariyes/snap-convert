@@ -1,9 +1,10 @@
 import type { ExportErrorCode } from './errors';
 
-/** Every user-facing string of the export module. */
+/**
+ * User-facing strings of the export module. Shared button text ("Download",
+ * "Download all N as ZIP") comes from `strings` in src/ui/strings.ts.
+ */
 export const exportStrings = {
-  download: 'Download',
-  downloadZip: (count: number) => `Download all ${count} as ZIP`,
   saveToFolder: 'Save to folder',
   saveToFolderHint: 'Pick a folder on your device. Existing files are never replaced.',
   /** File name of the ZIP when the tool doesn't pass one (".zip" is added). */

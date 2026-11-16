@@ -1,6 +1,7 @@
 import { CircleAlert, Download, FolderArchive, FolderDown, LoaderCircle } from 'lucide-react';
-import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { cn } from '@/lib/utils';
+import { Button, ProgressBar, strings } from '@/ui';
 import { downloadBlob } from './download';
 import { ExportError } from './errors';
 import { canSaveToFolder, saveToFolder } from './folder';
@@ -40,35 +41,6 @@ function useCanSaveToFolder(): boolean {
 
 function errorMessage(err: unknown, fallback: keyof typeof t.errors): string {
   return t.errors[err instanceof ExportError ? err.code : fallback];
-}
-
-const buttonBase =
-  'inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border px-4 font-medium transition ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ' +
-  'disabled:cursor-not-allowed disabled:opacity-45 [&_svg]:size-4 [&_svg]:shrink-0';
-const primary = 'border-accent bg-accent text-on-accent hover:opacity-90';
-const secondary = 'border-line bg-card text-fg hover:border-faint';
-
-function ActionButton(props: {
-  onClick: () => void;
-  disabled: boolean;
-  primary: boolean;
-  icon: ReactNode;
-  children: ReactNode;
-  title?: string;
-}) {
-  return (
-    <button
-      type="button"
-      className={cn(buttonBase, props.primary ? primary : secondary)}
-      onClick={props.onClick}
-      disabled={props.disabled}
-      title={props.title}
-    >
-      {props.icon}
-      {props.children}
-    </button>
-  );
 }
 
 /** Download one file, all files as a ZIP, or save them straight into a folder. */
@@ -129,69 +101,48 @@ export function ExportBar({
   };
 
   const percent = busy ? Math.round(status.progress * 100) : 0;
-  const spinner = <LoaderCircle aria-hidden className="animate-spin" />;
+  const spinner = <LoaderCircle aria-hidden="true" className="animate-spin" />;
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
       <div className="flex flex-wrap gap-2">
         {single && (
-          <ActionButton
-            primary
-            onClick={handleDownload}
-            disabled={off}
-            icon={<Download aria-hidden />}
-          >
-            {t.download}
-          </ActionButton>
+          <Button variant="primary" onClick={handleDownload} disabled={off}>
+            <Download aria-hidden="true" />
+            {strings.download}
+          </Button>
         )}
         {showZip && (
-          <ActionButton
-            primary={!single}
+          <Button
+            variant={single ? 'default' : 'primary'}
             onClick={() => void handleZip()}
             disabled={off}
-            icon={busy && status.action === 'zip' ? spinner : <FolderArchive aria-hidden />}
           >
-            {t.downloadZip(files.length)}
-          </ActionButton>
+            {busy && status.action === 'zip' ? spinner : <FolderArchive aria-hidden="true" />}
+            {strings.downloadAllCountZip(files.length)}
+          </Button>
         )}
         {folderSupported && (
-          <ActionButton
-            primary={false}
-            onClick={() => void handleFolder()}
-            disabled={off}
-            title={t.saveToFolderHint}
-            icon={busy && status.action === 'folder' ? spinner : <FolderDown aria-hidden />}
-          >
+          <Button onClick={() => void handleFolder()} disabled={off} title={t.saveToFolderHint}>
+            {busy && status.action === 'folder' ? spinner : <FolderDown aria-hidden="true" />}
             {t.saveToFolder}
-          </ActionButton>
+          </Button>
         )}
       </div>
 
-      <div role="status" aria-live="polite" className="text-muted text-sm empty:hidden">
+      <div role="status" aria-live="polite" className="text-sm text-muted empty:hidden">
         {busy && (
           <div className="flex flex-col gap-1.5">
             <span>{status.action === 'zip' ? t.zipping(percent) : t.saving(percent)}</span>
-            <div
-              role="progressbar"
-              aria-label={t.progressLabel}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={percent}
-              className="bg-sunk h-1.5 w-full overflow-hidden rounded-full"
-            >
-              <div
-                className="bg-accent h-full rounded-full transition-[width]"
-                style={{ width: `${percent}%` }}
-              />
-            </div>
+            <ProgressBar value={status.progress} label={t.progressLabel} size="lg" />
           </div>
         )}
         {status.kind === 'done' && status.message}
       </div>
 
       {status.kind === 'error' && (
-        <p role="alert" className="text-bad flex items-start gap-2 text-sm">
-          <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+        <p role="alert" className="flex items-start gap-2 text-sm text-bad">
+          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           {status.message}
         </p>
       )}
