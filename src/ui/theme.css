@@ -1,2 +1,213 @@
-/* PLACEHOLDER — owned by P02 (theme tokens, fonts). Keep the Tailwind import when replacing. */
-@import 'tailwindcss';
+/*
+ * Snap Convert theme — brand C · Snap orange (decision D15).
+ * Tokens are copied from prototype/index.html. This is the only file that may contain colour values.
+ *
+ * Dark mode follows the device and can be forced with data-theme="light|dark" on <html>
+ * (same selectors as the prototype). The same attribute also works on any element, so a
+ * section of a page can show one theme (used by the UI showcase).
+ */
+
+/* Only scan src/ for class names (not docs/ or prototype/). Path is relative to this file. */
+@import 'tailwindcss' source('../');
+@import 'tw-animate-css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+/* ---------- Raw tokens ---------- */
+:root,
+[data-theme='light'] {
+  --bg: #fafaf9;
+  --card: #fff;
+  --fg: #1c1917;
+  --muted: #57534e;
+  /* Prototype value #8a8580 is darkened to pass WCAG AA (4.5:1) on --sunk; see P02 report. */
+  --faint: #726d68;
+  --line: #e7e5e4;
+  --sunk: #f3f2f0;
+  --ok: #166534;
+  --ok-bg: #dcfce7;
+  --warn: #92400e;
+  --warn-bg: #fef3c7;
+  --bad: #b91c1c;
+  --bad-bg: #fee2e2;
+  --accent: #c2410c;
+  --accent-soft: #ffedd5;
+  --on-accent: #fff;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d0e;
+    --card: #161618;
+    --fg: #ececec;
+    --muted: #a9a9ae;
+    /* Prototype value #76767c is lightened to pass WCAG AA (4.5:1) on --sunk. */
+    --faint: #84848a;
+    --line: #27272b;
+    --sunk: #1c1c1f;
+    --ok: #86efac;
+    --ok-bg: #12301f;
+    --warn: #fcd34d;
+    --warn-bg: #352809;
+    --bad: #fca5a5;
+    --bad-bg: #3a1515;
+    --accent: #fdba74;
+    --accent-soft: #3a1f0d;
+    --on-accent: #0d0d0e;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'],
+[data-theme='dark'] {
+  --bg: #0d0d0e;
+  --card: #161618;
+  --fg: #ececec;
+  --muted: #a9a9ae;
+  --faint: #84848a;
+  --line: #27272b;
+  --sunk: #1c1c1f;
+  --ok: #86efac;
+  --ok-bg: #12301f;
+  --warn: #fcd34d;
+  --warn-bg: #352809;
+  --bad: #fca5a5;
+  --bad-bg: #3a1515;
+  --accent: #fdba74;
+  --accent-soft: #3a1f0d;
+  --on-accent: #0d0d0e;
+  color-scheme: dark;
+}
+
+/* Toast sits above the fixed phone action bar (prototype #toast). */
+:root {
+  --toast-bottom: 24px;
+}
+@media (max-width: 879px) {
+  :root {
+    --toast-bottom: 136px;
+  }
+}
+
+/* `dark:` follows the same rules as the tokens (device setting, overridable by data-theme). Prefer tokens. */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *):not(
+        :where([data-theme='light'], [data-theme='light'] *)
+      ) {
+      @slot;
+    }
+  }
+}
+
+/* ---------- Tailwind theme ---------- */
+@theme inline {
+  /* Only our palette: utilities like bg-red-500 don't exist, so colours can't be hard-coded by accident. */
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-sunk: var(--sunk);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-bad: var(--bad);
+  --color-bad-bg: var(--bad-bg);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  /* Fixed colours that sit on top of images, the same in both themes (compare slider). */
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --color-on-scrim: #fff;
+  --color-handle: #fff;
+  --color-on-handle: #1c1917;
+
+  --font-sans: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@theme {
+  --radius-card: 12px;
+  --radius-control: 10px;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.12);
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.08);
+  --shadow-handle: 0 2px 8px rgb(0 0 0 / 0.3);
+  --shadow-handle-line: 0 0 0 1px rgb(0 0 0 / 0.25);
+
+  /* Prototype sizes: 11, 12, 13, 14, 15 (body), 16 px; line height 1.5 throughout. */
+  --text-2xs: 11px;
+  --text-2xs--line-height: 1.5;
+  --text-xs: 12px;
+  --text-xs--line-height: 1.5;
+  --text-ui: 13px;
+  --text-ui--line-height: 1.5;
+  --text-sm: 14px;
+  --text-sm--line-height: 1.5;
+  --text-body: 15px;
+  --text-body--line-height: 1.5;
+  --text-base: 16px;
+  --text-base--line-height: 1.5;
+}
+
+/* ---------- Utilities ---------- */
+/* Checkerboard behind images, follows the theme (compare slider). */
+@utility bg-checker {
+  background: repeating-conic-gradient(var(--sunk) 0 25%, var(--card) 0 50%) 0 0 / 20px 20px;
+}
+/* "Transparent" swatch, always light like the prototype. */
+@utility bg-checker-light {
+  background: repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0 / 10px 10px;
+}
+/* Small accent shape used in Fit / Fill pictures. */
+@utility bg-accent-shape {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 35%, #fff));
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: inherit;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* Prototype: svg.lucide 18 px. Utilities (size-4 …) still override this. */
+  svg.lucide {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+    flex-shrink: 0;
+  }
+  kbd {
+    font-family: var(--font-mono);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}

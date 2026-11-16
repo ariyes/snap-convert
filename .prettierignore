@@ -6,6 +6,7 @@ playwright-report/
 test-results/
 pnpm-lock.yaml
 LICENSE
+.claude/
 
 # Owned by the governor / planning stage; not reformatted by agents
 docs/

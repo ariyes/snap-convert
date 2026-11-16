@@ -55,6 +55,8 @@ export interface ImageJobInput {
   quality: number;
   targetBytes?: number;                                        // "make it under X"
   metadata: MetadataPolicy;
+  width?: number;                 // source size if known (from intake) — lets the queue run 40 MP+ images alone (D27)
+  height?: number;
 }
 export interface ImageJobResult {
   blob: Blob;
