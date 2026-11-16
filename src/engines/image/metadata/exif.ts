@@ -27,7 +27,19 @@ export const TAG = {
 
 /** Bytes per value for each TIFF field type (1–13). */
 const TYPE_SIZE: Record<number, number> = {
-  1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8, 13: 4,
+  1: 1,
+  2: 1,
+  3: 2,
+  4: 4,
+  5: 8,
+  6: 1,
+  7: 1,
+  8: 2,
+  9: 4,
+  10: 8,
+  11: 4,
+  12: 8,
+  13: 4,
 };
 
 /** Most entries any real IFD has is a few hundred; more means garbage. */
@@ -122,7 +134,8 @@ function readIfd(tiff: Tiff, at: number): Ifd {
 function subIfd(tiff: Tiff, ifd: Ifd, tag: number): number {
   const e = ifd.entries.find((x) => x.tag === tag);
   if (!e) return 0;
-  if ((e.type !== 4 && e.type !== 13) || e.count !== 1) throw new ExifFormatError('bad directory link');
+  if ((e.type !== 4 && e.type !== 13) || e.count !== 1)
+    throw new ExifFormatError('bad directory link');
   return tiff.u32(e.at + 8);
 }
 
@@ -130,7 +143,11 @@ function subIfd(tiff: Tiff, ifd: Ifd, tag: number): number {
 function eraseIfd(tiff: Tiff, ifd: Ifd): void {
   const value = (tag: number) => {
     const e = ifd.entries.find((x) => x.tag === tag);
-    return e && e.count === 1 && (e.type === 3 || e.type === 4) ? (e.type === 3 ? tiff.u16(e.at + 8) : tiff.u32(e.at + 8)) : undefined;
+    return e && e.count === 1 && (e.type === 3 || e.type === 4)
+      ? e.type === 3
+        ? tiff.u16(e.at + 8)
+        : tiff.u32(e.at + 8)
+      : undefined;
   };
   for (const [offTag, lenTag] of [
     [TAG.thumbnailOffset, TAG.thumbnailLength],
@@ -201,7 +218,10 @@ export interface PrepareExifOptions {
  *
  * Takes TIFF bytes from `exifToTiff` and edits them in place. Throws `ExifFormatError`.
  */
-export function prepareExif(tiffBytes: Uint8Array<ArrayBuffer>, o: PrepareExifOptions): Uint8Array<ArrayBuffer> {
+export function prepareExif(
+  tiffBytes: Uint8Array<ArrayBuffer>,
+  o: PrepareExifOptions,
+): Uint8Array<ArrayBuffer> {
   const tiff = new Tiff(tiffBytes);
   const ifd0At = tiff.u32(4);
   const ifd0 = readIfd(tiff, ifd0At);

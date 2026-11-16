@@ -32,13 +32,16 @@ const dirtyJpeg = () =>
 const meta = (o: Partial<ImageMetadata> = {}): ImageMetadata => ({
   orientation: 6,
   hasLocation: true,
-  exif: concat(ascii('Exif\0\0'), buildExifTiff({ orientation: 6, gps: true, thumbnail: true })).buffer,
+  exif: concat(ascii('Exif\0\0'), buildExifTiff({ orientation: 6, gps: true, thumbnail: true }))
+    .buffer,
   iccProfile: buildIcc('sRGB IEC61966-2.1').buffer,
   ...o,
 });
 
 function app1Exif(bytes: Uint8Array) {
-  return parseJpeg(bytes).segments.filter((s) => s.marker === MARKER.APP1 && startsWith(s.data, SIGNATURE.exif));
+  return parseJpeg(bytes).segments.filter(
+    (s) => s.marker === MARKER.APP1 && startsWith(s.data, SIGNATURE.exif),
+  );
 }
 
 describe('applyMetadata — JPEG', () => {
@@ -90,39 +93,65 @@ describe('applyMetadata — JPEG', () => {
   });
 
   it('leaves damaged EXIF out instead of failing the file', async () => {
-    const r = await applyMetadataDetailed(blob(buildJpeg()), meta({ exif: ascii('Exif\0\0garbage!').buffer }), 'keep-all');
+    const r = await applyMetadataDetailed(
+      blob(buildJpeg()),
+      meta({ exif: ascii('Exif\0\0garbage!').buffer }),
+      'keep-all',
+    );
     expect(r).toMatchObject({ exifKept: false, exifDropped: true });
     expect(app1Exif(await bytesOf(r.blob))).toHaveLength(0);
   });
 
   it('keep-all with no original metadata adds nothing', async () => {
-    const r = await applyMetadataDetailed(blob(buildJpeg()), { orientation: 1, hasLocation: false }, 'keep-all');
+    const r = await applyMetadataDetailed(
+      blob(buildJpeg()),
+      { orientation: 1, hasLocation: false },
+      'keep-all',
+    );
     expect(r).toMatchObject({ exifKept: false, iccKept: false, jpegOnly: false });
-    expect(parseJpeg(await bytesOf(r.blob)).segments.map((s) => s.marker)).toEqual([MARKER.APP0, 0xdb, 0xc0, 0xc4]);
+    expect(parseJpeg(await bytesOf(r.blob)).segments.map((s) => s.marker)).toEqual([
+      MARKER.APP0,
+      0xdb,
+      0xc0,
+      0xc4,
+    ]);
   });
 
   it('throws a readable error for a broken JPEG', async () => {
-    await expect(applyMetadata(blob(buildJpeg().subarray(0, 40)), meta(), 'strip-all')).rejects.toThrow(/JPEG/);
+    await expect(
+      applyMetadata(blob(buildJpeg().subarray(0, 40)), meta(), 'strip-all'),
+    ).rejects.toThrow(/JPEG/);
   });
 });
 
 describe('applyMetadata — PNG, WebP, AVIF', () => {
-  const png = concat(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), new Uint8Array(20));
+  const png = concat(
+    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    new Uint8Array(20),
+  );
   const webp = concat(ascii('RIFF'), new Uint8Array(4), ascii('WEBPVP8 '), new Uint8Array(20));
-  const avif = concat(new Uint8Array([0, 0, 0, 0x1c]), ascii('ftypavif'), new Uint8Array(4), ascii('avifmif1miaf'));
+  const avif = concat(
+    new Uint8Array([0, 0, 0, 0x1c]),
+    ascii('ftypavif'),
+    new Uint8Array(4),
+    ascii('avifmif1miaf'),
+  );
 
   it.each([
     ['png', png],
     ['webp', webp],
     ['avif', avif],
-  ] as const)('%s: keep-all keeps nothing and flags "JPG only"; strip-all needs no flag', async (format, bytes) => {
-    expect(sniffFormat(bytes)).toBe(format);
-    const keep = await applyMetadataDetailed(blob(bytes), meta(), 'keep-all');
-    expect(keep.jpegOnly).toBe(true);
-    expect(await bytesOf(keep.blob)).toEqual(bytes);
-    const loc = await applyMetadataDetailed(blob(bytes), meta(), 'strip-location');
-    expect(loc.jpegOnly).toBe(true);
-    const strip = await applyMetadataDetailed(blob(bytes), meta(), 'strip-all');
-    expect(strip.jpegOnly).toBe(false);
-  });
+  ] as const)(
+    '%s: keep-all keeps nothing and flags "JPG only"; strip-all needs no flag',
+    async (format, bytes) => {
+      expect(sniffFormat(bytes)).toBe(format);
+      const keep = await applyMetadataDetailed(blob(bytes), meta(), 'keep-all');
+      expect(keep.jpegOnly).toBe(true);
+      expect(await bytesOf(keep.blob)).toEqual(bytes);
+      const loc = await applyMetadataDetailed(blob(bytes), meta(), 'strip-location');
+      expect(loc.jpegOnly).toBe(true);
+      const strip = await applyMetadataDetailed(blob(bytes), meta(), 'strip-all');
+      expect(strip.jpegOnly).toBe(false);
+    },
+  );
 });

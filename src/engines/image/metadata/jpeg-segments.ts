@@ -82,7 +82,10 @@ export function parseJpeg(bytes: Uint8Array): ParsedJpeg {
 }
 
 /** Builds a JPEG from header segments plus the untouched scan data (which starts at SOS). */
-export function writeJpeg(segments: readonly JpegSegment[], scan: Uint8Array): Uint8Array<ArrayBuffer> {
+export function writeJpeg(
+  segments: readonly JpegSegment[],
+  scan: Uint8Array,
+): Uint8Array<ArrayBuffer> {
   let size = 2 + scan.length;
   for (const s of segments) {
     if (s.data.length > MAX_SEGMENT_PAYLOAD) throw new JpegFormatError(t.segmentTooLong);
@@ -128,13 +131,16 @@ export function readFrame(parsed: ParsedJpeg): FrameInfo {
   return {
     height: (d[1]! << 8) | d[2]!,
     width: (d[3]! << 8) | d[4]!,
-    progressive: sof.marker === 0xc2 || sof.marker === 0xc6 || sof.marker === 0xca || sof.marker === 0xce,
+    progressive:
+      sof.marker === 0xc2 || sof.marker === 0xc6 || sof.marker === 0xca || sof.marker === 0xce,
     components,
   };
 }
 
 /** '4:4:4', '4:2:0', '4:2:2', 'gray' or 'other', from the frame's sampling factors. */
-export function chromaSubsampling(frame: FrameInfo): '4:4:4' | '4:2:0' | '4:2:2' | 'gray' | 'other' {
+export function chromaSubsampling(
+  frame: FrameInfo,
+): '4:4:4' | '4:2:0' | '4:2:2' | 'gray' | 'other' {
   const [y, cb, cr] = frame.components;
   if (frame.components.length === 1) return 'gray';
   if (!y || !cb || !cr || frame.components.length !== 3) return 'other';

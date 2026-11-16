@@ -35,7 +35,11 @@ export async function browserJpeg(img: ImageData, quality: number): Promise<Blob
   if (!ctx) throw new Error('No 2D canvas');
   ctx.putImageData(img, 0, 0);
   return new Promise((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/jpeg', quality);
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+      'image/jpeg',
+      quality,
+    );
   });
 }
 

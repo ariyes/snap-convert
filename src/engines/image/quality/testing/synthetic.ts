@@ -173,7 +173,8 @@ export function photoScene(width: number, height: number, o: PhotoOptions = {}):
   const phase = rand() * 6;
   for (let x = 0; x < width; x++) {
     const t = x / width;
-    horizon[x] = height * (0.4 + 0.06 * Math.sin(t * 7 + phase) + 0.025 * Math.sin(t * 23 + phase * 2));
+    horizon[x] =
+      height * (0.4 + 0.06 * Math.sin(t * 7 + phase) + 0.025 * Math.sin(t * 23 + phase * 2));
   }
 
   const lum = new Float32Array(n);
@@ -193,13 +194,21 @@ export function photoScene(width: number, height: number, o: PhotoOptions = {}):
   }
 
   // Buildings: shaded boxes with a lit side, sitting on the ground, with rows of windows.
-  const fill = (x0: number, y0: number, x1: number, y1: number, f: (x: number, y: number) => number) => {
+  const fill = (
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    f: (x: number, y: number) => number,
+  ) => {
     for (let y = Math.max(0, Math.floor(y0)); y < Math.min(height, Math.ceil(y1)); y++) {
       for (let x = Math.max(0, Math.floor(x0)); x < Math.min(width, Math.ceil(x1)); x++) {
         // Anti-aliased coverage of the box edges.
         const cover =
-          Math.min(1, Math.max(0, x + 1 - x0)) * Math.min(1, Math.max(0, x1 - x)) *
-          Math.min(1, Math.max(0, y + 1 - y0)) * Math.min(1, Math.max(0, y1 - y));
+          Math.min(1, Math.max(0, x + 1 - x0)) *
+          Math.min(1, Math.max(0, x1 - x)) *
+          Math.min(1, Math.max(0, y + 1 - y0)) *
+          Math.min(1, Math.max(0, y1 - y));
         const i = y * width + x;
         lum[i] = lum[i]! + (f(x, y) - lum[i]!) * cover;
       }
@@ -267,7 +276,8 @@ export function productOnWhite(width: number, height: number, seed = 5): TestIma
   const rand = mulberry32(seed);
   const n = width * height;
   const texture = new Float32Array(n);
-  for (let period = 64; period >= 2; period /= 2) addNoiseOctave(texture, width, height, period, 2 + period / 16, rand);
+  for (let period = 64; period >= 2; period /= 2)
+    addNoiseOctave(texture, width, height, period, 2 + period / 16, rand);
   const img = blank(width, height);
   const d = img.data;
   const cx = width / 2;
@@ -292,10 +302,14 @@ export function productOnWhite(width: number, height: number, seed = 5): TestIma
       const cover = dist <= -0.5 ? 1 : dist >= 0.5 ? 0 : 0.5 - dist;
       if (cover > 0) {
         const u = (x - cx) / half; // -1 … 1 across the bottle
-        const shade = 0.35 + 0.65 * Math.sqrt(Math.max(0, 1 - u * u)) + 0.25 * Math.max(0, 1 - Math.abs(u + 0.45) * 6);
+        const shade =
+          0.35 +
+          0.65 * Math.sqrt(Math.max(0, 1 - u * u)) +
+          0.25 * Math.max(0, 1 - Math.abs(u + 0.45) * 6);
         const onLabel = y > height * 0.45 && y < height * 0.65;
         const base = onLabel ? [235, 225, 200] : [40, 110, 70];
-        const stripe = onLabel && Math.floor((y - height * 0.45) / 6) % 3 === 0 && Math.abs(u) < 0.6 ? 0.45 : 1;
+        const stripe =
+          onLabel && Math.floor((y - height * 0.45) / 6) % 3 === 0 && Math.abs(u) < 0.6 ? 0.45 : 1;
         const t = texture[i]!;
         const br = Math.min(255, base[0]! * shade * stripe + t);
         const bg = Math.min(255, base[1]! * shade * stripe + t);

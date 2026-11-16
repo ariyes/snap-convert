@@ -38,7 +38,8 @@ export function iccDescription(icc: Uint8Array): string | undefined {
       const start = view.getUint32(offset + 24);
       if (start + len > size) return undefined;
       let s = '';
-      for (let k = 0; k + 1 < len; k += 2) s += String.fromCharCode(view.getUint16(offset + start + k));
+      for (let k = 0; k + 1 < len; k += 2)
+        s += String.fromCharCode(view.getUint16(offset + start + k));
       return s.replace(/\0+$/, '');
     }
     return undefined;

@@ -40,7 +40,7 @@ export function loadCodec<F extends ImageFormat>(format: F): Promise<Codecs[F]> 
       try {
         const encode = await importers[format]();
         const probe = new ImageData(new Uint8ClampedArray([255, 255, 255, 255]), 1, 1);
-        await (encode as (img: ImageData, o: object) => Promise<ArrayBuffer>)(probe, {});
+        await encode(probe, {});
         return encode;
       } catch (cause) {
         loaded.delete(format);

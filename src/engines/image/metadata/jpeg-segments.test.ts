@@ -8,7 +8,13 @@ import {
   readFrame,
   writeJpeg,
 } from './jpeg-segments';
-import { buildExifTiff, buildJpeg, commentSegment, exifSegment, xmpSegment } from './testing/builders';
+import {
+  buildExifTiff,
+  buildJpeg,
+  commentSegment,
+  exifSegment,
+  xmpSegment,
+} from './testing/builders';
 
 describe('parseJpeg', () => {
   it('reads header segments in order and keeps the scan data untouched', () => {
@@ -59,7 +65,10 @@ describe('parseJpeg', () => {
     ['garbage where a marker should be', (b) => b.map((x, i) => (i === 2 ? 0x12 : x))],
     ['a second SOI', (b) => b.map((x, i) => (i === 3 ? MARKER.SOI : x))],
     ['EOI before the image data', (b) => b.map((x, i) => (i === 3 ? MARKER.EOI : x))],
-    ['all fill bytes', (b) => new Uint8Array(b.length).fill(0xff).map((x, i) => (i === 1 ? MARKER.SOI : x))],
+    [
+      'all fill bytes',
+      (b) => new Uint8Array(b.length).fill(0xff).map((x, i) => (i === 1 ? MARKER.SOI : x)),
+    ],
   ];
   it.each(malformed)('throws a readable JpegFormatError: %s', (_, corrupt) => {
     const bad = corrupt(buildJpeg());
@@ -82,7 +91,10 @@ describe('parseJpeg', () => {
   });
 
   it('fuzz: 500 random corruptions each finish within 100 ms, parsing or throwing JpegFormatError', () => {
-    const original = buildJpeg([exifSegment(buildExifTiff({ gps: true, thumbnail: true })), xmpSegment()]);
+    const original = buildJpeg([
+      exifSegment(buildExifTiff({ gps: true, thumbnail: true })),
+      xmpSegment(),
+    ]);
     const headerEnd = original.length - parseJpeg(original).scan.length;
     const rand = mulberry32(2026);
     let threw = 0;

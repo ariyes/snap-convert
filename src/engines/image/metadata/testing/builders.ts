@@ -9,7 +9,12 @@ const SHORT = 3;
 const LONG = 4;
 const RATIONAL = 5;
 
-type Value = { short: number } | { long: number } | { ascii: string } | { rationals: Array<[number, number]> } | { pointer: true };
+type Value =
+  | { short: number }
+  | { long: number }
+  | { ascii: string }
+  | { rationals: Array<[number, number]> }
+  | { pointer: true };
 
 interface EntrySpec {
   tag: number;
@@ -125,7 +130,16 @@ export function buildExifTiff(o: ExifSpec = {}): Uint8Array<ArrayBuffer> {
       { tag: 0x0001, value: { ascii: 'N' } },
       { tag: 0x0002, value: { rationals: GPS_LATITUDE } },
       { tag: 0x0003, value: { ascii: 'W' } },
-      { tag: 0x0004, value: { rationals: [[0, 1], [7, 1], [3999, 100]] } },
+      {
+        tag: 0x0004,
+        value: {
+          rationals: [
+            [0, 1],
+            [7, 1],
+            [3999, 100],
+          ],
+        },
+      },
     ]);
   }
 
@@ -169,14 +183,20 @@ export const xmpSegment = (): JpegSegment => ({
   marker: MARKER.APP1,
   data: ascii(`${SIGNATURE.xmp}<x:xmpmeta><exif:GPSLatitude>51,30N</exif:GPSLatitude></x:xmpmeta>`),
 });
-export const commentSegment = (text: string): JpegSegment => ({ marker: MARKER.COM, data: ascii(text) });
+export const commentSegment = (text: string): JpegSegment => ({
+  marker: MARKER.COM,
+  data: ascii(text),
+});
 
 /**
  * A structurally valid baseline JPEG skeleton (JFIF, DQT, SOF0 3×8-bit 4:2:0, DHT, SOS, scan
  * bytes, EOI). Not decodable as a picture — the segment parser doesn't need it to be.
  */
 export function buildJpeg(extra: JpegSegment[] = [], seed = 1): Uint8Array<ArrayBuffer> {
-  const jfif: JpegSegment = { marker: MARKER.APP0, data: concat(ascii(SIGNATURE.jfif), new Uint8Array([1, 1, 0, 0, 1, 0, 1, 0, 0])) };
+  const jfif: JpegSegment = {
+    marker: MARKER.APP0,
+    data: concat(ascii(SIGNATURE.jfif), new Uint8Array([1, 1, 0, 0, 1, 0, 1, 0, 0])),
+  };
   const dqt: JpegSegment = { marker: 0xdb, data: new Uint8Array(65).fill(16) };
   dqt.data[0] = 0;
   const sof: JpegSegment = {
@@ -199,7 +219,11 @@ export function buildJpeg(extra: JpegSegment[] = [], seed = 1): Uint8Array<Array
 }
 
 /** Minimal ICC profile header + tag table with a 'desc' tag (v2 'desc' or v4 'mluc' type). */
-export function buildIcc(description: string, version: 2 | 4 = 2, colourSpace = 'RGB '): Uint8Array<ArrayBuffer> {
+export function buildIcc(
+  description: string,
+  version: 2 | 4 = 2,
+  colourSpace = 'RGB ',
+): Uint8Array<ArrayBuffer> {
   const desc =
     version === 2
       ? (() => {
@@ -218,7 +242,8 @@ export function buildIcc(description: string, version: 2 | 4 = 2, colourSpace = 
           d.set(ascii('enUS'), 16);
           v.setUint32(20, description.length * 2);
           v.setUint32(24, 28);
-          for (let i = 0; i < description.length; i++) v.setUint16(28 + i * 2, description.charCodeAt(i));
+          for (let i = 0; i < description.length; i++)
+            v.setUint16(28 + i * 2, description.charCodeAt(i));
           return d;
         })();
   const size = 132 + 12 + desc.length;

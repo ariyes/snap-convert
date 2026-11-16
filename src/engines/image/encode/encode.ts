@@ -63,7 +63,10 @@ export async function encodeImage(
         const flat = flattenOnto(img, parseBackground(o.background));
         const graphic = hints.graphic ?? (quality >= 90 ? true : isGraphic(flat));
         const chroma = chooseChroma(quality, graphic);
-        bytes = await encode(toImageData(flat), jpegOptions(quality, chroma, o.progressive ?? true));
+        bytes = await encode(
+          toImageData(flat),
+          jpegOptions(quality, chroma, o.progressive ?? true),
+        );
         break;
       }
       case 'png': {

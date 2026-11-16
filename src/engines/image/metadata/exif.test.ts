@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { mulberry32 } from '../quality/testing/synthetic';
 import { exifToTiff, ExifFormatError, prepareExif, readExifInfo, TAG } from './exif';
-import { ascii, buildExifTiff, concat, indexOf, latitudeBytes, THUMBNAIL_FILL } from './testing/builders';
+import {
+  ascii,
+  buildExifTiff,
+  concat,
+  indexOf,
+  latitudeBytes,
+  THUMBNAIL_FILL,
+} from './testing/builders';
 
 describe.each([true, false])('prepareExif (little-endian: %s)', (littleEndian) => {
   const build = () => buildExifTiff({ littleEndian, orientation: 6, gps: true, thumbnail: true });
@@ -28,7 +35,9 @@ describe.each([true, false])('prepareExif (little-endian: %s)', (littleEndian) =
     const info = readExifInfo(out);
     expect(info.hasGps).toBe(false);
     expect(info.ifd0Tags).not.toContain(TAG.gpsIfd);
-    expect(info.ifd0Tags).toEqual(expect.arrayContaining([0x010f, 0x0110, TAG.orientation, TAG.exifIfd]));
+    expect(info.ifd0Tags).toEqual(
+      expect.arrayContaining([0x010f, 0x0110, TAG.orientation, TAG.exifIfd]),
+    );
     expect(info.orientation).toBe(1);
     expect(indexOf(out, latitudeBytes(littleEndian))).toBe(-1);
     expect(indexOf(out, ascii('TestCam Industries'))).toBeGreaterThan(0);
@@ -37,7 +46,11 @@ describe.each([true, false])('prepareExif (little-endian: %s)', (littleEndian) =
 
   it('works without orientation, GPS or thumbnail', () => {
     const out = prepareExif(buildExifTiff({ littleEndian }), { removeGps: true });
-    expect(readExifInfo(out)).toMatchObject({ orientation: undefined, hasGps: false, hasThumbnail: false });
+    expect(readExifInfo(out)).toMatchObject({
+      orientation: undefined,
+      hasGps: false,
+      hasThumbnail: false,
+    });
   });
 });
 
@@ -72,7 +85,8 @@ describe('damaged EXIF', () => {
     const rand = mulberry32(99);
     for (let round = 0; round < 500; round++) {
       const bytes = original.slice();
-      for (let k = 0; k < 1 + rand() * 6; k++) bytes[Math.floor(rand() * bytes.length)] = Math.floor(rand() * 256);
+      for (let k = 0; k < 1 + rand() * 6; k++)
+        bytes[Math.floor(rand() * bytes.length)] = Math.floor(rand() * 256);
       const input = round % 5 === 0 ? bytes.slice(0, Math.floor(rand() * bytes.length)) : bytes;
       const t0 = performance.now();
       try {

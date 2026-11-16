@@ -28,7 +28,7 @@ export interface GraphicStats {
 export function graphicStats(img: Pixels): GraphicStats {
   assertPixels(img, 'isGraphic');
   const { width, height, data } = img;
-  const step = Math.max(1, Math.floor(Math.sqrt((width * height) / MAX_SAMPLES)));
+  const step = Math.max(1, Math.ceil(Math.sqrt((width * height) / MAX_SAMPLES)));
   const colours = new Set<number>();
   let pairs = 0;
   let equal = 0;
