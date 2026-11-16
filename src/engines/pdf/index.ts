@@ -17,3 +17,18 @@ export { PdfOpError, type PdfErrorCode } from './ops/errors';
 export { pdfStrings } from './ops/strings';
 
 // P08
+// pdf.js reading and page thumbnails, on the main thread. pdf.js itself loads on first use
+// (dynamic import), so these exports keep it out of the startup bundle.
+export {
+  DOCUMENT_CACHE_TTL_MS,
+  MAX_CONCURRENT_RENDERS,
+  PdfRenderError,
+  readPdfInfo,
+  renderPageThumbnail,
+  renderThumbnails,
+  usePageThumbnail,
+  useThumbnails,
+  type PageThumbnailResult,
+  type PdfRenderErrorCode,
+  type ThumbnailsResult,
+} from './render';

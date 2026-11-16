@@ -1,4 +1,5 @@
 import type { Size } from '@/core/contracts/sizing';
+import { fitSize } from '@/core/sizing';
 
 /** Higher ratios cost memory without a visible gain at thumbnail size. */
 const MAX_PIXEL_RATIO = 3;
@@ -21,15 +22,12 @@ export function thumbnailLongSide(maxSize: number, ratio = pixelRatio()): number
  * Canvas size and render scale for a page drawn with its long side = `longSide` px.
  * One scale for both sides, so the page is never stretched. Small pages are drawn larger:
  * a PDF page is vector content, so this sharpens rather than enlarges pixels.
- *
- * TODO(governor): switch to `fitSize(page, { mode: 'longest', value: longSide, upscale: true })`
- * once P03's src/core/sizing lands (it is a placeholder in this branch).
  */
 export function thumbnailCanvasSize(page: Size, longSide: number): Size & { scale: number } {
-  const scale = longSide / Math.max(page.width, page.height);
-  return {
-    width: Math.max(1, Math.round(page.width * scale)),
-    height: Math.max(1, Math.round(page.height * scale)),
-    scale,
-  };
+  const { width, height, scale } = fitSize(page, {
+    mode: 'longest',
+    value: longSide,
+    upscale: true,
+  });
+  return { width, height, scale };
 }

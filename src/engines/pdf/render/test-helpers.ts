@@ -32,11 +32,23 @@ export function fixture(name: FixtureName): File {
   return new File([data], `${name}.pdf`, { type: 'application/pdf' });
 }
 
-/** A 100-page A4 PDF with text and vector shapes on every page. */
+let hundredPageBytes: Promise<Uint8Array<ArrayBuffer>> | undefined;
+
+/**
+ * A 100-page A4 PDF with text and vector shapes on every page, as a fresh File (new cache key).
+ * Built once per test file, in small steps: browser test files share one main thread, and a long
+ * synchronous build would stall timing-sensitive tests in other files.
+ */
 export async function hundredPagePdf(): Promise<File> {
+  hundredPageBytes ??= buildHundredPagePdf();
+  return new File([await hundredPageBytes], 'hundred.pdf', { type: 'application/pdf' });
+}
+
+async function buildHundredPagePdf(): Promise<Uint8Array<ArrayBuffer>> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   for (let p = 0; p < 100; p++) {
+    if (p % 4 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
     const page = doc.addPage([595.28, 841.89]);
     page.drawText(`Page ${p + 1}`, { x: 50, y: 780, size: 36, font });
     for (let line = 0; line < 40; line++) {
@@ -57,8 +69,7 @@ export async function hundredPagePdf(): Promise<File> {
       });
     }
   }
-  const data = await doc.save();
-  return new File([new Uint8Array(data)], 'hundred.pdf', { type: 'application/pdf' });
+  return new Uint8Array(await doc.save({ objectsPerTick: 20 }));
 }
 
 /** RGBA of one pixel of a bitmap. */
