@@ -15,8 +15,10 @@ export type RunOutcome =
   | { type: 'done'; value: unknown }
   /** The worker threw (not out of memory). The worker stays in the pool. */
   | { type: 'error'; error: unknown }
-  /** Out of memory, or the worker crashed. The worker was replaced. */
+  /** Out of memory, or the worker crashed after it had started. The worker was replaced. */
   | { type: 'crash' }
+  /** The worker never started (script failed to download or to run). Its slot was freed. */
+  | { type: 'load-failed'; error?: unknown }
   /** No worker could be created for this kind. */
   | { type: 'unavailable'; error: unknown }
   /** The signal was aborted. The worker was terminated and will be replaced on demand. */
@@ -46,6 +48,8 @@ interface PooledWorker {
   worker: Worker;
   api: Comlink.Remote<WorkerApi>;
   busy: boolean;
+  /** The worker answered the readiness handshake: its script loaded and Comlink is listening. */
+  ready: boolean;
   /** Set when the worker can't be trusted any more; it is terminated instead of kept warm. */
   broken: boolean;
   idleTimer: ReturnType<typeof setTimeout> | null;
@@ -132,12 +136,31 @@ export class WorkerPool {
       signal?.addEventListener('abort', onAbort, { once: true });
       pw.onFailure = settle;
 
-      pw.api.run(op, input, Comlink.proxy(onProgress)).then(
-        (value) => settle({ type: 'done', value }),
-        (error: unknown) =>
-          settle(isOutOfMemoryError(error) ? { type: 'crash' } : { type: 'error', error }),
+      const ready = pw.ready ? Promise.resolve() : this.handshake(pw);
+      ready.then(
+        () => {
+          if (settled) return;
+          pw.api.run(op, input, Comlink.proxy(onProgress)).then(
+            (value) => settle({ type: 'done', value }),
+            (error: unknown) =>
+              settle(isOutOfMemoryError(error) ? { type: 'crash' } : { type: 'error', error }),
+          );
+        },
+        (error: unknown) => settle({ type: 'load-failed', error }),
       );
     });
+  }
+
+  /**
+   * Readiness handshake, done once per worker before its first job. Reads `run.length` through
+   * Comlink: one GET round-trip that only succeeds once the worker's script has loaded and
+   * `Comlink.expose` has run, and needs nothing extra from the engine workers (WorkerApi is
+   * unchanged). Until it answers, a worker `error` event means "failed to load", not "crashed".
+   */
+  private async handshake(pw: PooledWorker): Promise<void> {
+    const probe = pw.api.run as unknown as { readonly length: PromiseLike<number> };
+    await probe.length;
+    pw.ready = true;
   }
 
   /** Terminates every worker (e.g. when the page is torn down). */
@@ -177,15 +200,16 @@ export class WorkerPool {
       worker,
       api: Comlink.wrap<WorkerApi>(worker),
       busy: true,
+      ready: false,
       broken: false,
       idleTimer: null,
       onFailure: null,
     };
     worker.addEventListener('error', (event) => {
-      // Handled here: an uncaught error, a failed load or a crash. Don't report it to the page.
+      // Handled here: a failed load, an uncaught error or a crash. Don't report it to the page.
       event.preventDefault();
       pw.broken = true;
-      if (pw.onFailure) pw.onFailure({ type: 'crash' });
+      if (pw.onFailure) pw.onFailure(pw.ready ? { type: 'crash' } : { type: 'load-failed' });
       else this.discard(pw);
     });
     worker.addEventListener('messageerror', () => {

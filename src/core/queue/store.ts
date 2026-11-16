@@ -235,6 +235,9 @@ export function createQueueStore(options: QueueStoreOptions): QueueStore {
         case 'crash':
           patchJob(job.id, { status: 'failed', error: queueStrings.tooLarge, endedAt });
           break;
+        case 'load-failed':
+          patchJob(job.id, { status: 'failed', error: queueStrings.loadFailed, endedAt });
+          break;
         case 'unavailable':
           patchJob(job.id, { status: 'failed', error: queueStrings.unavailable, endedAt });
           break;

@@ -5,7 +5,8 @@
 //   throw  { message }             throws an Error
 //   throw-value                     throws something that isn't an Error
 //   oom                             throws the RangeError an ArrayBuffer allocation gives when memory runs out
-//   crash  { ms? }                  an uncaught error after `ms` (the worker's error event); never returns
+//   crash  { ms? }                  reports some progress, then an uncaught error after `ms`
+//                                   (the worker's error event); never returns
 //   echo                            returns { workerId, value: input }
 
 import * as Comlink from 'comlink';
@@ -50,6 +51,7 @@ const api: WorkerApi = {
       case 'oom':
         throw new RangeError('Array buffer allocation failed');
       case 'crash':
+        onProgress(0.3); // mid-job
         setTimeout(() => {
           throw new Error('Fake crash');
         }, o.ms ?? 10);

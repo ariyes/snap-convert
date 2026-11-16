@@ -358,6 +358,84 @@ describe('job queue', () => {
     expect(job(queue, img).status).toBe('done');
   });
 
+  it('a worker that fails to load (404) fails its job as retryable, not "too large", and frees the slot', async () => {
+    // Built as a string so Vite doesn't treat it as a worker import.
+    const missingUrl = new URL('/__p04-missing-worker__.js', location.origin).href;
+    let offline = true;
+    const goodWorker = () =>
+      new Worker(new URL('./test-worker.ts', import.meta.url), { type: 'module' });
+    const { queue, pool } = setup({
+      size: 1,
+      registry: {
+        image: () => (offline ? new Worker(missingUrl, { type: 'module' }) : goodWorker()),
+      },
+    });
+    const [img = ''] = queue
+      .getState()
+      .add('image', 'work', [{ label: 'a.jpg', input: { ms: 20 } }]);
+    const [pdf = ''] = queue.getState().add('pdf', 'work', [{ label: 'b.pdf', input: { ms: 20 } }]);
+    queue.getState().start();
+    await waitUntil(() => isIdle(queue));
+
+    expect(job(queue, img)).toMatchObject({ status: 'failed', error: queueStrings.loadFailed });
+    expect(job(queue, img).error).not.toBe(queueStrings.tooLarge);
+    // The slot was freed: the next job ran on the size-1 pool, and the broken worker is gone.
+    expect(job(queue, pdf).status).toBe('done');
+    expect(pool.stats()).toMatchObject({ busy: 0, terminated: 1 });
+
+    offline = false;
+    queue.getState().retry(img);
+    await waitUntil(() => job(queue, img).status === 'done');
+    expect(job(queue, img).error).toBeUndefined();
+  });
+
+  it('a worker whose script throws while loading is a load failure too', async () => {
+    const source = new Blob(['throw new Error("broken worker script");'], {
+      type: 'text/javascript',
+    });
+    const url = URL.createObjectURL(source);
+    cleanups.push(() => URL.revokeObjectURL(url));
+    const { queue } = setup({
+      size: 2,
+      registry: { pdf: () => new Worker(url, { type: 'module' }) },
+    });
+    const [pdf = ''] = queue.getState().add('pdf', 'merge', [{ label: 'a.pdf', input: {} }]);
+    const [img = ''] = queue
+      .getState()
+      .add('image', 'work', [{ label: 'a.jpg', input: { ms: 20 } }]);
+    queue.getState().start();
+    await waitUntil(() => isIdle(queue));
+    expect(job(queue, pdf)).toMatchObject({ status: 'failed', error: queueStrings.loadFailed });
+    expect(job(queue, img).status).toBe('done');
+  });
+
+  it('a worker that crashes mid-job fails with "too large" and is replaced', async () => {
+    const { queue, created } = setup({ size: 1 });
+    const [crash = ''] = queue
+      .getState()
+      .add('image', 'crash', [{ label: 'huge.jpg', input: { ms: 250 } }]);
+    let sawProgress = false;
+    cleanups.push(
+      queue.subscribe((s) => {
+        const j = s.jobs.find((x) => x.id === crash);
+        if (j?.status === 'working' && j.progress > 0) sawProgress = true;
+      }),
+    );
+    const [next = ''] = queue
+      .getState()
+      .add('image', 'work', [{ label: 'b.jpg', input: { ms: 20 } }]);
+    queue.getState().start();
+    await waitUntil(() => isIdle(queue));
+
+    expect(sawProgress).toBe(true);
+    expect(job(queue, crash)).toMatchObject({ status: 'failed', error: queueStrings.tooLarge });
+    expect(job(queue, next).status).toBe('done');
+    // The crashed worker was terminated and a fresh one ran the next job.
+    expect(created).toHaveLength(2);
+    expect(created[0]?.terminated).toBe(true);
+    expect(created[1]?.terminated).toBe(false);
+  });
+
   it('a job over 40 megapixels runs alone, in its place in the line', async () => {
     const { queue } = setup({ size: 4 });
     const ids = queue.getState().add('image', 'work', [
