@@ -57,6 +57,8 @@ export interface ImageJobInput {
   metadata: MetadataPolicy;
   width?: number;                 // source size if known (from intake) — lets the queue run 40 MP+ images alone (D27)
   height?: number;
+  background?: string;            // colour behind transparency when the output can't keep alpha (JPEG); default '#ffffff' (D29)
+  qualityGuard?: boolean;         // true on default/preset runs: raise quality until SSIM ≥ 0.97; false when the user set quality (D28, D29)
 }
 export interface ImageJobResult {
   blob: Blob;
@@ -68,7 +70,11 @@ export interface ImageJobResult {
   quality: number;                // quality actually used
   ssim: number;                   // visual score vs the resized pixels (1 = identical)
   graphic: boolean;               // isGraphic() said text/logo/flat art (UI may suggest PNG)
-  notes: Array<'target-unreachable' | 'format-fallback' | 'not-enlarged' | 'padded' | 'cropped' | 'metadata-jpeg-only' | 'reduced-decode'>;
+  notes: Array<'target-unreachable' | 'format-fallback' | 'not-enlarged' | 'padded' | 'cropped' | 'metadata-jpeg-only' | 'reduced-decode' | 'guard-short' | 'kept-original'>;
+  guard?: { steps: number; reached: boolean };  // quality-guard outcome (D29)
+  suggestedSize?: Size;           // with 'target-unreachable': dimensions that would fit
+  suggestedFormat?: ImageFormat;  // with 'target-unreachable' on PNG: a lossy format that would fit
+  encodes?: number;               // encode attempts used (diagnostics)
 }
 
 export interface WebPreset {
