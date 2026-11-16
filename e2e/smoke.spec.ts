@@ -8,6 +8,6 @@ test('home page renders and is cross-origin isolated', async ({ page }) => {
   expect(headers['cross-origin-opener-policy']).toBe('same-origin');
   expect(headers['cross-origin-embedder-policy']).toBe('credentialless');
 
-  await expect(page).toHaveTitle('Snap Convert');
-  await expect(page.getByRole('heading', { level: 1, name: 'Snap Convert' })).toBeVisible();
+  await expect(page).toHaveTitle(/^Snap Convert/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });

@@ -1,3 +1,8 @@
-// PLACEHOLDER — owned by P10 (M1 app shell, routes)
-
-export {};
+// M1 app shell (P10): helpers tool pages use.
+export {
+  clearPendingFiles,
+  setPendingFiles,
+  takePendingFiles,
+  usePendingFiles,
+} from './pending-files';
+export { useToolPage } from './use-tool-page';
