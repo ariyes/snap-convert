@@ -1,0 +1,25 @@
+# Dependencies and builds
+node_modules/
+dist/
+build/
+.react-router/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Environment and local files
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code worktrees
+.claude/worktrees/
