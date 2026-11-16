@@ -18,10 +18,11 @@ export const MAX_ZIP_BYTES = 0xffff_ffff;
 export const MAX_ZIP_ENTRIES = 0xffff;
 
 /** Formats that are already compressed: storing them is as small as deflating and far faster. */
-const STORED_EXTENSIONS = new Set([
-  'jpg', 'jpeg', 'jpe', 'jfif', 'png', 'apng', 'webp', 'avif', 'heic', 'heif', 'jxl', 'gif',
-  'pdf', 'zip', 'gz', '7z', 'rar', 'mp4', 'mov', 'webm', 'mp3', 'm4a', 'woff2',
-]);
+const STORED_EXTENSIONS = new Set(
+  'jpg jpeg jpe jfif png apng webp avif heic heif jxl gif pdf zip gz 7z rar mp4 mov webm mp3 m4a woff2'.split(
+    ' ',
+  ),
+);
 const STORED_TYPES =
   /^(image\/(jpeg|png|apng|webp|avif|heic|heif|jxl|gif)|application\/(pdf|zip|gzip)|video\/|audio\/)/i;
 
@@ -121,7 +122,8 @@ export async function buildZip(
     }
   };
   const check = () => {
-    if (state.error) throw new ExportError('zip-failed', state.error.message, { cause: state.error });
+    if (state.error)
+      throw new ExportError('zip-failed', state.error.message, { cause: state.error });
   };
 
   report(0);

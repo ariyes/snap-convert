@@ -13,7 +13,8 @@ class FakeFolder {
     await Promise.resolve();
     const key = name.toLowerCase();
     if (this.subfolders.has(key)) throw new DOMException('Is a folder', 'TypeMismatchError');
-    if (!this.files.has(key) && !options?.create) throw new DOMException('Missing', 'NotFoundError');
+    if (!this.files.has(key) && !options?.create)
+      throw new DOMException('Missing', 'NotFoundError');
     return {
       createWritable: async () => {
         await Promise.resolve();
@@ -120,7 +121,9 @@ describe('saveToFolder', () => {
   });
 
   it("returns 'cancelled' when the user closes the picker", async () => {
-    installPicker(() => Promise.reject(new DOMException('The user aborted a request.', 'AbortError')));
+    installPicker(() =>
+      Promise.reject(new DOMException('The user aborted a request.', 'AbortError')),
+    );
     await expect(saveToFolder([file('a.jpg')])).resolves.toBe('cancelled');
     expect(folder.getFileHandle).not.toHaveBeenCalled();
   });

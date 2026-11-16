@@ -79,9 +79,12 @@ const RESERVED_WINDOWS_NAMES = new Set([
   'NUL',
   'CONIN$',
   'CONOUT$',
-  ...[...'0123456789', String.fromCharCode(0xb9), String.fromCharCode(0xb2), String.fromCharCode(0xb3)].flatMap(
-    (d) => [`COM${d}`, `LPT${d}`],
-  ),
+  ...[
+    ...'0123456789',
+    String.fromCharCode(0xb9),
+    String.fromCharCode(0xb2),
+    String.fromCharCode(0xb3),
+  ].flatMap((d) => [`COM${d}`, `LPT${d}`]),
 ]);
 
 const TOKEN = /\{(name|width|height|n|format)\}/gi;

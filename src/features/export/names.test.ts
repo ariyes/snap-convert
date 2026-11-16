@@ -140,7 +140,28 @@ describe('applyNamePattern', () => {
 
   it('never returns an unsafe name for random input', () => {
     // Deterministic pseudo-random strings over a nasty alphabet.
-    const alphabet = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '.', ' ', '\u0000', '\u202E', 'a', 'C', 'O', 'N', '\uD83D', '\uDE00', 'é'];
+    const alphabet = [
+      '/',
+      '\\',
+      ':',
+      '*',
+      '?',
+      '"',
+      '<',
+      '>',
+      '|',
+      '.',
+      ' ',
+      '\u0000',
+      '\u202E',
+      'a',
+      'C',
+      'O',
+      'N',
+      '\uD83D',
+      '\uDE00',
+      'é',
+    ];
     let seed = 42;
     const rand = () => {
       seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
@@ -148,14 +169,21 @@ describe('applyNamePattern', () => {
     };
     for (let i = 0; i < 2000; i += 1) {
       const len = Math.floor(rand() * 12);
-      const raw = Array.from({ length: len }, () => alphabet[Math.floor(rand() * alphabet.length)]).join('');
+      const raw = Array.from(
+        { length: len },
+        () => alphabet[Math.floor(rand() * alphabet.length)],
+      ).join('');
       const out = applyNamePattern(raw, ctx);
       expect(out).not.toBe('');
       expect(out).not.toMatch(/[/\\:*?"<>|]/);
-      expect(Array.from(out, (c) => c.codePointAt(0) ?? 0).some((cp) => cp < 0x20 || cp === 0x202e)).toBe(false);
+      expect(
+        Array.from(out, (c) => c.codePointAt(0) ?? 0).some((cp) => cp < 0x20 || cp === 0x202e),
+      ).toBe(false);
       expect(removeUnsafeChars(out)).toBe(out); // also proves there are no lone surrogates
       expect(out).not.toMatch(/^[\s.]|[\s.]$/);
-      expect(out.split('.')[0]?.trimEnd().toUpperCase()).not.toMatch(/^(CON|PRN|AUX|NUL|COM\d|LPT\d)$/);
+      expect(out.split('.')[0]?.trimEnd().toUpperCase()).not.toMatch(
+        /^(CON|PRN|AUX|NUL|COM\d|LPT\d)$/,
+      );
     }
   });
 });
@@ -209,7 +237,10 @@ describe('uniqueNames', () => {
   });
 
   it('treats NFC and NFD forms as the same name', () => {
-    expect(uniqueNames(['caf\u00E9.jpg', 'cafe\u0301.jpg'])).toEqual(['caf\u00E9.jpg', 'cafe\u0301 (2).jpg']);
+    expect(uniqueNames(['caf\u00E9.jpg', 'cafe\u0301.jpg'])).toEqual([
+      'caf\u00E9.jpg',
+      'cafe\u0301 (2).jpg',
+    ]);
   });
 
   it('leaves unique names alone and keeps order', () => {
@@ -218,7 +249,11 @@ describe('uniqueNames', () => {
   });
 
   it('handles names without an extension', () => {
-    expect(uniqueNames(['report', 'report', 'report'])).toEqual(['report', 'report (2)', 'report (3)']);
+    expect(uniqueNames(['report', 'report', 'report'])).toEqual([
+      'report',
+      'report (2)',
+      'report (3)',
+    ]);
   });
 
   it('only numbers the last extension', () => {
