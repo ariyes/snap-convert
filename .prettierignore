@@ -1,0 +1,17 @@
+build/
+dist/
+coverage/
+.react-router/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+LICENSE
+
+# Owned by the governor / planning stage; not reformatted by agents
+docs/
+prompts/
+prototype/
+CLAUDE.md
+
+# Shared contracts keep the exact layout of prompts/01-contracts.md
+src/core/contracts/
