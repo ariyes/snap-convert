@@ -4,6 +4,14 @@ const port = 4173;
 const desktop = { viewport: { width: 1280, height: 800 } };
 const phone = { viewport: { width: 375, height: 812 }, hasTouch: true };
 
+// Firefox is opt-in (E2E_FIREFOX=1 or CI): Playwright's Firefox build fails to launch on the dev Windows 10 machine (mozglue side-by-side error).
+const includeFirefox = !!process.env.CI || process.env.E2E_FIREFOX === '1';
+const firefoxProjects = [
+  { name: 'firefox-desktop', use: { ...devices['Desktop Firefox'], ...desktop } },
+  // Firefox has no mobile emulation (isMobile); phone size + touch only.
+  { name: 'firefox-phone', use: { ...devices['Desktop Firefox'], ...phone } },
+];
+
 /** End-to-end tests run against the production build (pre-rendered pages), served by `vite preview`. */
 export default defineConfig({
   testDir: './e2e',
@@ -18,9 +26,7 @@ export default defineConfig({
   projects: [
     { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'], ...desktop } },
     { name: 'chromium-phone', use: { ...devices['Desktop Chrome'], ...phone, isMobile: true } },
-    { name: 'firefox-desktop', use: { ...devices['Desktop Firefox'], ...desktop } },
-    // Firefox has no mobile emulation (isMobile); phone size + touch only.
-    { name: 'firefox-phone', use: { ...devices['Desktop Firefox'], ...phone } },
+    ...(includeFirefox ? firefoxProjects : []),
     { name: 'webkit-desktop', use: { ...devices['Desktop Safari'], ...desktop } },
     { name: 'webkit-phone', use: { ...devices['Desktop Safari'], ...phone, isMobile: true } },
   ],
