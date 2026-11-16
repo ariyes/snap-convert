@@ -16,6 +16,7 @@ export default defineConfig([
     'prototype/',
     'docs/',
     'prompts/',
+    '.claude/', // agent worktrees live here; each is linted on its own
   ]),
   {
     files: ['**/*.{js,ts,tsx}'],
