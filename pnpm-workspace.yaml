@@ -1,0 +1,5 @@
+# eslint-plugin-jsx-a11y 6.10.2 (latest) declares eslint <=9, but ESLint 9 is end-of-life and
+# the plugin uses no API that ESLint 10 removed. Accept ESLint 10 until the plugin catches up.
+peerDependencyRules:
+  allowedVersions:
+    eslint-plugin-jsx-a11y>eslint: '10'
