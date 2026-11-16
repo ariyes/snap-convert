@@ -21,7 +21,11 @@ import { pdfStrings } from './strings';
  * Runs one PDF operation by name — what the PDF worker's `WorkerApi.run` calls. The input comes
  * from another thread, so its shape is checked before use; each operation checks its settings.
  */
-export async function runPdfOp(op: string, input: unknown, onProgress?: Progress): Promise<PdfResult> {
+export async function runPdfOp(
+  op: string,
+  input: unknown,
+  onProgress?: Progress,
+): Promise<PdfResult> {
   switch (op as PdfOp) {
     case 'images-to-pdf':
       check<ImagesToPdfInput>(input, (i) => isList(i.images, isNamedBlob) && isText(i.outName));

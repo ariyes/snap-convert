@@ -26,8 +26,10 @@ export function pageSizePoints(size: NamedPageSize | Size): Size {
     if (!named) throw new PdfOpError('bad-input', pdfStrings.badPageSize);
     return named;
   }
-  const ok = (n: unknown) => typeof n === 'number' && Number.isFinite(n) && n >= 1 && n <= MAX_PAGE_POINTS;
-  if (!ok(size.width) || !ok(size.height)) throw new PdfOpError('bad-input', pdfStrings.badPageSize);
+  const ok = (n: unknown) =>
+    typeof n === 'number' && Number.isFinite(n) && n >= 1 && n <= MAX_PAGE_POINTS;
+  if (!ok(size.width) || !ok(size.height))
+    throw new PdfOpError('bad-input', pdfStrings.badPageSize);
   return { width: size.width, height: size.height };
 }
 

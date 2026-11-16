@@ -1,6 +1,14 @@
 import type { PdfResult, ResizePagesInput } from '@/core/contracts';
 import { drawXObject, type Progress } from './draw';
-import { baseName, copyDocumentInfo, loadPdf, newPdf, pdfName, prepareForEmbed, savePdf } from './load';
+import {
+  baseName,
+  copyDocumentInfo,
+  loadPdf,
+  newPdf,
+  pdfName,
+  prepareForEmbed,
+  savePdf,
+} from './load';
 import { orientPage, pageSizePoints } from './page-size';
 import { fitInBox } from './placement';
 import { normalizeRotation, pageMatrix, rotatedSize } from './transforms';
@@ -12,7 +20,10 @@ import { normalizeRotation, pageMatrix, rotatedSize } from './transforms';
  * A page's rotation is applied to the drawing, so it looks the same as before.
  * Links, form fields and other annotations are dropped (pdf-lib embeds only the drawing).
  */
-export async function resizePages(input: ResizePagesInput, onProgress?: Progress): Promise<PdfResult> {
+export async function resizePages(
+  input: ResizePagesInput,
+  onProgress?: Progress,
+): Promise<PdfResult> {
   const target = pageSizePoints(input.pageSize);
   const src = await loadPdf(input.file);
   onProgress?.(0.1);

@@ -23,7 +23,10 @@ export async function splitPdf(input: SplitInput, onProgress?: Progress): Promis
   for (const group of groups) {
     const out = await newPdf();
     copyDocumentInfo(src, out);
-    const pages = await out.copyPages(src, group.map((n) => n - 1));
+    const pages = await out.copyPages(
+      src,
+      group.map((n) => n - 1),
+    );
     for (const page of pages) out.addPage(page);
     const first = group[0] ?? 1;
     const last = group[group.length - 1] ?? first;

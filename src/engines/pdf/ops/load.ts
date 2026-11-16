@@ -25,7 +25,10 @@ const PDF_HEADER = [0x25, 0x50, 0x44, 0x46, 0x2d]; // "%PDF-"
  * password-protected, isn't a PDF, is damaged or takes too long. `name` goes into the message
  * when several files are involved (merge), so the user knows which one failed.
  */
-export async function loadPdf(file: NamedBlob, options: { nameInErrors?: boolean } = {}): Promise<PDFDocument> {
+export async function loadPdf(
+  file: NamedBlob,
+  options: { nameInErrors?: boolean } = {},
+): Promise<PDFDocument> {
   const name = options.nameInErrors ? file.name : undefined;
   const bytes = new Uint8Array(await file.blob.arrayBuffer());
   if (!hasPdfHeader(bytes)) throw new PdfOpError('not-pdf', pdfStrings.notPdf(name));
@@ -83,7 +86,8 @@ function checkStructure(doc: PDFDocument): void {
 
   const seen = new Set<PDFObject>();
   const visit = (node: PDFObject | undefined, depth: number) => {
-    if (!(node instanceof PDFDict) || seen.has(node) || depth > 64) throw new Error('bad page tree');
+    if (!(node instanceof PDFDict) || seen.has(node) || depth > 64)
+      throw new Error('bad page tree');
     seen.add(node);
     if (node instanceof PDFPageLeaf) {
       const contents = resolve(node.get(PDFName.of('Contents')));
@@ -134,7 +138,8 @@ export function prepareForCopy(doc: PDFDocument): void {
     const kept = annots.asArray().filter((ref) => {
       const annot = context.lookup(ref);
       if (!(annot instanceof PDFDict)) return false;
-      if (annot.get(PDFName.of('Subtype')) === PDFName.of('Link') && !isWebLink(annot, doc)) return false;
+      if (annot.get(PDFName.of('Subtype')) === PDFName.of('Link') && !isWebLink(annot, doc))
+        return false;
       annot.delete(PDFName.of('P'));
       return true;
     });

@@ -1,10 +1,5 @@
 export type PdfErrorCode =
-  | 'encrypted'
-  | 'damaged'
-  | 'not-pdf'
-  | 'timeout'
-  | 'bad-image'
-  | 'bad-input';
+  'encrypted' | 'damaged' | 'not-pdf' | 'timeout' | 'bad-image' | 'bad-input';
 
 /**
  * A failure whose message can be shown to the user as-is. Comlink passes only `name` and
@@ -21,7 +16,11 @@ export class PdfOpError extends Error {
 }
 
 /** Rejects with `onTimeout()` if `promise` hasn't settled within `ms`. */
-export async function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout: () => Error): Promise<T> {
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  onTimeout: () => Error,
+): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(onTimeout()), ms);

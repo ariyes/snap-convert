@@ -2,7 +2,15 @@ import { degrees } from 'pdf-lib';
 import type { OrganizeInput, PdfResult } from '@/core/contracts';
 import type { Progress } from './draw';
 import { PdfOpError } from './errors';
-import { baseName, copyDocumentInfo, loadPdf, newPdf, pdfName, prepareForCopy, savePdf } from './load';
+import {
+  baseName,
+  copyDocumentInfo,
+  loadPdf,
+  newPdf,
+  pdfName,
+  prepareForCopy,
+  savePdf,
+} from './load';
 import { pdfStrings } from './strings';
 import { normalizeRotation } from './transforms';
 
@@ -20,10 +28,14 @@ export async function organizePdf(input: OrganizeInput, onProgress?: Progress): 
   const used = new Set<number>();
   for (const { index, rotate } of input.pages) {
     if (!Number.isInteger(index) || index < 0 || index >= count) {
-      throw new PdfOpError('bad-input', pdfStrings.pageMissing(Number.isInteger(index) ? index + 1 : String(index), count));
+      throw new PdfOpError(
+        'bad-input',
+        pdfStrings.pageMissing(Number.isInteger(index) ? index + 1 : String(index), count),
+      );
     }
     if (used.has(index)) throw new PdfOpError('bad-input', pdfStrings.pageTwice(index + 1));
-    if (![0, 90, 180, 270].includes(rotate)) throw new PdfOpError('bad-input', pdfStrings.badRotation);
+    if (![0, 90, 180, 270].includes(rotate))
+      throw new PdfOpError('bad-input', pdfStrings.badRotation);
     used.add(index);
   }
   onProgress?.(0.1);
@@ -31,7 +43,10 @@ export async function organizePdf(input: OrganizeInput, onProgress?: Progress): 
   prepareForCopy(src);
   const out = await newPdf();
   copyDocumentInfo(src, out);
-  const pages = await out.copyPages(src, input.pages.map((p) => p.index));
+  const pages = await out.copyPages(
+    src,
+    input.pages.map((p) => p.index),
+  );
   for (const [i, page] of pages.entries()) {
     const rotate = input.pages[i]?.rotate ?? 0;
     page.setRotation(degrees(normalizeRotation(page.getRotation().angle + rotate)));

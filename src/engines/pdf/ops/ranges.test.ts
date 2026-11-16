@@ -17,9 +17,30 @@ describe('parseRanges — valid input', () => {
     ['-3', 10, [[1, 2, 3]]],
     ['- 2', 10, [[1, 2]]],
     ['-1', 10, [[1]]],
-    ['-3, 8-', 10, [[1, 2, 3], [8, 9, 10]]],
-    ['8-10, 1-2', 10, [[8, 9, 10], [1, 2]]], // order kept as written
-    ['1-3, 2-4', 10, [[1, 2, 3], [2, 3, 4]]], // overlaps allowed
+    [
+      '-3, 8-',
+      10,
+      [
+        [1, 2, 3],
+        [8, 9, 10],
+      ],
+    ],
+    [
+      '8-10, 1-2',
+      10,
+      [
+        [8, 9, 10],
+        [1, 2],
+      ],
+    ], // order kept as written
+    [
+      '1-3, 2-4',
+      10,
+      [
+        [1, 2, 3],
+        [2, 3, 4],
+      ],
+    ], // overlaps allowed
     ['5, 5', 10, [[5], [5]]],
     ['1-3,', 10, [[1, 2, 3]]], // trailing comma while typing
     [',1,,2,', 10, [[1], [2]]],
@@ -44,7 +65,11 @@ describe('parseRanges — errors shown to the user', () => {
     ['-11', 10, "Page 11 doesn't exist — this PDF has 10 pages"],
     ['2', 1, "Page 2 doesn't exist — this PDF has 1 page"],
     ['1, 3, 99', 3, "Page 99 doesn't exist — this PDF has 3 pages"],
-    ['123456789012345678901234', 5, "Page 123456789012345678901234 doesn't exist — this PDF has 5 pages"],
+    [
+      '123456789012345678901234',
+      5,
+      "Page 123456789012345678901234 doesn't exist — this PDF has 5 pages",
+    ],
     ['011', 10, "Page 11 doesn't exist — this PDF has 10 pages"],
     // reversed
     ['5-3', 10, '“5-3” is backwards — write it as 3-5'],
@@ -60,17 +85,17 @@ describe('parseRanges — errors shown to the user', () => {
     ['   ', 10, 'Enter the pages you want, like 1-3, 5, 8-10'],
     [', ,', 10, 'Enter the pages you want, like 1-3, 5, 8-10'],
     // junk
-    ['abc', 10, '“abc” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['-', 10, '“-” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['1-2-3', 10, '“1-2-3” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['1.5', 10, '“1.5” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['+2', 10, '“+2” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['1 2', 10, '“1 2” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['1;3', 10, '“1;3” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['1-3, x', 10, '“x” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['1e2', 200, '“1e2” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['0x5', 10, '“0x5” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
-    ['five', 10, '“five” isn\'t a page or range — use numbers like 1-3, 5, 8-10'],
+    ['abc', 10, "“abc” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['-', 10, "“-” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['1-2-3', 10, "“1-2-3” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['1.5', 10, "“1.5” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['+2', 10, "“+2” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['1 2', 10, "“1 2” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['1;3', 10, "“1;3” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['1-3, x', 10, "“x” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['1e2', 200, "“1e2” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['0x5', 10, "“0x5” isn't a page or range — use numbers like 1-3, 5, 8-10"],
+    ['five', 10, "“five” isn't a page or range — use numbers like 1-3, 5, 8-10"],
     // no pages at all
     ['1', 0, 'This PDF has no pages'],
   ];

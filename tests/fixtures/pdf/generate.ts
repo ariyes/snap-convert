@@ -25,7 +25,6 @@ import {
   PDFDict,
   PDFDocument,
   PDFHexString,
-  PDFName,
   PDFRawStream,
   PDFString,
   StandardFonts,
@@ -151,9 +150,15 @@ function encryptStrings(obj: PDFObject, key: Uint8Array): PDFObject {
   return obj;
 }
 
-async function encrypt(doc: PDFDocument, userPassword: string, ownerPassword: string): Promise<Uint8Array> {
+async function encrypt(
+  doc: PDFDocument,
+  userPassword: string,
+  ownerPassword: string,
+): Promise<Uint8Array> {
   // Reload without object streams so every object is a plain indirect object we can encrypt.
-  const plain = await PDFDocument.load(await doc.save({ useObjectStreams: false }), { updateMetadata: false });
+  const plain = await PDFDocument.load(await doc.save({ useObjectStreams: false }), {
+    updateMetadata: false,
+  });
   const context: PDFContext = plain.context;
 
   const id = md5(new TextEncoder().encode('snap-convert encrypted fixture'));
@@ -168,7 +173,10 @@ async function encrypt(doc: PDFDocument, userPassword: string, ownerPassword: st
   for (const [ref, obj] of context.enumerateIndirectObjects()) {
     const n = ref.objectNumber;
     const g = ref.generationNumber;
-    const objectKey = md5(fileKey, Uint8Array.of(n & 255, (n >> 8) & 255, (n >> 16) & 255, g & 255, (g >> 8) & 255)).subarray(0, 10);
+    const objectKey = md5(
+      fileKey,
+      Uint8Array.of(n & 255, (n >> 8) & 255, (n >> 16) & 255, g & 255, (g >> 8) & 255),
+    ).subarray(0, 10);
     if (obj instanceof PDFRawStream) {
       encryptStrings(obj.dict, objectKey);
       context.assign(ref, PDFRawStream.of(obj.dict, rc4(objectKey, obj.contents)));
@@ -194,7 +202,10 @@ async function encrypt(doc: PDFDocument, userPassword: string, ownerPassword: st
 // --- Write the files ---
 
 write('a4-3-pages.pdf', await (await pages(A4, 3, (n) => `A4 page ${n} of 3`)).save());
-write('letter-landscape-2-pages.pdf', await (await pages([LETTER[1], LETTER[0]], 2, (n) => `Letter landscape ${n} of 2`)).save());
+write(
+  'letter-landscape-2-pages.pdf',
+  await (await pages([LETTER[1], LETTER[0]], 2, (n) => `Letter landscape ${n} of 2`)).save(),
+);
 write('mixed-4-pages.pdf', await (await mixed()).save());
 
 const ten = await pages(A4, 10, (n) => `Page ${n}`);
@@ -208,7 +219,11 @@ write('truncated.pdf', await truncated(await ten.save({ useObjectStreams: false 
  */
 async function truncated(whole: Uint8Array): Promise<Uint8Array> {
   const text = Buffer.from(whole).toString('latin1');
-  for (let end = text.indexOf('endobj', whole.length * 0.3); end !== -1; end = text.indexOf('endobj', end + 1)) {
+  for (
+    let end = text.indexOf('endobj', whole.length * 0.3);
+    end !== -1;
+    end = text.indexOf('endobj', end + 1)
+  ) {
     const cut = whole.subarray(0, end + 'endobj\n'.length);
     try {
       const doc = await PDFDocument.load(cut, { updateMetadata: false });
@@ -220,4 +235,7 @@ async function truncated(whole: Uint8Array): Promise<Uint8Array> {
   throw new Error('No truncation point found that pdf-lib loads');
 }
 
-write('encrypted.pdf', await encrypt(await pages(A4, 1, () => 'Secret page'), 'snap', 'snap-owner'));
+write(
+  'encrypted.pdf',
+  await encrypt(await pages(A4, 1, () => 'Secret page'), 'snap', 'snap-owner'),
+);

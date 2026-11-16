@@ -17,14 +17,22 @@ export function orientedSize(stored: Size, orientation: number): Size {
 export function imageMatrix(orientation: number, box: Rect): Matrix {
   const { x, y, width: w, height: h } = box;
   switch (orientation) {
-    case 2: return [-w, 0, 0, h, x + w, y]; // mirrored left–right
-    case 3: return [-w, 0, 0, -h, x + w, y + h]; // upside down
-    case 4: return [w, 0, 0, -h, x, y + h]; // mirrored top–bottom
-    case 5: return [0, -h, -w, 0, x + w, y + h]; // mirrored, then turned
-    case 6: return [0, -h, w, 0, x, y + h]; // needs a quarter turn clockwise
-    case 7: return [0, h, w, 0, x, y]; // mirrored, then turned
-    case 8: return [0, h, -w, 0, x + w, y]; // needs a quarter turn anticlockwise
-    default: return [w, 0, 0, h, x, y];
+    case 2:
+      return [-w, 0, 0, h, x + w, y]; // mirrored left–right
+    case 3:
+      return [-w, 0, 0, -h, x + w, y + h]; // upside down
+    case 4:
+      return [w, 0, 0, -h, x, y + h]; // mirrored top–bottom
+    case 5:
+      return [0, -h, -w, 0, x + w, y + h]; // mirrored, then turned
+    case 6:
+      return [0, -h, w, 0, x, y + h]; // needs a quarter turn clockwise
+    case 7:
+      return [0, h, w, 0, x, y]; // mirrored, then turned
+    case 8:
+      return [0, h, -w, 0, x + w, y]; // needs a quarter turn anticlockwise
+    default:
+      return [w, 0, 0, h, x, y];
   }
 }
 
@@ -56,9 +64,13 @@ export function pageMatrix(
   const s = scale;
   const { width: w, height: h } = size;
   switch (rotation) {
-    case 90: return [0, -s, s, 0, x, y + s * w];
-    case 180: return [-s, 0, 0, -s, x + s * w, y + s * h];
-    case 270: return [0, s, -s, 0, x + s * h, y];
-    default: return [s, 0, 0, s, x, y];
+    case 90:
+      return [0, -s, s, 0, x, y + s * w];
+    case 180:
+      return [-s, 0, 0, -s, x + s * w, y + s * h];
+    case 270:
+      return [0, s, -s, 0, x + s * h, y];
+    default:
+      return [s, 0, 0, s, x, y];
   }
 }

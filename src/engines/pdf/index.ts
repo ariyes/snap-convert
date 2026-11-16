@@ -6,7 +6,13 @@
 // pdf-lib into the main bundle.
 export { PDF_OPS, type PdfOp } from './ops/op-names';
 export { parseRanges } from './ops/ranges';
-export { NAMED_PAGE_SIZES, MAX_PAGE_POINTS, mmToPoints, orientPage, pageSizePoints } from './ops/page-size';
+export {
+  NAMED_PAGE_SIZES,
+  MAX_PAGE_POINTS,
+  mmToPoints,
+  orientPage,
+  pageSizePoints,
+} from './ops/page-size';
 export { PdfOpError, type PdfErrorCode } from './ops/errors';
 export { pdfStrings } from './ops/strings';
 

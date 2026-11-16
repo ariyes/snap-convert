@@ -22,7 +22,10 @@ import { drawXObject, type Progress } from './draw';
  * - Other sizes: `orientation: 'auto'` makes each page portrait or landscape to match its image.
  *   Images are scaled up or down to fill the space inside the margins.
  */
-export async function imagesToPdf(input: ImagesToPdfInput, onProgress?: Progress): Promise<PdfResult> {
+export async function imagesToPdf(
+  input: ImagesToPdfInput,
+  onProgress?: Progress,
+): Promise<PdfResult> {
   if (input.images.length === 0) throw new PdfOpError('bad-input', pdfStrings.noImages);
   if (!Number.isFinite(input.marginMm) || input.marginMm < 0) {
     throw new PdfOpError('bad-input', pdfStrings.badMargin);
@@ -45,12 +48,19 @@ export async function imagesToPdf(input: ImagesToPdfInput, onProgress?: Progress
       const limit = MAX_PAGE_POINTS - 2 * margin;
       if (limit < 1) throw new PdfOpError('bad-input', pdfStrings.marginTooLarge);
       placement = fitInBox(shown, { width: limit, height: limit }, false);
-      pageSize = { width: placement.target.width + 2 * margin, height: placement.target.height + 2 * margin };
+      pageSize = {
+        width: placement.target.width + 2 * margin,
+        height: placement.target.height + 2 * margin,
+      };
       placement = fitInBox(shown, contentBox(pageSize, margin), false);
     }
 
     const page: PDFPage = doc.addPage([pageSize.width, pageSize.height]);
-    const box = { ...placement.target, x: placement.target.x + margin, y: placement.target.y + margin };
+    const box = {
+      ...placement.target,
+      x: placement.target.x + margin,
+      y: placement.target.y + margin,
+    };
     drawXObject(page, 'Image', embedded.ref, imageMatrix(orientation, box));
     onProgress?.((i + 1) / (input.images.length + 1));
   }
