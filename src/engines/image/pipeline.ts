@@ -16,7 +16,7 @@ import type { ExactOptions, Placement, Rect, ResizeOptions, Size } from '@/core/
 import { exactPlacement, fitSize } from '@/core/sizing';
 import type { Attempt } from '@/engines/optimize/attempt';
 import { GUARD, guardQuality } from '@/engines/optimize/guard';
-import { findQualityForTarget, sizeForTarget } from '@/engines/optimize/target';
+import { findQualityForTarget, sizeForTarget, TARGET_SEARCH } from '@/engines/optimize/target';
 import { decodeImage } from './decode';
 import {
   clampQuality,
@@ -107,9 +107,14 @@ export async function processImage(
 
   const targetBytes = validTarget(input.targetBytes);
   const guardOn = targetBytes === undefined && (input.qualityGuard ?? quality === DEFAULT_QUALITY);
-  const budget = targetBytes !== undefined ? 7 : guardOn ? guardBudget(quality) : 1;
+  const budget =
+    targetBytes !== undefined ? TARGET_SEARCH.maxEncodes : guardOn ? guardBudget(quality) : 1;
+  // Never reaches the end of the encode span early (the guard's last-resort steps can exceed it).
   const encodeProgress = (done: number) =>
-    report(PROGRESS.resized + ((PROGRESS.encoded - PROGRESS.resized) * done) / budget);
+    report(
+      PROGRESS.resized +
+        ((PROGRESS.encoded - PROGRESS.resized) * Math.min(done, budget - 0.5)) / budget,
+    );
 
   const { format, attempt: first } = await encoder.firstAttempt(chosen.format, quality, notes);
   encodeProgress(1);
