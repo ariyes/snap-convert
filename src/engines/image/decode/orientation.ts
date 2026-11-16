@@ -41,7 +41,10 @@ export function orientPixels(img: ImageData, orientation: number): ImageData {
 }
 
 /** Applies HEIF/AVIF container transforms (irot / imir) in order. Used when we decode AVIF ourselves. */
-export function applyIsoTransforms(img: ImageData, transforms: readonly IsoTransform[] | undefined): ImageData {
+export function applyIsoTransforms(
+  img: ImageData,
+  transforms: readonly IsoTransform[] | undefined,
+): ImageData {
   let out = img;
   for (const t of transforms ?? []) {
     if ('rotate' in t) {
@@ -58,10 +61,32 @@ export function applyIsoTransforms(img: ImageData, transforms: readonly IsoTrans
 
 /** Smallest valid big-endian TIFF/EXIF block with Orientation = 6 (rotate 90° clockwise). */
 const ORIENTATION_6_EXIF = new Uint8Array([
-  0x4d, 0x4d, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x08, // header, IFD0 at 8
-  0x00, 0x01, // one entry
-  0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x06, 0x00, 0x00, // Orientation SHORT 6
-  0x00, 0x00, 0x00, 0x00, // no next IFD
+  0x4d,
+  0x4d,
+  0x00,
+  0x2a,
+  0x00,
+  0x00,
+  0x00,
+  0x08, // header, IFD0 at 8
+  0x00,
+  0x01, // one entry
+  0x01,
+  0x12,
+  0x00,
+  0x03,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x06,
+  0x00,
+  0x00, // Orientation SHORT 6
+  0x00,
+  0x00,
+  0x00,
+  0x00, // no next IFD
 ]);
 
 type ProbeFormat = 'jpeg' | 'png' | 'webp';
@@ -92,9 +117,12 @@ async function runProbe(format: ProbeFormat): Promise<boolean | undefined> {
   const encoded = await canvas.convertToBlob({ type: `image/${format}` });
   if (encoded.type !== `image/${format}`) return undefined; // this browser can't encode it (e.g. WebP in Safari)
   const plain = new Uint8Array(await encoded.arrayBuffer());
-  const tagged = format === 'jpeg' ? tagJpeg(plain) : format === 'png' ? tagPng(plain) : tagWebp(plain);
+  const tagged =
+    format === 'jpeg' ? tagJpeg(plain) : format === 'png' ? tagPng(plain) : tagWebp(plain);
   if (!tagged) return undefined;
-  const bitmap = await createImageBitmap(new Blob([tagged as Uint8Array<ArrayBuffer>]), { imageOrientation: 'from-image' });
+  const bitmap = await createImageBitmap(new Blob([tagged as Uint8Array<ArrayBuffer>]), {
+    imageOrientation: 'from-image',
+  });
   const rotated = bitmap.width === 1 && bitmap.height === 2;
   bitmap.close();
   return rotated;
@@ -105,12 +133,21 @@ function tagJpeg(jpeg: Uint8Array): Uint8Array {
   payload.set([0x45, 0x78, 0x69, 0x66, 0, 0]); // "Exif\0\0"
   payload.set(ORIENTATION_6_EXIF, 6);
   const len = payload.length + 2;
-  return join(jpeg.subarray(0, 2), new Uint8Array([0xff, 0xe1, len >> 8, len & 0xff]), payload, jpeg.subarray(2));
+  return join(
+    jpeg.subarray(0, 2),
+    new Uint8Array([0xff, 0xe1, len >> 8, len & 0xff]),
+    payload,
+    jpeg.subarray(2),
+  );
 }
 
 function tagPng(png: Uint8Array): Uint8Array {
   const ihdrEnd = 8 + 12 + 13;
-  return join(png.subarray(0, ihdrEnd), pngChunk('eXIf', ORIENTATION_6_EXIF), png.subarray(ihdrEnd));
+  return join(
+    png.subarray(0, ihdrEnd),
+    pngChunk('eXIf', ORIENTATION_6_EXIF),
+    png.subarray(ihdrEnd),
+  );
 }
 
 function tagWebp(webp: Uint8Array): Uint8Array | undefined {

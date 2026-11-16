@@ -6,7 +6,19 @@ const ascii = (s: string) => Array.from(s, (c) => c.charCodeAt(0));
 
 function ftyp(major: string, ...compatible: string[]): Uint8Array {
   const size = 16 + 4 * compatible.length;
-  return new Uint8Array([0, 0, 0, size, ...ascii('ftyp'), ...ascii(major), 0, 0, 0, 0, ...compatible.flatMap(ascii)]);
+  return new Uint8Array([
+    0,
+    0,
+    0,
+    size,
+    ...ascii('ftyp'),
+    ...ascii(major),
+    0,
+    0,
+    0,
+    0,
+    ...compatible.flatMap(ascii),
+  ]);
 }
 
 describe('sniffFormat', () => {
@@ -16,7 +28,18 @@ describe('sniffFormat', () => {
     [ascii('GIF89a'), 'gif'],
     [ascii('GIF87a'), 'gif'],
     [[...ascii('RIFF'), 0, 0, 0, 0, ...ascii('WEBP')], 'webp'],
-    [[...ascii('BM'), ...new Array<number>(12).fill(0), 40, 0, 0, 0, ...new Array<number>(10).fill(0)], 'bmp'],
+    [
+      [
+        ...ascii('BM'),
+        ...new Array<number>(12).fill(0),
+        40,
+        0,
+        0,
+        0,
+        ...new Array<number>(10).fill(0),
+      ],
+      'bmp',
+    ],
     [ascii('hello world'), 'unknown'],
     [[...ascii('RIFF'), 0, 0, 0, 0, ...ascii('WAVE')], 'unknown'],
   ] as const)('%j → %s', (bytes, format) => {
@@ -39,7 +62,15 @@ describe('readContainer', () => {
       return [0xff, 0xe2, 0, body.length + 2, ...body];
     };
     const sof = [0xff, 0xc0, 0, 11, 8, 0, 30, 0, 40, 1, 1, 0x11, 0];
-    const jpeg = new Uint8Array([0xff, 0xd8, ...app2(2, [3, 4]), ...app2(1, [1, 2]), ...sof, 0xff, 0xda]);
+    const jpeg = new Uint8Array([
+      0xff,
+      0xd8,
+      ...app2(2, [3, 4]),
+      ...app2(1, [1, 2]),
+      ...sof,
+      0xff,
+      0xda,
+    ]);
     const info = await readContainer(jpeg);
     expect(info).toMatchObject({ format: 'jpeg', width: 40, height: 30 });
     expect(Array.from(info.icc ?? [])).toEqual([1, 2, 3, 4]);
@@ -50,9 +81,25 @@ describe('readContainer', () => {
     const vp8l = [0x2f, bits & 0xff, (bits >> 8) & 0xff, (bits >> 16) & 0xff, (bits >>> 24) & 0xff];
     const exif = [...ascii('Exif'), 0, 0, ...ascii('MM'), 0, 42, 0, 0, 0, 8];
     const webp = new Uint8Array([
-      ...ascii('RIFF'), 0, 0, 0, 0, ...ascii('WEBP'),
-      ...ascii('VP8L'), vp8l.length, 0, 0, 0, ...vp8l, 0, // padded to even
-      ...ascii('EXIF'), exif.length, 0, 0, 0, ...exif,
+      ...ascii('RIFF'),
+      0,
+      0,
+      0,
+      0,
+      ...ascii('WEBP'),
+      ...ascii('VP8L'),
+      vp8l.length,
+      0,
+      0,
+      0,
+      ...vp8l,
+      0, // padded to even
+      ...ascii('EXIF'),
+      exif.length,
+      0,
+      0,
+      0,
+      ...exif,
     ]);
     const info = await readContainer(webp);
     expect(info).toMatchObject({ format: 'webp', width: 300, height: 200 });

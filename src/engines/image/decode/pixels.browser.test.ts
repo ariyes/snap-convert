@@ -21,22 +21,87 @@ describe('orientPixels', () => {
   // Stored:  1 2 3
   //          4 5 6
   it.each([
-    [1, [[1, 2, 3], [4, 5, 6]]],
-    [2, [[3, 2, 1], [6, 5, 4]]], // mirrored left-right
-    [3, [[6, 5, 4], [3, 2, 1]]], // rotated 180°
-    [4, [[4, 5, 6], [1, 2, 3]]], // mirrored top-bottom
-    [5, [[1, 4], [2, 5], [3, 6]]], // transposed
-    [6, [[4, 1], [5, 2], [6, 3]]], // rotated 90° clockwise
-    [7, [[6, 3], [5, 2], [4, 1]]], // transverse
-    [8, [[3, 6], [2, 5], [1, 4]]], // rotated 90° anti-clockwise
+    [
+      1,
+      [
+        [1, 2, 3],
+        [4, 5, 6],
+      ],
+    ],
+    [
+      2,
+      [
+        [3, 2, 1],
+        [6, 5, 4],
+      ],
+    ], // mirrored left-right
+    [
+      3,
+      [
+        [6, 5, 4],
+        [3, 2, 1],
+      ],
+    ], // rotated 180°
+    [
+      4,
+      [
+        [4, 5, 6],
+        [1, 2, 3],
+      ],
+    ], // mirrored top-bottom
+    [
+      5,
+      [
+        [1, 4],
+        [2, 5],
+        [3, 6],
+      ],
+    ], // transposed
+    [
+      6,
+      [
+        [4, 1],
+        [5, 2],
+        [6, 3],
+      ],
+    ], // rotated 90° clockwise
+    [
+      7,
+      [
+        [6, 3],
+        [5, 2],
+        [4, 1],
+      ],
+    ], // transverse
+    [
+      8,
+      [
+        [3, 6],
+        [2, 5],
+        [1, 4],
+      ],
+    ], // rotated 90° anti-clockwise
   ])('orientation %i', (orientation, expected) => {
     expect(reds(orientPixels(numbered(), orientation))).toEqual(expected);
   });
 
   it('applies HEIF irot (anti-clockwise) and imir', () => {
-    expect(reds(applyIsoTransforms(numbered(), [{ rotate: 90 }]))).toEqual([[3, 6], [2, 5], [1, 4]]);
-    expect(reds(applyIsoTransforms(numbered(), [{ mirror: 'vertical-axis' }]))).toEqual([[3, 2, 1], [6, 5, 4]]);
-    expect(reds(applyIsoTransforms(numbered(), [{ rotate: 270 }, { mirror: 'horizontal-axis' }]))).toEqual([[6, 3], [5, 2], [4, 1]]);
+    expect(reds(applyIsoTransforms(numbered(), [{ rotate: 90 }]))).toEqual([
+      [3, 6],
+      [2, 5],
+      [1, 4],
+    ]);
+    expect(reds(applyIsoTransforms(numbered(), [{ mirror: 'vertical-axis' }]))).toEqual([
+      [3, 2, 1],
+      [6, 5, 4],
+    ]);
+    expect(
+      reds(applyIsoTransforms(numbered(), [{ rotate: 270 }, { mirror: 'horizontal-axis' }])),
+    ).toEqual([
+      [6, 3],
+      [5, 2],
+      [4, 1],
+    ]);
   });
 });
 

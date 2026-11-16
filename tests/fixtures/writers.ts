@@ -167,7 +167,12 @@ export function writeBmp(img: ImageData): Uint8Array {
  * GIF with one frame per palette-index array (all frames full size). Uses 8-bit LZW codes with a
  * clear code every 100 pixels, so no dictionary is needed — valid, just not compressed much.
  */
-export function writeGif(width: number, height: number, palette: Array<[number, number, number]>, frames: Uint8Array[]): Uint8Array {
+export function writeGif(
+  width: number,
+  height: number,
+  palette: Array<[number, number, number]>,
+  frames: Uint8Array[],
+): Uint8Array {
   const bytes: number[] = [];
   const u16 = (v: number) => bytes.push(v & 0xff, v >> 8);
   for (const c of 'GIF89a') bytes.push(c.charCodeAt(0));

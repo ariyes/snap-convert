@@ -28,10 +28,17 @@ const NO_SHARPENING: Sharpening = { unsharpAmount: 0, unsharpRadius: 0, unsharpT
  */
 export function sharpeningFor(ratio: number): Sharpening {
   if (!(ratio >= SHARPEN_FROM_RATIO)) return NO_SHARPENING;
-  const t = Math.min(1, Math.log(ratio / SHARPEN_FROM_RATIO) / Math.log(SHARPEN_FULL_RATIO / SHARPEN_FROM_RATIO));
+  const t = Math.min(
+    1,
+    Math.log(ratio / SHARPEN_FROM_RATIO) / Math.log(SHARPEN_FULL_RATIO / SHARPEN_FROM_RATIO),
+  );
   const amount = Math.round(SHARPEN_MAX.amount * t);
   if (amount === 0) return NO_SHARPENING;
-  return { unsharpAmount: amount, unsharpRadius: SHARPEN_MAX.radius, unsharpThreshold: SHARPEN_MAX.threshold };
+  return {
+    unsharpAmount: amount,
+    unsharpRadius: SHARPEN_MAX.radius,
+    unsharpThreshold: SHARPEN_MAX.threshold,
+  };
 }
 
 let picaInstance: Promise<Pica> | undefined;
@@ -65,7 +72,11 @@ export const resizePixels: ResizePixels = async (img, to) => {
 };
 
 /** Lanczos3 resize with explicit sharpening settings (resizePixels picks them from the ratio). */
-export async function resizeWithSharpening(img: ImageData, to: Size, sharpening: Sharpening): Promise<ImageData> {
+export async function resizeWithSharpening(
+  img: ImageData,
+  to: Size,
+  sharpening: Sharpening,
+): Promise<ImageData> {
   assertSize(to.width, to.height);
   const pica = await getPica();
   // pica's WebAssembly path reads the whole underlying buffer, so hand it an exact-size one.

@@ -3,10 +3,16 @@
 
 import type { DecodeImage, DecodedImage } from '@/core/contracts/image';
 import type { Size } from '@/core/contracts/sizing';
+import { fitSize } from '@/core/sizing';
 import { applyColorTransform, iccToSrgb, nclxToSrgb } from './color';
 import { readContainer, type ContainerInfo, type SniffedFormat } from './container';
 import { readMetadata } from './metadata';
-import { applyIsoTransforms, browserAppliesOrientation, orientPixels, swapsAxes } from './orientation';
+import {
+  applyIsoTransforms,
+  browserAppliesOrientation,
+  orientPixels,
+  swapsAxes,
+} from './orientation';
 import { decodeStrings } from './strings';
 
 export type DecodeErrorCode = 'unsupported' | 'heic-unsupported' | 'too-large';
@@ -28,7 +34,10 @@ export interface DecodeLimits {
   reduceAbovePixels: number;
 }
 
-export const DECODE_LIMITS: DecodeLimits = { maxPixels: 16384 * 16384, reduceAbovePixels: 50_000_000 };
+export const DECODE_LIMITS: DecodeLimits = {
+  maxPixels: 16384 * 16384,
+  reduceAbovePixels: 50_000_000,
+};
 
 export interface DecodeOptions {
   limits?: DecodeLimits;
@@ -46,7 +55,11 @@ const REDUCED_DECODE_FACTOR = 2;
 /** Decodes a JPEG, PNG, WebP, AVIF, GIF (first frame), BMP or HEIC/HEIF file. Throws {@link DecodeError}. */
 export const decodeImage: DecodeImage = (file, hint) => decodeImageWith(file, hint);
 
-export async function decodeImageWith(file: Blob, hint?: Hint, options: DecodeOptions = {}): Promise<DecodedImage> {
+export async function decodeImageWith(
+  file: Blob,
+  hint?: Hint,
+  options: DecodeOptions = {},
+): Promise<DecodedImage> {
   const limits = options.limits ?? DECODE_LIMITS;
   const bytes = new Uint8Array(await file.arrayBuffer());
   const info = await readContainer(bytes);
@@ -121,10 +134,14 @@ async function decodeWithBrowser(
   limits: DecodeLimits,
 ): Promise<{ pixels: ImageData; reducedFrom?: Size } | undefined> {
   const exifFormat = usesExifOrientation(info.format) ? info.format : undefined;
-  const rotates = orientation !== 1 && exifFormat !== undefined ? await predictBrowserOrientation(exifFormat) : false;
-  let reduce = exifFormat || info.format === 'gif' || info.format === 'bmp'
-    ? reducedSize(info, orientation, rotates, hint, limits)
-    : undefined;
+  const rotates =
+    orientation !== 1 && exifFormat !== undefined
+      ? await predictBrowserOrientation(exifFormat)
+      : false;
+  let reduce =
+    exifFormat || info.format === 'gif' || info.format === 'bmp'
+      ? reducedSize(info, orientation, rotates, hint, limits)
+      : undefined;
 
   let bitmap: ImageBitmap;
   try {
@@ -161,7 +178,9 @@ async function decodeWithBrowser(
   if (orientation !== 1 && !applied) pixels = orientPixels(pixels, orientation);
 
   if (!reduce || !sw || !sh) return { pixels };
-  const reducedFrom = swapsAxes(orientation) ? { width: sh, height: sw } : { width: sw, height: sh };
+  const reducedFrom = swapsAxes(orientation)
+    ? { width: sh, height: sw }
+    : { width: sw, height: sh };
   return { pixels, reducedFrom };
 }
 
@@ -178,7 +197,7 @@ function bitmapOptions(resize: Size | undefined): ImageBitmapOptions {
 /**
  * For a huge image with a known final size: the size (in the bitmap's own orientation) to decode at.
  * At least {@link REDUCED_DECODE_FACTOR}× the final longest side, never below it, and only ever smaller
- * than the original. Same aspect ratio as the original (this is an intermediate, not an output size).
+ * than the original. Computed by the sizing rule, so the aspect ratio is kept.
  */
 function reducedSize(
   info: ContainerInfo,
@@ -189,15 +208,17 @@ function reducedSize(
 ): Size | undefined {
   const minLongest = hint?.minLongestSide;
   const { width: sw, height: sh } = info;
-  if (!minLongest || !(minLongest > 0) || !sw || !sh || sw * sh <= limits.reduceAbovePixels) return undefined;
+  if (!minLongest || !(minLongest > 0) || !sw || !sh || sw * sh <= limits.reduceAbovePixels)
+    return undefined;
   const longest = Math.max(sw, sh);
   const target = Math.ceil(minLongest * REDUCED_DECODE_FACTOR);
   if (target >= longest) return undefined;
-  const scale = target / longest;
-  const [bw, bh] = browserRotates && swapsAxes(orientation) ? [sh, sw] : [sw, sh];
-  const size = { width: Math.max(1, Math.round(bw * scale)), height: Math.max(1, Math.round(bh * scale)) };
-  // Rounding must not take the longest side below the hint.
-  return Math.max(size.width, size.height) >= minLongest ? size : undefined;
+  const bitmapSpace =
+    browserRotates && swapsAxes(orientation)
+      ? { width: sh, height: sw }
+      : { width: sw, height: sh };
+  const { width, height } = fitSize(bitmapSpace, { mode: 'longest', value: target });
+  return { width, height };
 }
 
 function bitmapPixels(bitmap: ImageBitmap): ImageData {
@@ -209,7 +230,10 @@ function bitmapPixels(bitmap: ImageBitmap): ImageData {
     return ctx.getImageData(0, 0, bitmap.width, bitmap.height, { colorSpace: 'srgb' });
   } catch {
     // The browser couldn't allocate a canvas this big (common on phones).
-    throw new DecodeError('too-large', decodeStrings.tooLarge(Math.round((bitmap.width * bitmap.height) / 1_000_000)));
+    throw new DecodeError(
+      'too-large',
+      decodeStrings.tooLarge(Math.round((bitmap.width * bitmap.height) / 1_000_000)),
+    );
   } finally {
     canvas.width = 0;
     canvas.height = 0;

@@ -7,13 +7,22 @@ import encodeAvif from '@jsquash/avif/encode.js';
 import { describe, it } from 'vitest';
 import { commands } from 'vitest/browser';
 import { orientPixels } from '@/engines/image/decode/orientation';
-import { QUADRANT_COLOURS, TAG, jpegWithExif, writeBmp, writeExif, writeGif, type ExifSpec } from './writers';
+import {
+  QUADRANT_COLOURS,
+  TAG,
+  jpegWithExif,
+  writeBmp,
+  writeExif,
+  writeGif,
+  type ExifSpec,
+} from './writers';
 
 const enabled = import.meta.env.VITE_WRITE_FIXTURES === '1';
 
 function toBase64(bytes: Uint8Array): string {
   let s = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(s);
 }
 
@@ -31,7 +40,11 @@ async function encode(img: ImageData, type: string, quality?: number): Promise<U
   return new Uint8Array(await blob.arrayBuffer());
 }
 
-function draw(width: number, height: number, paint: (ctx: OffscreenCanvasRenderingContext2D) => void): ImageData {
+function draw(
+  width: number,
+  height: number,
+  paint: (ctx: OffscreenCanvasRenderingContext2D) => void,
+): ImageData {
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('no context');
@@ -82,12 +95,29 @@ async function writeImages(): Promise<void> {
     ifd0: { ...camera, [TAG.Orientation]: { type: 'short', value: 1 } },
     gps: {
       [TAG.GPSLatitudeRef]: { type: 'ascii', value: 'N' },
-      [TAG.GPSLatitude]: { type: 'rational', value: [[51, 1], [30, 1], [0, 1]] },
+      [TAG.GPSLatitude]: {
+        type: 'rational',
+        value: [
+          [51, 1],
+          [30, 1],
+          [0, 1],
+        ],
+      },
       [TAG.GPSLongitudeRef]: { type: 'ascii', value: 'W' },
-      [TAG.GPSLongitude]: { type: 'rational', value: [[0, 1], [7, 1], [0, 1]] },
+      [TAG.GPSLongitude]: {
+        type: 'rational',
+        value: [
+          [0, 1],
+          [7, 1],
+          [0, 1],
+        ],
+      },
     },
   });
-  await save('tests/fixtures/images/gps.jpg', jpegWithExif(await encode(upright, 'image/jpeg', 0.95), gpsExif));
+  await save(
+    'tests/fixtures/images/gps.jpg',
+    jpegWithExif(await encode(upright, 'image/jpeg', 0.95), gpsExif),
+  );
   await save('tests/fixtures/images/no-exif.jpg', await encode(upright, 'image/jpeg', 0.95));
 
   // PNG with alpha: transparent left third, half-transparent middle, opaque right.
@@ -99,7 +129,10 @@ async function writeImages(): Promise<void> {
   });
   await save('tests/fixtures/images/alpha.png', await encode(alpha, 'image/png'));
   await save('tests/fixtures/images/opaque.png', await encode(quadrants(90, 60), 'image/png'));
-  await save('tests/fixtures/images/sample.webp', await encode(quadrants(80, 60), 'image/webp', 0.9));
+  await save(
+    'tests/fixtures/images/sample.webp',
+    await encode(quadrants(80, 60), 'image/webp', 0.9),
+  );
 
   const avif = await encodeAvif(quadrants(80, 60), { quality: 80 });
   await save('tests/fixtures/images/sample.avif', new Uint8Array(avif));
@@ -121,7 +154,10 @@ async function writeImages(): Promise<void> {
     const y = Math.floor(i / gw);
     return (y < gh / 2 ? 0 : 2) + (x < gw / 2 ? 0 : 1);
   });
-  await save('tests/fixtures/images/sample.gif', writeGif(gw, gh, palette, [first, new Uint8Array(gw * gh).fill(4)]));
+  await save(
+    'tests/fixtures/images/sample.gif',
+    writeGif(gw, gh, palette, [first, new Uint8Array(gw * gh).fill(4)]),
+  );
 }
 
 // ---------- Reference quality set (synthetic members) ----------
@@ -141,7 +177,8 @@ function skyGradient(): ImageData {
       const glow = Math.exp(-(dx * dx + dy * dy) * 6) * 30;
       const i = (y * w + x) * 4;
       for (let c = 0; c < 3; c++) {
-        const v = (top[c] ?? 0) + ((bottom[c] ?? 0) - (top[c] ?? 0)) * t + glow * (c === 2 ? 0.2 : 1);
+        const v =
+          (top[c] ?? 0) + ((bottom[c] ?? 0) - (top[c] ?? 0)) * t + glow * (c === 2 ? 0.2 : 1);
         img.data[i + c] = Math.round(Math.min(255, v));
       }
       img.data[i + 3] = 255;
@@ -169,12 +206,20 @@ function textScreenshot(): ImageData {
     for (const size of sizes) {
       ctx.fillStyle = '#111827';
       ctx.font = `${size}px Arial, sans-serif`;
-      ctx.fillText(`${size}px: The quick brown fox jumps over the lazy dog 0123456789 ÄÖÜ €@&%`, 70, y);
+      ctx.fillText(
+        `${size}px: The quick brown fox jumps over the lazy dog 0123456789 ÄÖÜ €@&%`,
+        70,
+        y,
+      );
       y += size * 2.4;
     }
     ctx.fillStyle = '#2563eb';
     ctx.font = '16px Georgia, serif';
-    ctx.fillText('Serif link text: https://example.com/a/long/path?with=query&and=more', 70, y + 10);
+    ctx.fillText(
+      'Serif link text: https://example.com/a/long/path?with=query&and=more',
+      70,
+      y + 10,
+    );
     ctx.fillStyle = '#b91c1c';
     ctx.font = 'bold 14px Consolas, monospace';
     ctx.fillText('error: const value = image.width * scale; // monospace code', 70, y + 50);
@@ -246,7 +291,7 @@ function lineArt(): ImageData {
   };
   for (let y = 1100; y < 1300; y++) {
     for (let x = 1000; x < 1400; x++) put(x, y, x % 2 ? 0 : 255);
-    for (let x = 1500; x < 1900; x++) put(x, y, (x % 3) === 0 ? 0 : 255);
+    for (let x = 1500; x < 1900; x++) put(x, y, x % 3 === 0 ? 0 : 255);
   }
   const cx = 1450;
   const cy = 1650;
@@ -263,7 +308,10 @@ function lineArt(): ImageData {
 
 async function writeQualitySet(): Promise<void> {
   await save('tests/fixtures/quality/sky-gradient.png', await encode(skyGradient(), 'image/png'));
-  await save('tests/fixtures/quality/text-screenshot.png', await encode(textScreenshot(), 'image/png'));
+  await save(
+    'tests/fixtures/quality/text-screenshot.png',
+    await encode(textScreenshot(), 'image/png'),
+  );
   await save('tests/fixtures/quality/line-art-logo.png', await encode(lineArt(), 'image/png'));
 }
 

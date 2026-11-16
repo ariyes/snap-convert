@@ -21,7 +21,11 @@ const linearToSrgb: Curve = (v) => (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1
 
 function mulVec(m: Mat3, v: Vec3): Vec3 {
   const [[a, b, c], [d, e, f], [g, h, i]] = m;
-  return [a * v[0] + b * v[1] + c * v[2], d * v[0] + e * v[1] + f * v[2], g * v[0] + h * v[1] + i * v[2]];
+  return [
+    a * v[0] + b * v[1] + c * v[2],
+    d * v[0] + e * v[1] + f * v[2],
+    g * v[0] + h * v[1] + i * v[2],
+  ];
 }
 
 function transpose(m: Mat3): Mat3 {
@@ -53,7 +57,12 @@ function invert(m: Mat3): Mat3 {
 }
 
 /** RGB → XYZ matrix from xy chromaticities of the primaries and the white point. */
-function rgbToXyz(r: [number, number], g: [number, number], b: [number, number], w: [number, number]): Mat3 {
+function rgbToXyz(
+  r: [number, number],
+  g: [number, number],
+  b: [number, number],
+  w: [number, number],
+): Mat3 {
   const xyz = ([x, y]: [number, number]): Vec3 => [x / y, 1, (1 - x - y) / y];
   const prim = transpose([xyz(r), xyz(g), xyz(b)]); // primaries as columns
   const [sr, sg, sb] = mulVec(invert(prim), xyz(w)); // scale so that RGB 1,1,1 is the white point
@@ -170,14 +179,21 @@ export function nclxToSrgb(nclx: Nclx): ColorTransform | undefined {
   const sdr = [1, 6, 13, 14, 15].includes(nclx.transfer) || nclx.transfer === 2; // 2 = unspecified
   if (!sdr) return undefined;
   let source: Mat3 | undefined;
-  if (nclx.primaries === 12) source = rgbToXyz([0.68, 0.32], [0.265, 0.69], [0.15, 0.06], D65); // Display P3
-  else if (nclx.primaries === 9) source = rgbToXyz([0.708, 0.292], [0.17, 0.797], [0.131, 0.046], D65); // BT.2020
+  if (nclx.primaries === 12)
+    source = rgbToXyz([0.68, 0.32], [0.265, 0.69], [0.15, 0.06], D65); // Display P3
+  else if (nclx.primaries === 9)
+    source = rgbToXyz([0.708, 0.292], [0.17, 0.797], [0.131, 0.046], D65); // BT.2020
   if (!source) return undefined; // BT.709 / sRGB / unspecified: already right
-  return { curves: [srgbToLinear, srgbToLinear, srgbToLinear], matrix: mul(invert(SRGB_D65), source) };
+  return {
+    curves: [srgbToLinear, srgbToLinear, srgbToLinear],
+    matrix: mul(invert(SRGB_D65), source),
+  };
 }
 
 function isIdentity(t: ColorTransform): boolean {
-  const close = t.matrix.every((row, i) => row.every((v, j) => Math.abs(v - (i === j ? 1 : 0)) < 0.002));
+  const close = t.matrix.every((row, i) =>
+    row.every((v, j) => Math.abs(v - (i === j ? 1 : 0)) < 0.002),
+  );
   if (!close) return false;
   for (let i = 0; i <= 16; i++) {
     const x = i / 16;
@@ -198,13 +214,15 @@ export function applyColorTransform(img: ImageData, t: ColorTransform): void {
   }) as [Float32Array, Float32Array, Float32Array];
   if (!encodeLut) {
     encodeLut = new Uint8Array(ENCODE_STEPS + 1);
-    for (let i = 0; i <= ENCODE_STEPS; i++) encodeLut[i] = Math.round(linearToSrgb(i / ENCODE_STEPS) * 255);
+    for (let i = 0; i <= ENCODE_STEPS; i++)
+      encodeLut[i] = Math.round(linearToSrgb(i / ENCODE_STEPS) * 255);
   }
   const enc = encodeLut;
   const [[m00, m01, m02], [m10, m11, m12], [m20, m21, m22]] = t.matrix;
   const [dr, dg, db] = decode;
   const d = img.data;
-  const toIndex = (v: number) => (v <= 0 ? 0 : v >= 1 ? ENCODE_STEPS : (v * ENCODE_STEPS + 0.5) | 0);
+  const toIndex = (v: number) =>
+    v <= 0 ? 0 : v >= 1 ? ENCODE_STEPS : (v * ENCODE_STEPS + 0.5) | 0;
   for (let i = 0; i < d.length; i += 4) {
     const r = dr[d[i] ?? 0] ?? 0;
     const g = dg[d[i + 1] ?? 0] ?? 0;

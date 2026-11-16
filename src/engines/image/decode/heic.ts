@@ -1,17 +1,40 @@
 // HEIC / HEIF decoding with libheif-js, loaded only when a HEIC file needs it
-// (about 2 MB of WebAssembly that must never be in the startup bundle).
+// (90 KB of JavaScript plus a 1.4 MB WebAssembly file that must never be in the startup bundle).
+// The .wasm is our own static asset (same origin; no user data is sent), fetched and handed to
+// libheif as bytes. We use this build rather than libheif-js's 2 MB "bundle" (WebAssembly inlined
+// as base64 text): smaller download, and loading that bundle stalled other work in the page.
 
-import type { LibHeif } from 'libheif-js/libheif-wasm/libheif-bundle.mjs';
+import type { LibHeif } from 'libheif-js/libheif-wasm/libheif.js';
+import wasmUrl from 'libheif-js/libheif-wasm/libheif.wasm?url';
 
 let lib: Promise<LibHeif> | undefined;
 
-function loadLibheif(): Promise<LibHeif> {
-  lib ??= import('libheif-js/libheif-wasm/libheif-bundle.mjs')
-    .then((m) => m.default())
-    .catch((error: unknown) => {
-      lib = undefined; // allow a retry, e.g. after a failed chunk download
-      throw error;
+async function createLibheif(): Promise<LibHeif> {
+  const [{ default: factory }, response] = await Promise.all([
+    import('libheif-js/libheif-wasm/libheif.js'),
+    fetch(wasmUrl),
+  ]);
+  if (!response.ok) throw new Error(`libheif.wasm: HTTP ${response.status}`);
+  const wasmBinary = await response.arrayBuffer();
+  return new Promise<LibHeif>((resolve, reject) => {
+    let module: LibHeif | undefined = undefined;
+    module = factory({
+      wasmBinary,
+      // May run inside factory() before `module` is assigned, so resolve on the next microtask.
+      onRuntimeInitialized: () =>
+        queueMicrotask(() =>
+          module ? resolve(module) : reject(new Error('libheif failed to start')),
+        ),
+      onAbort: (reason) => reject(new Error(String(reason))),
     });
+  });
+}
+
+function loadLibheif(): Promise<LibHeif> {
+  lib ??= createLibheif().catch((error: unknown) => {
+    lib = undefined; // allow a retry, e.g. after a failed chunk download
+    throw error;
+  });
   return lib;
 }
 

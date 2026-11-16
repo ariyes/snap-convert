@@ -8,6 +8,10 @@ export async function decodeAvif(bytes: Uint8Array): Promise<ImageData | undefin
   const result = await decode(copy);
   if (!result) return undefined;
   if (result instanceof ImageData) return result;
-  const { data, width, height } = result as { data: Uint8ClampedArray; width: number; height: number };
+  const { data, width, height } = result as {
+    data: Uint8ClampedArray;
+    width: number;
+    height: number;
+  };
   return new ImageData(new Uint8ClampedArray(data), width, height);
 }

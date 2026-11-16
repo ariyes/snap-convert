@@ -16,7 +16,10 @@ function text(v: unknown): string | undefined {
 }
 
 /** "Canon" + "Canon EOS R5" → "Canon EOS R5"; "Apple" + "iPhone 7" → "Apple iPhone 7". */
-export function cameraName(make: string | undefined, model: string | undefined): string | undefined {
+export function cameraName(
+  make: string | undefined,
+  model: string | undefined,
+): string | undefined {
   if (!make) return model;
   if (!model) return make;
   const firstWord = make.split(/\s+/)[0] ?? make;
@@ -70,7 +73,12 @@ export async function readMetadata(info: ContainerInfo): Promise<ImageMetadata> 
   if (!tags) return meta;
 
   const orientation = tags.Orientation;
-  if (typeof orientation === 'number' && Number.isInteger(orientation) && orientation >= 1 && orientation <= 8) {
+  if (
+    typeof orientation === 'number' &&
+    Number.isInteger(orientation) &&
+    orientation >= 1 &&
+    orientation <= 8
+  ) {
     meta.orientation = orientation;
   }
   meta.hasLocation = tags.GPSLatitude !== undefined || tags.GPSLongitude !== undefined;

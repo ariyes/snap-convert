@@ -1,5 +1,5 @@
-// Types for the parts of libheif-js we use (the package ships no types for its ES module build).
-declare module 'libheif-js/libheif-wasm/libheif-bundle.mjs' {
+// Types for the parts of libheif-js we use (the package ships no types for its browser build).
+declare module 'libheif-js/libheif-wasm/libheif.js' {
   export interface HeifDisplayTarget {
     data: Uint8ClampedArray;
     width: number;
@@ -23,6 +23,12 @@ declare module 'libheif-js/libheif-wasm/libheif-bundle.mjs' {
     HeifDecoder: new () => HeifDecoder;
     heif_context_free(context: unknown): void;
   }
-  /** Creates the libheif module synchronously (the WebAssembly binary is embedded in the bundle). */
-  export default function libheif(options?: Record<string, unknown>): LibHeif;
+  export interface LibHeifOptions {
+    /** The libheif.wasm bytes (the package's .wasm file, served as our own asset). */
+    wasmBinary?: ArrayBuffer;
+    onRuntimeInitialized?: () => void;
+    onAbort?: (reason: unknown) => void;
+  }
+  /** Emscripten module factory; returns the module object (usable once the runtime is initialised). */
+  export default function libheif(options?: LibHeifOptions): LibHeif;
 }

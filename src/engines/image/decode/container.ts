@@ -15,7 +15,8 @@ export interface Nclx {
  * `rotate` (irot): anti-clockwise degrees. `mirror` (imir): 'vertical-axis' swaps left and right,
  * 'horizontal-axis' swaps top and bottom.
  */
-export type IsoTransform = { rotate: 90 | 180 | 270 } | { mirror: 'vertical-axis' | 'horizontal-axis' };
+export type IsoTransform =
+  { rotate: 90 | 180 | 270 } | { mirror: 'vertical-axis' | 'horizontal-axis' };
 
 export interface ContainerInfo {
   format: SniffedFormat;
@@ -29,7 +30,18 @@ export interface ContainerInfo {
   transforms?: IsoTransform[];
 }
 
-const HEIF_BRANDS = new Set(['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1']);
+const HEIF_BRANDS = new Set([
+  'heic',
+  'heix',
+  'hevc',
+  'hevx',
+  'heim',
+  'heis',
+  'hevm',
+  'hevs',
+  'mif1',
+  'msf1',
+]);
 const AVIF_BRANDS = new Set(['avif', 'avis']);
 
 function ascii(b: Uint8Array, at: number, len: number): string {
@@ -73,7 +85,13 @@ function readU16BE(b: Uint8Array, at: number): number {
   return ((b[at] ?? 0) << 8) | (b[at + 1] ?? 0);
 }
 function readU32BE(b: Uint8Array, at: number): number {
-  return (((b[at] ?? 0) << 24) | ((b[at + 1] ?? 0) << 16) | ((b[at + 2] ?? 0) << 8) | (b[at + 3] ?? 0)) >>> 0;
+  return (
+    (((b[at] ?? 0) << 24) |
+      ((b[at + 1] ?? 0) << 16) |
+      ((b[at + 2] ?? 0) << 8) |
+      (b[at + 3] ?? 0)) >>>
+    0
+  );
 }
 function readU16LE(b: Uint8Array, at: number): number {
   return (b[at] ?? 0) | ((b[at + 1] ?? 0) << 8);
@@ -101,7 +119,9 @@ function tiffStart(block: Uint8Array): Uint8Array | undefined {
 /** Inflates zlib data (PNG iCCP) with the browser's built-in decompressor. */
 async function inflate(data: Uint8Array): Promise<Uint8Array | undefined> {
   try {
-    const stream = new Blob([data as Uint8Array<ArrayBuffer>]).stream().pipeThrough(new DecompressionStream('deflate'));
+    const stream = new Blob([data as Uint8Array<ArrayBuffer>])
+      .stream()
+      .pipeThrough(new DecompressionStream('deflate'));
     return new Uint8Array(await new Response(stream).arrayBuffer());
   } catch {
     return undefined;
@@ -158,13 +178,20 @@ function readJpeg(b: Uint8Array): Parts {
       out.exif = tiffStart(data);
     } else if (marker === 0xe2 && ascii(data, 0, 12) === 'ICC_PROFILE\0') {
       iccChunks.push({ seq: data[12] ?? 0, data: data.subarray(14) });
-    } else if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+    } else if (
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      marker !== 0xc4 &&
+      marker !== 0xc8 &&
+      marker !== 0xcc
+    ) {
       out.height = readU16BE(b, at + 5);
       out.width = readU16BE(b, at + 7);
     }
     at += 2 + len;
   }
-  if (iccChunks.length > 0) out.icc = concat(iccChunks.sort((x, y) => x.seq - y.seq).map((c) => c.data));
+  if (iccChunks.length > 0)
+    out.icc = concat(iccChunks.sort((x, y) => x.seq - y.seq).map((c) => c.data));
   return out;
 }
 
@@ -272,7 +299,11 @@ function readIsoBmff(b: Uint8Array): Parts {
   const find = (type: string) => metaChildren.find((x) => x.type === type);
 
   const pitm = find('pitm');
-  const primary = pitm ? (b[pitm.start] === 0 ? readU16BE(b, pitm.start + 4) : readU32BE(b, pitm.start + 4)) : undefined;
+  const primary = pitm
+    ? b[pitm.start] === 0
+      ? readU16BE(b, pitm.start + 4)
+      : readU32BE(b, pitm.start + 4)
+    : undefined;
 
   // Item properties of the primary item: size, colour, rotation, mirror.
   const iprp = find('iprp');
@@ -281,10 +312,13 @@ function readIsoBmff(b: Uint8Array): Parts {
     const props = boxes(b, ipco.start, ipco.end);
     const ipma = iprp ? child(b, iprp, 'ipma') : undefined;
     const assoc = ipma && primary !== undefined ? primaryAssociations(b, ipma, primary) : undefined;
-    const mine = assoc ? assoc.map((i) => props[i - 1]).filter((p): p is Box => p !== undefined) : props;
+    const mine = assoc
+      ? assoc.map((i) => props[i - 1]).filter((p): p is Box => p !== undefined)
+      : props;
     const readColour = (p: Box) => {
       const kind = ascii(b, p.start, 4);
-      if ((kind === 'prof' || kind === 'rICC') && !out.icc) out.icc = b.subarray(p.start + 4, p.end);
+      if ((kind === 'prof' || kind === 'rICC') && !out.icc)
+        out.icc = b.subarray(p.start + 4, p.end);
       else if (kind === 'nclx' && !out.nclx)
         out.nclx = { primaries: readU16BE(b, p.start + 4), transfer: readU16BE(b, p.start + 6) };
     };
@@ -299,7 +333,8 @@ function readIsoBmff(b: Uint8Array): Parts {
         readColour(p);
       } else if (p.type === 'irot' && assoc) {
         const quarter = (b[p.start] ?? 0) & 3;
-        if (quarter !== 0) (out.transforms ??= []).push({ rotate: (quarter * 90) as 90 | 180 | 270 });
+        if (quarter !== 0)
+          (out.transforms ??= []).push({ rotate: (quarter * 90) as 90 | 180 | 270 });
       } else if (p.type === 'imir' && assoc) {
         const axis = (b[p.start] ?? 0) & 1;
         (out.transforms ??= []).push({ mirror: axis === 0 ? 'vertical-axis' : 'horizontal-axis' });
@@ -365,7 +400,12 @@ function exifItemId(b: Uint8Array, iinf: Box): number | undefined {
   return undefined;
 }
 
-function itemExtents(b: Uint8Array, iloc: Box, itemId: number, idat: Box | undefined): Extent[] | undefined {
+function itemExtents(
+  b: Uint8Array,
+  iloc: Box,
+  itemId: number,
+  idat: Box | undefined,
+): Extent[] | undefined {
   const version = b[iloc.start] ?? 0;
   let at = iloc.start + 4;
   const sizes1 = b[at] ?? 0;
@@ -401,7 +441,8 @@ function itemExtents(b: Uint8Array, iloc: Box, itemId: number, idat: Box | undef
       extents.push({ offset: base + offset, length: length || b.length - (base + offset) });
     }
     if (id !== itemId) continue;
-    if (method === 1 && idat) return extents.map((e) => ({ offset: idat.start + e.offset, length: e.length }));
+    if (method === 1 && idat)
+      return extents.map((e) => ({ offset: idat.start + e.offset, length: e.length }));
     if (method !== 0) return undefined;
     return extents;
   }

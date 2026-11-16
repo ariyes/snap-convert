@@ -30,7 +30,13 @@ export function edgeContrast(img: ImageData): number {
  * with the reduction, e.g. Pillow's BILINEAR) — the reference our output must beat for sharpness.
  */
 export function bilinearDownscale(img: ImageData, toW: number, toH: number): ImageData {
-  const pass = (src: Float32Array, sw: number, sh: number, dw: number, horizontal: boolean): Float32Array => {
+  const pass = (
+    src: Float32Array,
+    sw: number,
+    sh: number,
+    dw: number,
+    horizontal: boolean,
+  ): Float32Array => {
     const len = horizontal ? sw : sh;
     const other = horizontal ? sh : sw;
     const scale = len / dw;
@@ -98,7 +104,12 @@ export function naiveBilinear(img: ImageData, toW: number, toH: number): ImageDa
  * Halo width across one edge: walking a luma profile, the longest run of pixels that overshoot
  * outside [low − tolerance, high + tolerance] (the two flat levels either side of the edge).
  */
-export function longestOvershootRun(profile: readonly number[], low: number, high: number, tolerance: number): number {
+export function longestOvershootRun(
+  profile: readonly number[],
+  low: number,
+  high: number,
+  tolerance: number,
+): number {
   let longest = 0;
   let run = 0;
   for (const v of profile) {
@@ -145,7 +156,13 @@ export function lumaStdDev(img: ImageData, inside: (x: number, y: number) => boo
 }
 
 /** Largest difference between neighbouring pixels in any colour channel, inside a region. Banding shows as big steps in smooth areas. */
-export function maxNeighbourStep(img: ImageData, x0 = 0, y0 = 0, x1 = img.width - 1, y1 = img.height - 1): number {
+export function maxNeighbourStep(
+  img: ImageData,
+  x0 = 0,
+  y0 = 0,
+  x1 = img.width - 1,
+  y1 = img.height - 1,
+): number {
   const d = img.data;
   const w = img.width;
   let max = 0;
