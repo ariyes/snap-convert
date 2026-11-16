@@ -1,0 +1,23 @@
+// PLACEHOLDER — owned by P23 (Open-source credits). Replace this whole file with the real page.
+import { Container } from '@/app/components/container';
+import { pageMeta } from '@/app/meta';
+
+export function meta() {
+  return pageMeta({
+    title: 'Open-source credits — Snap Convert',
+    description:
+      'The open-source libraries, fonts and codecs Snap Convert is built with, and their licenses.',
+    id: 'credits',
+  });
+}
+
+export default function Credits() {
+  return (
+    <Container className="py-10">
+      <h1 className="m-0 text-[28px] font-semibold tracking-[-0.02em] sm:text-[34px]">
+        Open-source credits
+      </h1>
+      <p className="mt-2 text-muted">Coming in this build.</p>
+    </Container>
+  );
+}
