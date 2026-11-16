@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const port = 4173;
+// E2E_PORT lets parallel agent worktrees each run their own preview server (default 4173).
+const port = Number(process.env.E2E_PORT) || 4173;
 const desktop = { viewport: { width: 1280, height: 800 } };
 const phone = { viewport: { width: 375, height: 812 }, hasTouch: true };
 
@@ -33,7 +34,8 @@ export default defineConfig({
   webServer: {
     command: `pnpm build && pnpm preview --port ${port} --strictPort`,
     url: `http://localhost:${port}/snap-convert/`,
-    reuseExistingServer: !process.env.CI,
+    // Never reuse a server we didn't start when a custom port is set: it could be another worktree's build.
+    reuseExistingServer: !process.env.CI && !process.env.E2E_PORT,
     timeout: 180_000,
   },
 });
