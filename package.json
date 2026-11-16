@@ -13,7 +13,7 @@
     "dev": "react-router dev",
     "build": "react-router build",
     "preview": "vite preview",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "react-router typegen && eslint . --max-warnings 0",
     "format": "prettier --write .",
     "typecheck": "react-router typegen && tsc",
     "test": "vitest run --project unit --project browser",
