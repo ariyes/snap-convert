@@ -161,8 +161,26 @@ export function DropZone({
     title ?? (multiple ? intakeStrings.dropTitle(accept) : intakeStrings.dropTitleSingle(accept));
   const describedBy = pasteHint ? `${subId} ${hintId}` : subId;
 
+  // The box takes drops; the button inside it is named by exactly its visible text (title +
+  // "Choose files", WCAG 2.5.3). The formats line and paste hint sit outside the button as its
+  // description, and the button's ::after covers the whole box so a click anywhere opens the
+  // picker and the focus ring outlines the box.
   return (
-    <>
+    <div
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={cn(
+        'relative flex flex-col items-center gap-2.5 rounded-2xl border-[1.5px] border-dashed border-line bg-card text-center',
+        'cursor-pointer transition-[border-color,background-color] duration-150',
+        'hover:border-accent hover:bg-[color-mix(in_srgb,var(--accent-soft)_45%,var(--card))]',
+        'has-[[data-over]]:border-accent has-[[data-over]]:bg-[color-mix(in_srgb,var(--accent-soft)_45%,var(--card))]',
+        size === 'big' ? 'px-5 py-9' : 'px-4 py-6',
+        disabled && 'pointer-events-none cursor-not-allowed opacity-45',
+        className,
+      )}
+    >
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
@@ -174,18 +192,10 @@ export function DropZone({
         data-size={size}
         onClick={openPicker}
         onKeyDown={onKeyDown}
-        onDragEnter={onDragEnter}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
         className={cn(
-          'flex flex-col items-center gap-2.5 rounded-2xl border-[1.5px] border-dashed border-line bg-card text-center',
-          'cursor-pointer transition-[border-color,background-color] duration-150',
-          'hover:border-accent hover:bg-[color-mix(in_srgb,var(--accent-soft)_45%,var(--card))]',
-          'data-[over]:border-accent data-[over]:bg-[color-mix(in_srgb,var(--accent-soft)_45%,var(--card))]',
-          size === 'big' ? 'px-5 py-9' : 'px-4 py-6',
-          disabled && 'pointer-events-none cursor-not-allowed opacity-45',
-          className,
+          'flex flex-col items-center gap-2.5 focus-visible:outline-none',
+          "after:absolute after:-inset-[1.5px] after:rounded-2xl after:content-['']",
+          'focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-accent',
         )}
       >
         <span
@@ -196,29 +206,29 @@ export function DropZone({
         </span>
         <span id={titleId} className="text-lg font-semibold">
           {heading}
-        </span>
+        </span>{' '}
         <span id={chooseId} className={cn(buttonVariants({ variant: 'primary' }), 'mt-1')}>
           {multiple ? strings.chooseFiles : intakeStrings.chooseFile}
         </span>
-        <span id={subId} className="text-ui text-faint">
-          {subtitle ?? defaultSubtitle(accept)}
-        </span>
-        {pasteHint && (
-          <span id={hintId} className="text-ui text-faint">
-            {intakeStrings.pasteHintBefore}{' '}
-            {apple ? (
-              <Kbd>
-                <span aria-hidden="true">{intakeStrings.keyCmd}</span>
-                <span className="sr-only">{intakeStrings.keyCmdName}</span>
-              </Kbd>
-            ) : (
-              <Kbd>{intakeStrings.keyCtrl}</Kbd>
-            )}{' '}
-            {intakeStrings.pasteHintJoin} <Kbd>{intakeStrings.keyV}</Kbd>
-          </span>
-        )}
       </div>
-      {/* Outside the zone: a button role can't hold a live region or another control. */}
+      <span id={subId} className="text-ui text-faint">
+        {subtitle ?? defaultSubtitle(accept)}
+      </span>
+      {pasteHint && (
+        <span id={hintId} className="text-ui text-faint">
+          {intakeStrings.pasteHintBefore}{' '}
+          {apple ? (
+            <Kbd>
+              <span aria-hidden="true">{intakeStrings.keyCmd}</span>
+              <span className="sr-only">{intakeStrings.keyCmdName}</span>
+            </Kbd>
+          ) : (
+            <Kbd>{intakeStrings.keyCtrl}</Kbd>
+          )}{' '}
+          {intakeStrings.pasteHintJoin} <Kbd>{intakeStrings.keyV}</Kbd>
+        </span>
+      )}
+      {/* Outside the button: a button role can't hold a live region or another control. */}
       <span role="status" className="sr-only">
         {busy ? intakeStrings.reading : ''}
       </span>
@@ -237,6 +247,6 @@ export function DropZone({
           void take(files);
         }}
       />
-    </>
+    </div>
   );
 }

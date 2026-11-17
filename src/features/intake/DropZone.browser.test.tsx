@@ -68,9 +68,23 @@ describe('<DropZone>', () => {
     const { zone } = setup();
     expect(zone.getAttribute('tabindex')).toBe('0');
     expect(screen.getByRole('button', { name: 'Drop images here Choose files' })).toBe(zone);
-    expect(zone.textContent).toContain('JPG · PNG · WebP · AVIF · GIF · BMP · HEIC — any size');
+    const box = zone.parentElement;
+    expect(box?.textContent).toContain('JPG · PNG · WebP · AVIF · GIF · BMP · HEIC — any size');
     // Windows / Linux test machine: Ctrl.
-    expect(zone.textContent).toContain('or paste with Ctrl + V');
+    expect(box?.textContent).toContain('or paste with Ctrl + V');
+  });
+
+  it('is named by exactly its visible text; the formats and paste hint describe it (WCAG 2.5.3)', () => {
+    const { zone } = setup();
+    // Nothing visible inside the button beyond its name (the icon is hidden).
+    expect(zone.textContent).toBe('Drop images here Choose files');
+    const description = (zone.getAttribute('aria-describedby') ?? '')
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent)
+      .join(' ');
+    expect(description).toBe(
+      'JPG · PNG · WebP · AVIF · GIF · BMP · HEIC — any size or paste with Ctrl + V',
+    );
   });
 
   it('opens the picker on click, Enter and Space', async () => {

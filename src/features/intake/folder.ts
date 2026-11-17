@@ -78,19 +78,24 @@ export function filesFromDataTransfer(dt: DataTransfer | null): Promise<File[]> 
   if (items.length === 0) {
     return Promise.resolve(Array.from(dt.files ?? []).filter((f) => !isHiddenName(f.name)));
   }
-  // Take everything now, while the event lasts: an entry if the browser gives one, else the file.
-  const taken = items.map((item): EntryLike | File | null => {
-    const entry = typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null;
-    return entry ?? item.getAsFile();
-  });
+  // Take everything now, while the event lasts: the entry if the browser gives one, and the file.
+  // WebKit gives files made in memory (not from disk) an entry whose file() fails with
+  // NotFoundError; the file taken here stands in for it then.
+  const taken = items.map((item): { entry: EntryLike | null; file: File | null } => ({
+    entry: typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null,
+    file: item.getAsFile(),
+  }));
   return (async () => {
     const out: File[] = [];
-    for (const t of taken) {
-      if (!t) continue;
-      if (t instanceof File) {
-        if (!isHiddenName(t.name)) out.push(t);
+    for (const { entry, file } of taken) {
+      if (entry?.isDirectory) {
+        out.push(...(await filesFromEntry(entry)));
       } else {
-        out.push(...(await filesFromEntry(t)));
+        const name = entry?.name ?? file?.name;
+        if (name === undefined || isHiddenName(name)) continue;
+        const opened = entry?.isFile ? await entryFile(entry as FileEntryLike) : undefined;
+        const found = opened ?? file;
+        if (found) out.push(found);
       }
     }
     return out;

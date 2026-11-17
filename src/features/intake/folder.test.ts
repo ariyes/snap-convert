@@ -94,6 +94,26 @@ describe('filesFromDataTransfer', () => {
     expect(names(await filesFromDataTransfer(dt))).toEqual(['x.jpg']);
   });
 
+  it("falls back to the plain file when the entry's file can't be opened (WebKit, in-memory files)", async () => {
+    // WebKit: file() fails with NotFoundError for files that never were on disk.
+    const notFound = (name: string) => ({
+      ...fileEntry(name),
+      file: (_ok: unknown, fail?: (e: unknown) => void) =>
+        fail?.(new DOMException('not found', 'NotFoundError')),
+    });
+    const dt = transfer([
+      { entry: notFound('a.pdf'), file: new File(['a'], 'a.pdf') },
+      { entry: dirEntry('folder', [fileEntry('b.png')]), file: new File([], 'folder') },
+      { entry: notFound('.DS_Store'), file: new File(['x'], '.DS_Store') },
+      { entry: notFound('gone.jpg'), file: null },
+      { entry: fileEntry('c.jpg'), file: new File(['other'], 'c.jpg') },
+    ]);
+    const files = await filesFromDataTransfer(dt);
+    expect(names(files)).toEqual(['a.pdf', 'b.png', 'c.jpg']);
+    // An entry that opens wins over the plain file.
+    expect(await files[2]?.text()).toBe('c.jpg');
+  });
+
   it('uses dataTransfer.files when there are no items', async () => {
     const dt = {
       items: [],

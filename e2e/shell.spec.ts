@@ -34,20 +34,6 @@ const pdf = (name: string) => ({
   buffer: bytes('intake/sample.pdf'),
 });
 
-/**
- * GOVERNOR: known issue in P11's DropZone (src/features/intake, outside P13b's files). Its
- * role="button" is named by the title + "Choose files" only, but also shows the formats line and
- * the paste hint, so axe's label-content-name-mismatch (WCAG 2.5.3) flags it. Remove this once
- * DropZone is fixed; every other node and rule is still checked.
- */
-function knownDropZoneIssue(ruleId: string, html: string): boolean {
-  return (
-    ruleId === 'label-content-name-mismatch' &&
-    html.includes('role="button"') &&
-    html.includes('data-size="big"')
-  );
-}
-
 test.describe('home', () => {
   test('loads with hero, drop box, trust strip and every tool', async ({ page }) => {
     await page.goto('./');
@@ -74,10 +60,9 @@ test.describe('home', () => {
     await chooseFiles(page, [jpg('a.jpg'), pdf('b.pdf')]);
     await expect(page.getByText(/What do you want to do with/)).toBeVisible();
     const results = await new AxeBuilder({ page }).analyze();
-    const serious = results.violations
-      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-      .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !knownDropZoneIssue(v.id, n.html)) }))
-      .filter((v) => v.nodes.length > 0);
+    const serious = results.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    );
     expect(
       serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
     ).toEqual([]);
