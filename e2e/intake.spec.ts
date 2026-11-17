@@ -2,7 +2,7 @@
 // file's kind read from its first bytes, never from its name.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 import { expectDelivered, watchDeliveries } from './support/delivered';
 
 interface Fixture {

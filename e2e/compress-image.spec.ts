@@ -2,7 +2,7 @@
 // Every result is made by the real image worker from the production build.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 import { unzipSync } from 'fflate';
 
 const SAMPLE = readFileSync(path.resolve('public/samples/compress-sample.jpg'));

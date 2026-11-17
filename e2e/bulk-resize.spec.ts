@@ -2,7 +2,7 @@
 // ZIP contents, stale results after a settings change, the long-list window and the leave warning.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 import { unzipSync } from 'fflate';
 
 interface Fixture {

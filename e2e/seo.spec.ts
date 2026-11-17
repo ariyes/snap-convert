@@ -1,11 +1,13 @@
 /** Search content (P22): sitemap, robots.txt, <head> tags of every page, how-to and FAQ on tool pages. */
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { expect, test, type APIRequestContext } from './support/test';
 import { prerenderRoutes } from '../src/app/prerender-routes';
 import { canonicalUrl, formatPages, isAvailable, SITE_URL, tools } from '../src/tools/registry';
 
 /** Every page the build pre-renders, as its public URL. */
-const notBuiltYet = new Set([...tools, ...formatPages].filter((p) => !isAvailable(p)).map((p) => p.id));
+const notBuiltYet = new Set(
+  [...tools, ...formatPages].filter((p) => !isAvailable(p)).map((p) => p.id),
+);
 const EXPECTED_URLS = prerenderRoutes
   .filter((r) => !notBuiltYet.has(r.slice(1)))
   .map((r) => (r === '/' ? SITE_URL : canonicalUrl(r.slice(1))));

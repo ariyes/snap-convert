@@ -2,7 +2,7 @@
 // Every run goes through the real image worker; downloaded files are checked byte by byte.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Download, type Page } from '@playwright/test';
+import { expect, test, type Download, type Page } from './support/test';
 
 interface Fixture {
   name: string;

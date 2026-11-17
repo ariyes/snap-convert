@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Download, type Locator, type Page } from './support/test';
 import { PDFDocument } from 'pdf-lib';
 
 const A4 = 'a4-3-pages.pdf';

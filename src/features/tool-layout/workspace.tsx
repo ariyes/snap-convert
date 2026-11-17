@@ -49,6 +49,15 @@ export function Workspace({
   className,
 }: WorkspaceProps) {
   const [barRef, barHeight] = useFixedBarHeight(actions !== undefined);
+  // A run swaps the action buttons (Merge → Merging… → Download). When the focused one disappears
+  // or is disabled, focus moves to the first usable button here, not back to the top of the page.
+  const focusedBar = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (focusedBar.current && document.activeElement === document.body) {
+      const next = focusedBar.current.querySelector<HTMLElement>('button:not(:disabled), a[href]');
+      next?.focus({ preventScroll: true });
+    }
+  });
 
   return (
     <>
@@ -85,6 +94,14 @@ export function Workspace({
               ref={barRef}
               role="group"
               aria-label={strings.actionsLabel}
+              onFocus={(e) => (focusedBar.current = e.currentTarget)}
+              onBlur={(e) => {
+                const left: Element = e.target;
+                // Still there and usable: the user moved focus elsewhere on purpose.
+                queueMicrotask(() => {
+                  if (left.isConnected && !left.matches(':disabled')) focusedBar.current = null;
+                });
+              }}
               className={cn(
                 'flex flex-col gap-2',
                 'max-[880px]:fixed max-[880px]:inset-x-0 max-[880px]:bottom-0 max-[880px]:z-[15] max-[880px]:flex-row-reverse',

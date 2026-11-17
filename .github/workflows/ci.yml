@@ -1,0 +1,66 @@
+# Snap Convert CI (P24). Runs every check on Linux, including the Firefox end-to-end projects that
+# can't run on the owner's Windows 10 machine (D26: Playwright's Firefox fails with a mozglue
+# side-by-side error there). Firefox coverage before and after launch comes from this workflow.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+
+      # pnpm version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies (lockfile must not change)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit and browser tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Image quality report
+        run: pnpm quality
+
+      # Chromium, Firefox and WebKit, desktop and phone sizes. The Playwright config builds and serves
+      # the production build itself; CI=1 also turns on retries and the GitHub reporter.
+      - name: End-to-end tests (3 browsers × 2 sizes)
+        run: pnpm e2e:all
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
