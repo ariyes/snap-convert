@@ -1,0 +1,7 @@
+# Snap Convert — https://crkayes.com/snap-convert/
+# Search engines only read robots.txt at the root of a site. This copy is served at
+# /snap-convert/robots.txt; the same lines belong in https://crkayes.com/robots.txt.
+User-agent: *
+Allow: /snap-convert/
+
+Sitemap: https://crkayes.com/snap-convert/sitemap.xml

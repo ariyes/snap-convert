@@ -12,6 +12,7 @@ import {
   ScrollRestoration,
   useRouteError,
 } from 'react-router';
+import { PwaUpdater } from '@/pwa';
 import { ThemeScript } from '@/ui';
 import '../ui/theme.css';
 import { ErrorPage } from './components/error-page';
@@ -32,6 +33,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </head>
       <body className="flex min-h-dvh flex-col">
         {children}
+        <PwaUpdater />
         <ScrollRestoration />
         <Scripts />
       </body>
