@@ -1,6 +1,7 @@
 /**
- * Search content under every tool page (P22): the page's how-to steps and FAQ from the registry.
- * Each tool's own `content.tsx` renders this with its how-to heading.
+ * Search content under every tool page (P22): the page's how-to steps and FAQ. Each tool's own
+ * `content.tsx` holds its data (helpers in seo-content.ts) and renders this with its how-to heading.
+ * The data is kept out of the registry so it never loads with the home page.
  *
  * This file has no default export on purpose. It sits at a `content.tsx` path so it stays within
  * P22's files, which puts it in tool-content.tsx's glob under the id `_shared`; no page has that id,
@@ -13,7 +14,7 @@ import { ChevronDown } from 'lucide-react';
 import { useId } from 'react';
 import { containerClass } from '@/features/tool-layout';
 import { cn } from '@/lib/utils';
-import { getPage } from '../registry';
+import type { SeoContent } from './seo-content';
 
 /** Shared headings (English only at launch, D13). Page-specific headings come from each content.tsx. */
 export const seoContentStrings = {
@@ -21,17 +22,14 @@ export const seoContentStrings = {
 } as const;
 
 export interface ToolSeoContentProps {
-  /** Registry id of the page (tool or format page). */
-  pageId: string;
   /** Heading above the steps, e.g. "How to compress images". */
   howToTitle: string;
+  /** The page's how-to steps and FAQ. */
+  content: SeoContent;
 }
 
-export function ToolSeoContent({ pageId, howToTitle }: ToolSeoContentProps) {
+export function ToolSeoContent({ howToTitle, content: { howTo, faq } }: ToolSeoContentProps) {
   const headingId = useId();
-  const page = getPage(pageId);
-  const howTo = page?.howTo ?? [];
-  const faq = page?.faq ?? [];
   if (howTo.length === 0 && faq.length === 0) return null;
 
   return (

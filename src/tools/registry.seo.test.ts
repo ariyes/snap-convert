@@ -3,6 +3,7 @@ import type { MetaDescriptor } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { sitemapUrls, sitemapXml } from '../../scripts/sitemap';
 import { contentIdFromPath } from '../app/components/tool-content';
+import type { SeoContent } from './_shared/seo-content';
 import { prerenderRoutes } from '../app/prerender-routes';
 import {
   canonicalUrl,
@@ -19,10 +20,24 @@ const pages = [...tools, ...formatPages];
 const working = pages.filter(isAvailable);
 const comingSoon = pages.filter((p) => !isAvailable(p));
 
-/** Content files that exist, by page id (the shared renderer is not a page). */
-const contentIds = Object.keys(import.meta.glob('./*/content.tsx'))
-  .map((p) => contentIdFromPath(p.replace(/^\./, '/tools')))
-  .filter((id) => id !== '_shared');
+/** How-to and FAQ of each page, from its content.tsx (the shared renderer is not a page). */
+const contentModules = import.meta.glob<{ content?: SeoContent }>('./*/content.tsx', {
+  eager: true,
+});
+const contentById = new Map(
+  Object.entries(contentModules)
+    .map(([path, mod]) => [contentIdFromPath(path.replace(/^\./, '/tools')), mod.content] as const)
+    .filter(
+      (e): e is readonly [string, SeoContent] =>
+        e[0] !== undefined && e[0] !== '_shared' && e[1] !== undefined,
+    ),
+);
+const contentIds = [...contentById.keys()];
+const contentOf = (id: string): SeoContent => {
+  const c = contentById.get(id);
+  if (!c) throw new Error(`No content.tsx data for ${id}`);
+  return c;
+};
 
 /** Words spelled differently in British and American English; the copy avoids them. */
 const SPELLING =
@@ -49,22 +64,32 @@ describe('SEO fields', () => {
     expect(new Set(descriptions).size).toBe(pages.length);
   });
 
-  it.each(working.map((p) => [p.id, p] as const))('%s has 3–5 steps and 4–6 questions', (_, p) => {
-    expect(p.howTo?.length).toBeGreaterThanOrEqual(3);
-    expect(p.howTo?.length).toBeLessThanOrEqual(5);
-    expect(p.faq?.length).toBeGreaterThanOrEqual(4);
-    expect(p.faq?.length).toBeLessThanOrEqual(6);
-    const questions = p.faq!.map((f) => f.q);
+  it.each(working.map((p) => [p.id] as const))('%s has 3–5 steps and 4–6 questions', (id) => {
+    const { howTo, faq } = contentOf(id);
+    expect(howTo.length).toBeGreaterThanOrEqual(3);
+    expect(howTo.length).toBeLessThanOrEqual(5);
+    expect(faq.length).toBeGreaterThanOrEqual(4);
+    expect(faq.length).toBeLessThanOrEqual(6);
+    const questions = faq.map((f) => f.q);
     expect(new Set(questions).size, 'no repeated question').toBe(questions.length);
-    for (const f of p.faq!) {
+    for (const f of faq) {
       expect(f.q).toMatch(/\?$/);
       expect(f.a.length).toBeGreaterThan(20);
     }
   });
 
+  it('keeps how-to and FAQ out of the registry, which loads with the home page', () => {
+    for (const p of pages) {
+      expect(p.howTo, p.id).toBeUndefined();
+      expect(p.faq, p.id).toBeUndefined();
+    }
+  });
+
   it('every working tool says whether files are uploaded and works on phones', () => {
     for (const p of working) {
-      const text = p.faq!.map((f) => `${f.q} ${f.a}`).join(' ');
+      const text = contentOf(p.id)
+        .faq.map((f) => `${f.q} ${f.a}`)
+        .join(' ');
       expect(text, p.id).toMatch(/never (leave your device|sent to a server)/);
       expect(text, p.id).toMatch(/phone/i);
     }
@@ -79,18 +104,18 @@ describe('SEO fields', () => {
     for (const p of comingSoon) {
       expect(p.title).toMatch(/Coming Soon/);
       expect(p.description).toMatch(/^Coming soon:/);
-      expect(p.howTo).toBeUndefined();
-      expect(p.faq).toBeUndefined();
+      expect(contentById.has(p.id)).toBe(false);
     }
   });
 
   it('copy uses spelling that reads the same in British and American English', () => {
     for (const p of pages) {
+      const content = contentById.get(p.id);
       const copy = [
         p.title,
         p.description,
-        ...(p.howTo ?? []),
-        ...(p.faq ?? []).flatMap((f) => [f.q, f.a]),
+        ...(content?.howTo ?? []),
+        ...(content?.faq ?? []).flatMap((f) => [f.q, f.a]),
       ].join(' ');
       expect(SPELLING.exec(copy)?.[0], p.id).toBeUndefined();
     }
