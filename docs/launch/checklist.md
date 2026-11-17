@@ -205,7 +205,7 @@ nothing blocks `/snap-convert/`. It lists only the main sitemap.
 ## 9. Public GitHub repository and SOURCE_URL
 
 The app's footer and header link to the source code (AGPL-3.0 requires it). The link today is
-`https://github.com/crkayes/snap-convert` (`SOURCE_URL` in `src/app/site.ts`).
+`https://github.com/ariyes/snap-convert` (`SOURCE_URL` in `src/app/site.ts`).
 
 You decided (D35, D36): the public repository gets **code only**, and every commit uses your
 **GitHub private email**. Your working repo stays as it is; a separate public copy is made.
@@ -228,7 +228,7 @@ You decided (D35, D36): the public repository gets **code only**, and every comm
 - [ ] Push **the public copy** (not the working repo):
   ```bash
   cd ../snap-convert-public
-  git remote add origin https://github.com/crkayes/snap-convert.git
+  git remote add origin https://github.com/ariyes/snap-convert.git
   git push -u origin main
   ```
   For later updates, ask the governor: the public copy is regenerated from the working repo.
