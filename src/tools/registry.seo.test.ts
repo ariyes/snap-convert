@@ -96,7 +96,7 @@ describe('SEO fields', () => {
   });
 
   it('"coming soon" tools say so and carry no how-to or FAQ', () => {
-    expect(comingSoon.map((p) => p.id)).toEqual(['remove-background', 'raw-to-jpg']);
+    expect(comingSoon.map((p) => p.id)).toEqual(['remove-background']);
     for (const p of comingSoon) {
       expect(p.title).toMatch(/Coming Soon/);
       expect(p.description).toMatch(/^Coming soon:/);
@@ -167,7 +167,9 @@ describe('social images and structured data', () => {
     );
     expect(ogImageUrl(formatPages[0])).toBe(`${SITE_URL}og/images.png`);
     expect(ogImageUrl(tools.find((t) => t.id === 'merge-pdf'))).toBe(`${SITE_URL}og/pdf.png`);
-    expect(ogImageUrl(tools.find((t) => t.id === 'raw-to-jpg'))).toBe(`${SITE_URL}og/home.png`);
+    expect(ogImageUrl(tools.find((t) => t.id === 'remove-background'))).toBe(
+      `${SITE_URL}og/home.png`,
+    );
   });
 
   it('home is a free SoftwareApplication that runs on the web', () => {
