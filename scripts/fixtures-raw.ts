@@ -27,30 +27,116 @@ export interface RawFixture {
 
 /** One file per brand (+ a CR3 with a HEIF preview, a high-efficiency NEF and a 61 MP ARW). */
 export const RAW_FIXTURES: readonly RawFixture[] = [
-  { file: 'canon-1100d.cr2', camera: 'Canon EOS 1100D', mode: 'RAW (3:2)', url: 'https://raw.pixls.us/getfile.php/1744/nice/Canon%20-%20EOS%201100D%20-%20RAW%20(3:2).CR2', sha256: '8f0ff8956ecf58de9fddda4b20d32f61576c46fa36460d358b83c42eee8d5fa8' },
-  { file: 'canon-m50.cr3', camera: 'Canon EOS M50', mode: '3:2', url: 'https://raw.pixls.us/getfile.php/4656/nice/Canon%20-%20EOS%20M50%20-%203:2.CR3', sha256: '27a88fdae82516ba136e12c2cc9b934f25dbaaac24d64ab4e5517f8524463594' },
-  { file: 'canon-r8.cr3', camera: 'Canon EOS R8', mode: '3:2', url: 'https://raw.pixls.us/getfile.php/6587/nice/Canon%20-%20EOS%20R8%20-%203:2.CR3', sha256: 'df33cf394573645ce03dea1b2e9f0b5cc2b7734e9e3391ee7114151414cf2812' },
-  { file: 'nikon-d500.nef', camera: 'Nikon D500', mode: '12bit 12bit compressed (Lossy (type 2)) (3:2)', url: 'https://raw.pixls.us/getfile.php/2504/nice/Nikon%20-%20D500%20-%2012bit%2012bit%20compressed%20(Lossy%20(type%202))%20(3:2).NEF', sha256: '33c96a2ba7167f780928767c0545719737d601883e5f98e5edba4f71bdc99d83' },
-  { file: 'nikon-zf.nef', camera: 'Nikon Z f', mode: '8bit 8bit lossy compressed (3:2)', url: 'https://raw.pixls.us/getfile.php/6887/nice/Nikon%20-%20Z%20f%20-%208bit%208bit%20lossy%20compressed%20(3:2).NEF', sha256: '98d6ca8e6c98048ca7ffed68ccaeda7b2b9f03807f0d320d97d5678db21748c2' },
-  { file: 'sony-a6400.arw', camera: 'Sony ILCE-6400', mode: '12bit 12bit compressed (3:2)', url: 'https://raw.pixls.us/getfile.php/3406/nice/Sony%20-%20ILCE-6400%20-%2012bit%2012bit%20compressed%20(3:2).ARW', sha256: '8a37c80fc47c6026efa2e55279220e79460e2f470b1aa48b440f8f2d47873aa6' },
-  { file: 'sony-a7r4-61mp.arw', camera: 'Sony ILCE-7RM4', mode: '12bit 12bit compressed (3:2)', url: 'https://raw.pixls.us/getfile.php/3479/nice/Sony%20-%20ILCE-7RM4%20-%2012bit%2012bit%20compressed%20(3:2).ARW', sha256: '3421b919ee81224d59f78872ee099a021bff0e2a47ae5fbbac385b182ac7241e' },
-  { file: 'ricoh-gr.dng', camera: 'Ricoh GR', mode: '12bit (4:3)', url: 'https://raw.pixls.us/getfile.php/996/nice/Ricoh%20-%20GR%20-%2012bit%20(4:3).DNG', sha256: '7ceec1ea31c56b6e0414202504581b915f17818ffe018b4c8bba1393332c405e' },
-  { file: 'fuji-xs10.raf', camera: 'Fujifilm X-S10', mode: '14bit 14bit compressed (3:2)', url: 'https://raw.pixls.us/getfile.php/4190/nice/Fujifilm%20-%20X-S10%20-%2014bit%2014bit%20compressed%20(3:2).RAF', sha256: '9419d1408ebf850395e5dd563beb96309466546252caf541466034c9cb7e9724' },
-  { file: 'olympus-ep5.orf', camera: 'Olympus E-P5', mode: '16bit (4:3)', url: 'https://raw.pixls.us/getfile.php/1090/nice/Olympus%20-%20E-P5%20-%2016bit%20(4:3).ORF', sha256: 'a1345ebe8d8722e791cbd52778e73257c5ff457ee13988fd78eac61eec841c21' },
-  { file: 'panasonic-g81.rw2', camera: 'Panasonic DMC-G81', mode: '4:3', url: 'https://raw.pixls.us/getfile.php/1518/nice/Panasonic%20-%20DMC-G81%20-%204:3.RW2', sha256: 'baf6d4697eb81e1b4c8e3374c21ee9ae5869970c73bc14a2e8485d7c481a5f20' },
-  { file: 'pentax-k5iis.pef', camera: 'Pentax K-5 II s', mode: '14bit (3:2)', url: 'https://raw.pixls.us/getfile.php/1198/nice/Pentax%20-%20K-5%20II%20s%20-%2014bit%20(3:2).PEF', sha256: 'e579e7360c35e512f9c3a5c0eb9519575b87b489c6f86be82590f7706a7ed17b' },
-  { file: 'samsung-nx500.srw', camera: 'Samsung NX500', mode: '12bit 12bit normal compression (3:2)', url: 'https://raw.pixls.us/getfile.php/3668/nice/Samsung%20-%20NX500%20-%2012bit%2012bit%20normal%20compression%20(3:2).SRW', sha256: '156e43118811bcecb6fcc600b5f41ee1773c4f00b6a5b2dd72e177e35f6596ab' },
+  {
+    file: 'canon-1100d.cr2',
+    camera: 'Canon EOS 1100D',
+    mode: 'RAW (3:2)',
+    url: 'https://raw.pixls.us/getfile.php/1744/nice/Canon%20-%20EOS%201100D%20-%20RAW%20(3:2).CR2',
+    sha256: '8f0ff8956ecf58de9fddda4b20d32f61576c46fa36460d358b83c42eee8d5fa8',
+  },
+  {
+    file: 'canon-m50.cr3',
+    camera: 'Canon EOS M50',
+    mode: '3:2',
+    url: 'https://raw.pixls.us/getfile.php/4656/nice/Canon%20-%20EOS%20M50%20-%203:2.CR3',
+    sha256: '27a88fdae82516ba136e12c2cc9b934f25dbaaac24d64ab4e5517f8524463594',
+  },
+  {
+    file: 'canon-r8.cr3',
+    camera: 'Canon EOS R8',
+    mode: '3:2',
+    url: 'https://raw.pixls.us/getfile.php/6587/nice/Canon%20-%20EOS%20R8%20-%203:2.CR3',
+    sha256: 'df33cf394573645ce03dea1b2e9f0b5cc2b7734e9e3391ee7114151414cf2812',
+  },
+  {
+    file: 'nikon-d500.nef',
+    camera: 'Nikon D500',
+    mode: '12bit 12bit compressed (Lossy (type 2)) (3:2)',
+    url: 'https://raw.pixls.us/getfile.php/2504/nice/Nikon%20-%20D500%20-%2012bit%2012bit%20compressed%20(Lossy%20(type%202))%20(3:2).NEF',
+    sha256: '33c96a2ba7167f780928767c0545719737d601883e5f98e5edba4f71bdc99d83',
+  },
+  {
+    file: 'nikon-zf.nef',
+    camera: 'Nikon Z f',
+    mode: '8bit 8bit lossy compressed (3:2)',
+    url: 'https://raw.pixls.us/getfile.php/6887/nice/Nikon%20-%20Z%20f%20-%208bit%208bit%20lossy%20compressed%20(3:2).NEF',
+    sha256: '98d6ca8e6c98048ca7ffed68ccaeda7b2b9f03807f0d320d97d5678db21748c2',
+  },
+  {
+    file: 'sony-a6400.arw',
+    camera: 'Sony ILCE-6400',
+    mode: '12bit 12bit compressed (3:2)',
+    url: 'https://raw.pixls.us/getfile.php/3406/nice/Sony%20-%20ILCE-6400%20-%2012bit%2012bit%20compressed%20(3:2).ARW',
+    sha256: '8a37c80fc47c6026efa2e55279220e79460e2f470b1aa48b440f8f2d47873aa6',
+  },
+  {
+    file: 'sony-a7r4-61mp.arw',
+    camera: 'Sony ILCE-7RM4',
+    mode: '12bit 12bit compressed (3:2)',
+    url: 'https://raw.pixls.us/getfile.php/3479/nice/Sony%20-%20ILCE-7RM4%20-%2012bit%2012bit%20compressed%20(3:2).ARW',
+    sha256: '3421b919ee81224d59f78872ee099a021bff0e2a47ae5fbbac385b182ac7241e',
+  },
+  {
+    file: 'ricoh-gr.dng',
+    camera: 'Ricoh GR',
+    mode: '12bit (4:3)',
+    url: 'https://raw.pixls.us/getfile.php/996/nice/Ricoh%20-%20GR%20-%2012bit%20(4:3).DNG',
+    sha256: '7ceec1ea31c56b6e0414202504581b915f17818ffe018b4c8bba1393332c405e',
+  },
+  {
+    file: 'fuji-xs10.raf',
+    camera: 'Fujifilm X-S10',
+    mode: '14bit 14bit compressed (3:2)',
+    url: 'https://raw.pixls.us/getfile.php/4190/nice/Fujifilm%20-%20X-S10%20-%2014bit%2014bit%20compressed%20(3:2).RAF',
+    sha256: '9419d1408ebf850395e5dd563beb96309466546252caf541466034c9cb7e9724',
+  },
+  {
+    file: 'olympus-ep5.orf',
+    camera: 'Olympus E-P5',
+    mode: '16bit (4:3)',
+    url: 'https://raw.pixls.us/getfile.php/1090/nice/Olympus%20-%20E-P5%20-%2016bit%20(4:3).ORF',
+    sha256: 'a1345ebe8d8722e791cbd52778e73257c5ff457ee13988fd78eac61eec841c21',
+  },
+  {
+    file: 'panasonic-g81.rw2',
+    camera: 'Panasonic DMC-G81',
+    mode: '4:3',
+    url: 'https://raw.pixls.us/getfile.php/1518/nice/Panasonic%20-%20DMC-G81%20-%204:3.RW2',
+    sha256: 'baf6d4697eb81e1b4c8e3374c21ee9ae5869970c73bc14a2e8485d7c481a5f20',
+  },
+  {
+    file: 'pentax-k5iis.pef',
+    camera: 'Pentax K-5 II s',
+    mode: '14bit (3:2)',
+    url: 'https://raw.pixls.us/getfile.php/1198/nice/Pentax%20-%20K-5%20II%20s%20-%2014bit%20(3:2).PEF',
+    sha256: 'e579e7360c35e512f9c3a5c0eb9519575b87b489c6f86be82590f7706a7ed17b',
+  },
+  {
+    file: 'samsung-nx500.srw',
+    camera: 'Samsung NX500',
+    mode: '12bit 12bit normal compression (3:2)',
+    url: 'https://raw.pixls.us/getfile.php/3668/nice/Samsung%20-%20NX500%20-%2012bit%2012bit%20normal%20compression%20(3:2).SRW',
+    sha256: '156e43118811bcecb6fcc600b5f41ee1773c4f00b6a5b2dd72e177e35f6596ab',
+  },
 ];
 
 /** Copies of downloaded files with only the IFD0 Orientation tag changed. */
-export const DERIVED_FIXTURES: ReadonlyArray<{ file: string; from: string; orientation: number }> = [
-  // DNG: develops upright (full decode path). 6 = rotate 90° clockwise.
-  { file: 'ricoh-gr-portrait.dng', from: 'ricoh-gr.dng', orientation: 6 },
-  // PEF with a full-size camera JPEG: the fast path is upright too. 8 = rotate 90° anticlockwise.
-  { file: 'pentax-k5iis-portrait.pef', from: 'pentax-k5iis.pef', orientation: 8 },
-];
+export const DERIVED_FIXTURES: ReadonlyArray<{ file: string; from: string; orientation: number }> =
+  [
+    // DNG: develops upright (full decode path). 6 = rotate 90° clockwise.
+    { file: 'ricoh-gr-portrait.dng', from: 'ricoh-gr.dng', orientation: 6 },
+    // PEF with a full-size camera JPEG: the fast path is upright too. 8 = rotate 90° anticlockwise.
+    { file: 'pentax-k5iis-portrait.pef', from: 'pentax-k5iis.pef', orientation: 8 },
+  ];
 
-export const RAW_CACHE = join(dirname(fileURLToPath(import.meta.url)), '..', 'tests', 'fixtures', 'raw', 'cache');
+export const RAW_CACHE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'tests',
+  'fixtures',
+  'raw',
+  'cache',
+);
 
 function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
@@ -103,7 +189,10 @@ async function main(): Promise<void> {
   const unknown = only.filter((name) => !known.includes(name));
   if (unknown.length) throw new Error(`Unknown fixture(s): ${unknown.join(', ')}`);
   const sources = new Set(
-    only.flatMap((name) => [name, ...DERIVED_FIXTURES.filter((d) => d.file === name).map((d) => d.from)]),
+    only.flatMap((name) => [
+      name,
+      ...DERIVED_FIXTURES.filter((d) => d.file === name).map((d) => d.from),
+    ]),
   );
   const wanted = only.length ? RAW_FIXTURES.filter((f) => sources.has(f.file)) : RAW_FIXTURES;
   await mkdir(RAW_CACHE, { recursive: true });

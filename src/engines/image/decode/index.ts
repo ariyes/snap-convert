@@ -2,9 +2,10 @@
 // Runs inside a Web Worker: only createImageBitmap, OffscreenCanvas and WebAssembly, no DOM.
 // Without OffscreenCanvas (older Safari) it uses the canvas-free decoders in fallback.ts (P12b).
 
-import type { DecodeImage, DecodedImage } from '@/core/contracts/image';
+import type { DecodeImage, DecodedImage, ImageJobResult, RawOptions } from '@/core/contracts/image';
 import type { Size } from '@/core/contracts/sizing';
 import { fitSize } from '@/core/sizing';
+import { DETECT_BYTES, sniffKind } from '@/features/intake/detect';
 import { canvasAvailable } from './canvas';
 import { applyColorTransform, iccToSrgb, nclxToSrgb } from './color';
 import { readContainer, type ContainerInfo, type SniffedFormat } from './container';
@@ -18,7 +19,7 @@ import {
 import { clearTransparent, PixelDecodeError } from './raw';
 import { decodeStrings } from './strings';
 
-export type DecodeErrorCode = 'unsupported' | 'heic-unsupported' | 'too-large';
+export type DecodeErrorCode = 'unsupported' | 'heic-unsupported' | 'too-large' | 'damaged';
 
 /** A decode failure with a message that can be shown to the user as is. */
 export class DecodeError extends Error {
@@ -46,6 +47,14 @@ export interface DecodeOptions {
   limits?: DecodeLimits;
   /** 'wasm' skips the browser's AVIF decoder and uses the WebAssembly fallback (for tests). */
   avifDecoder?: 'auto' | 'wasm';
+  /** Camera RAW files (P29): ImageJobInput.raw. */
+  raw?: Partial<RawOptions>;
+  /** Camera RAW files: bytes the decode may use (default: from the device; tests simulate phones). */
+  rawMemoryBudget?: number;
+  /** Camera RAW files: told when the camera's JPEG was used or memory forced a half-size develop. */
+  onNote?: (
+    note: Extract<ImageJobResult['notes'][number], 'raw-preview' | 'raw-half-size'>,
+  ) => void;
 }
 
 interface Hint {
@@ -55,7 +64,10 @@ interface Hint {
 /** Reduced decodes keep at least this multiple of the final size, so the last Lanczos step still has detail. */
 const REDUCED_DECODE_FACTOR = 2;
 
-/** Decodes a JPEG, PNG, WebP, AVIF, GIF (first frame), BMP or HEIC/HEIF file. Throws {@link DecodeError}. */
+/**
+ * Decodes a JPEG, PNG, WebP, AVIF, GIF (first frame), BMP, HEIC/HEIF or camera RAW file.
+ * Throws {@link DecodeError}.
+ */
 export const decodeImage: DecodeImage = (file, hint) => decodeImageWith(file, hint);
 
 export async function decodeImageWith(
@@ -64,6 +76,9 @@ export async function decodeImageWith(
   options: DecodeOptions = {},
 ): Promise<DecodedImage> {
   const limits = options.limits ?? DECODE_LIMITS;
+  // Camera RAW files go to M7 (loaded on demand) before the whole file is read here.
+  const head = new Uint8Array(await file.slice(0, DETECT_BYTES).arrayBuffer());
+  if (sniffKind(head, nameOf(file)) === 'raw') return decodeRawFile(file, hint, options, limits);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const info = await readContainer(bytes);
   if (info.format === 'unknown') throw new DecodeError('unsupported', decodeStrings.unsupported);
@@ -299,4 +314,35 @@ async function decodeWithWasm(bytes: Uint8Array, info: ContainerInfo): Promise<I
   const transform = info.icc ? iccToSrgb(info.icc) : info.nclx ? nclxToSrgb(info.nclx) : undefined;
   if (transform) applyColorTransform(pixels, transform);
   return pixels;
+}
+
+// ---------- Camera RAW (M7, P29) ----------
+
+function nameOf(file: Blob): string {
+  return typeof File !== 'undefined' && file instanceof File ? file.name : '';
+}
+
+/** RAW files: the RAW engine and its decoders load on the first RAW file only. */
+async function decodeRawFile(
+  file: Blob,
+  hint: Hint | undefined,
+  options: DecodeOptions,
+  limits: DecodeLimits,
+): Promise<DecodedImage> {
+  const { decodeRawImage, RawDecodeError } = await import('@/engines/raw');
+  try {
+    const { image, notes } = await decodeRawImage(file, {
+      options: options.raw,
+      hint,
+      budget: options.rawMemoryBudget,
+      // The camera's JPEG goes through the normal JPEG path (orientation, reduced decode, sRGB).
+      decodeJpeg: (jpeg, jpegHint) => decodeImageWith(jpeg, jpegHint, { limits }),
+    });
+    checkPixels(image.width * image.height, limits);
+    for (const note of notes) options.onNote?.(note);
+    return image;
+  } catch (error) {
+    if (error instanceof RawDecodeError) throw new DecodeError(error.code, error.message);
+    throw error;
+  }
 }
