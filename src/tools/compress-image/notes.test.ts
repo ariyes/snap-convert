@@ -57,10 +57,11 @@ describe('resultNotes', () => {
   });
 
   it('bigger than the original: says so plainly', () => {
-    const [note] = resultNotes(result({ bytes: 120_000, format: 'webp' }), 100_000, {
-      ...COMPRESS_DEFAULTS,
-      format: 'webp',
-    });
+    const [note] = resultNotes(
+      result({ bytes: 120_000, format: 'webp' }),
+      100_000,
+      COMPRESS_DEFAULTS,
+    );
     expect(note).toMatchObject({ id: 'bigger', tone: 'warn' });
     expect(note?.text).toBe('Larger than the original — WebP at full size. Try resizing.');
   });

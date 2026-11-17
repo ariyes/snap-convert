@@ -132,7 +132,9 @@ describe('planJobs', () => {
       status: () => undefined,
     });
     const entries = first.add.map((id, i) => entry(id, 'k1', i + 1));
-    const waiting = Object.fromEntries(entries.map((e) => [e.jobId, 'waiting' as JobStatus]));
+    const waiting: Record<string, JobStatus> = Object.fromEntries(
+      entries.map((e) => [e.jobId, 'waiting']),
+    );
     const second = planJobs({
       fileIds,
       selectedId: 'b',
