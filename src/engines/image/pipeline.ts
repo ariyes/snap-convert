@@ -27,7 +27,7 @@ import {
   type GuardSampleMode,
 } from '@/engines/optimize/sample';
 import { findQualityForTarget, sizeForTarget, TARGET_SEARCH } from '@/engines/optimize/target';
-import { decodeImage } from './decode';
+import { decodeImage, decodeImageWith, type DecodeOptions } from './decode';
 import { canvasAvailable } from './decode/canvas';
 import { clampQuality, MIME_TYPES, encodeImage, ImageEncodeError, parseBackground } from './encode';
 import { flattenOnto, hasTransparency } from './encode/background';
@@ -205,9 +205,11 @@ async function decodeAndSize(
   report: ProgressCallback,
 ): Promise<Prepared> {
   // Upright sRGB pixels. Huge images may come back smaller, never below what the output needs.
-  let decoded = await decodeImage(input.file, decodeHint(input));
+  // Camera RAW files: the job's RAW settings, and notes for the camera's JPEG / half-size develops.
+  const raw: DecodeOptions = { raw: input.raw, onNote: (note) => notes.add(note) };
+  let decoded = await decodeImageWith(input.file, decodeHint(input), raw);
   if (decoded.reducedFrom && !reducedIsEnough(decoded, input)) {
-    decoded = await decodeImage(input.file);
+    decoded = await decodeImageWith(input.file, undefined, raw);
   }
   if (decoded.reducedFrom) notes.add('reduced-decode');
   // Judged on the source: what kind of picture it is, before resizing blends its edges.

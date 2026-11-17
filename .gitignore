@@ -35,3 +35,6 @@ tests/fixtures/real/owner/
 
 # Hand-over ZIP for the crkayes.com project (built from docs/launch/crkayes-content/)
 docs/launch/crkayes-content/*.zip
+
+# Camera RAW test files (P29): downloaded by `pnpm fixtures:raw`, too big for git
+tests/fixtures/raw/cache/
