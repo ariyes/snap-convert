@@ -4,6 +4,7 @@
   "private": true,
   "description": "Free, open-source image, PDF and RAW converter that runs entirely in the browser.",
   "license": "AGPL-3.0-only",
+  "sideEffects": ["*.css", "src/app/entry.*"],
   "type": "module",
   "packageManager": "pnpm@12.21.0",
   "engines": {
