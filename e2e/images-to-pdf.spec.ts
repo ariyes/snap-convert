@@ -494,27 +494,14 @@ test.describe('outside the US and Canada', () => {
   });
 });
 
-/**
- * GOVERNOR: the known DropZone naming issue (as in shell.spec.ts) — its role="button" is named by
- * the title + "Choose files" only, so axe's label-content-name-mismatch flags it. P11b fixes it in
- * src/features/intake; drop this filter then. Every other node and rule is still checked.
- */
-function knownDropZoneIssue(ruleId: string, html: string): boolean {
-  return (
-    ruleId === 'label-content-name-mismatch' &&
-    html.includes('role="button"') &&
-    html.includes('data-size=')
-  );
-}
-
 test('workspace has no serious accessibility issues', async ({ page }) => {
   await open(page);
   await pick(page, [fixture('images/opaque.png'), fixture('images/no-exif.jpg')]);
   const results = await new AxeBuilder({ page }).analyze();
-  const serious = results.violations
-    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-    .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !knownDropZoneIssue(v.id, n.html)) }))
-    .filter((v) => v.nodes.length > 0);
+  // The DropZone naming issue was fixed in P11b, so nothing is filtered.
+  const serious = results.violations.filter(
+    (v) => v.impact === 'serious' || v.impact === 'critical',
+  );
   expect(
     serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
   ).toEqual([]);
