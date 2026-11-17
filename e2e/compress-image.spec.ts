@@ -199,10 +199,11 @@ test('resizing keeps proportions and matches the planned size', async ({ page })
   await page.getByRole('option', { name: 'Max width' }).click();
   await sizeField(page).fill('640');
   await sizeField(page).press('Tab');
-  const planned = /→\s*(\d+×\d+)/.exec(await page.getByTestId('dims-preview').innerText())?.[1];
-  expect(planned).toMatch(/^640×44\d$/);
+  // The planned size updates just after the field commits: wait for it, don't read it once.
+  const planned = page.getByTestId('dims-preview').locator('strong');
+  await expect(planned).toHaveText(/^640×44\d$/);
   await expect(fresh(page)).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByTestId('result-dims')).toHaveText(planned!);
+  await expect(page.getByTestId('result-dims')).toHaveText(await planned.innerText());
 });
 
 test('20 photos download as a ZIP of 20 correctly named files', async ({ page, isMobile }) => {
