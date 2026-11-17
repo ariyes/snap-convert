@@ -4,9 +4,9 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 export const appStrings = {
   // Head
-  homeTitle: 'Snap Convert — Free image, PDF and RAW converter in your browser',
+  homeTitle: 'Snap Convert — Free image and PDF converter in your browser',
   homeDescription:
-    'Convert, resize and compress images, PDFs and camera RAW photos right in your browser. Free, no sign-up, no watermarks, and your files never leave your device.',
+    'Compress, resize and convert images, and merge or split PDFs, right in your browser. Free, no sign-up, no watermarks. Your files never leave your device.',
   pageTitle: (name: string) => `${name} — Snap Convert`,
 
   // Header
@@ -27,7 +27,7 @@ export const appStrings = {
   // Home
   eyebrow: 'Free · Private · No sign-up',
   heroTitle: 'Convert, resize and compress files, right in your browser.',
-  lede: 'Images, PDFs and camera RAW photos in one place. No limits, no watermarks, and your files never leave your device.',
+  lede: 'Images and PDFs in one place, with camera RAW coming soon. No limits, no watermarks, and your files never leave your device.',
   dropTitle: 'Drop any files here',
   dropFormats: 'JPG · PNG · WebP · AVIF · HEIC · PDF · RAW',
   trust: [
