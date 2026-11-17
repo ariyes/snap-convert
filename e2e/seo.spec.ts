@@ -103,34 +103,48 @@ test.describe('sitemap and robots.txt', () => {
 });
 
 test.describe('how-to and FAQ', () => {
-  test('a tool page shows its steps and FAQ in the pre-rendered page', async ({ page }) => {
-    const compress = tools.find((t) => t.id === 'compress-image')!;
+  test('the how-to and FAQ text is in the pre-rendered HTML', async ({
+    request,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(browserName !== 'chromium' || isMobile, 'HTTP only');
+    const html = await (await request.get('./compress-image')).text();
+    expect(html).toContain('How to compress images');
+    expect(html).toContain('Drag the before/after slider to compare');
+    expect(html).toContain('Questions and answers');
+    expect(html).toContain('Is it really free?');
+    expect(html).toContain('A target file size works with JPG, WebP and AVIF.');
+  });
+
+  test('a tool page shows its steps and FAQ', async ({ page }) => {
     await page.goto('compress-image');
     const content = page.getByTestId('tool-seo-content');
     await expect(
       content.getByRole('heading', { level: 2, name: 'How to compress images' }),
     ).toBeVisible();
-    await expect(content.getByRole('listitem')).toHaveCount(compress.howTo!.length);
+    await expect(content.getByRole('listitem')).toHaveCount(4);
     await expect(
       content.getByRole('heading', { level: 2, name: 'Questions and answers' }),
     ).toBeVisible();
+    await expect(content.locator('details')).toHaveCount(6);
 
     // Answers start collapsed and open on tap or click.
-    const first = compress.faq![0]!;
-    const answer = content.getByText(first.a);
+    const answer = content.getByText('Snap Convert is free and open source');
     await expect(answer).toBeHidden();
-    await content.getByText(first.q).click();
+    await content.getByText('Is it really free?').click();
     await expect(answer).toBeVisible();
   });
 
   test('FAQ opens with the keyboard', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Keyboard is checked on desktop');
-    const merge = tools.find((t) => t.id === 'merge-pdf')!;
     await page.goto('merge-pdf');
-    const question = page.getByTestId('tool-seo-content').locator('summary').first();
-    await question.focus();
+    const content = page.getByTestId('tool-seo-content');
+    const answer = content.getByText('Pages keep their original size, quality and rotation.');
+    await expect(answer).toBeHidden();
+    await content.locator('summary').first().focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByText(merge.faq![0]!.a)).toBeVisible();
+    await expect(answer).toBeVisible();
   });
 
   test('format pages have their own content; coming-soon pages have none', async ({ page }) => {
