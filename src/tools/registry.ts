@@ -294,9 +294,15 @@ export function isFormatPage(page: PageMeta): page is FormatPageMeta {
   return 'tool' in page && 'from' in page && 'to' in page;
 }
 
-/** Tools available now (phase 1). */
+/**
+ * Phase 2+ tools that are live (D39). A tool ships by adding its id here, once its page,
+ * engine and tests are merged; until then it shows the "Coming soon" page and stays out of search.
+ */
+export const RELEASED_LATER: ReadonlySet<string> = new Set<string>([]);
+
+/** Tools available now: every phase 1 tool, plus later tools once released. */
 export function isAvailable(page: PageMeta): boolean {
-  return page.phase === 1;
+  return page.phase === 1 || RELEASED_LATER.has(page.id);
 }
 
 export function toolsInGroup(group: ToolGroup): ToolMeta[] {
@@ -320,8 +326,8 @@ export const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
  * Absolute URL of the social preview image for a page: one per group (Images, PDF) and one for the
  * home page, which the "Coming soon" tools also use. Omit the page for the home page.
  */
-export function ogImageUrl(page?: Pick<ToolMeta, 'group' | 'phase'>): string {
-  const name = page && page.phase === 1 ? (page.group === 'PDF' ? 'pdf' : 'images') : 'home';
+export function ogImageUrl(page?: PageMeta): string {
+  const name = page && isAvailable(page) ? (page.group === 'PDF' ? 'pdf' : 'images') : 'home';
   return `${SITE_URL}og/${name}.png`;
 }
 

@@ -131,7 +131,7 @@ test.describe('tool links', () => {
       await expect(page).toHaveURL(new RegExp(`/snap-convert/${tool.id}$`));
       await expect(page.getByRole('heading', { level: 1 })).toContainText(tool.name);
       await expect(page).toHaveTitle(tool.title ?? `${tool.name} — Snap Convert`);
-      if (tool.phase === 2)
+      if (!isAvailable(tool))
         await expect(page.getByRole('heading', { name: 'Coming soon', exact: true })).toBeVisible();
       await page.getByRole('link', { name: 'All tools' }).first().click();
       await expect(page).toHaveURL(/\/snap-convert\/$/);

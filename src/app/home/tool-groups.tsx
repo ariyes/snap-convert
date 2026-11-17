@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { Link } from 'react-router';
 import type { ToolMeta } from '@/core/contracts/tools';
-import { toolGroups, toolsInGroup } from '@/tools/registry';
+import { isAvailable, toolGroups, toolsInGroup } from '@/tools/registry';
 import { Badge } from '@/ui';
 import { Container } from '../components/container';
 import { ToolIcon } from '../components/tool-icon';
@@ -20,7 +20,7 @@ function ToolCard({ tool }: { tool: ToolMeta }) {
       <span>
         <span className="flex flex-wrap items-center gap-2 font-semibold group-hover:text-accent">
           {tool.name}
-          {tool.phase !== 1 && <Badge variant="warn">{appStrings.comingSoon}</Badge>}
+          {!isAvailable(tool) && <Badge variant="warn">{appStrings.comingSoon}</Badge>}
         </span>
         <span className="mt-0.5 block text-ui text-muted">{tool.short}</span>
       </span>

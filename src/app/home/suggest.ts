@@ -3,7 +3,7 @@
  * Pure functions, so they are easy to test and independent of the drop zone.
  */
 import type { FileKind, IntakeFile } from '@/core/contracts/intake';
-import { getTool } from '@/tools/registry';
+import { getTool, isAvailable } from '@/tools/registry';
 import { appStrings } from '../strings';
 
 /**
@@ -65,7 +65,7 @@ const { chip } = appStrings;
 function suggestion(toolId: string, label: string, icon?: string): Suggestion {
   const tool = getTool(toolId);
   if (!tool) throw new Error(`Unknown tool in suggestions: ${toolId}`);
-  return { toolId, label, icon: icon ?? tool.icon, soon: tool.phase !== 1 };
+  return { toolId, label, icon: icon ?? tool.icon, soon: !isAvailable(tool) };
 }
 
 /** Chips in the prototype's order: images, then PDFs, then RAW. Empty when nothing fits. */
