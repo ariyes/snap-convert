@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { expectDelivered, watchDeliveries } from './support/delivered';
 
 interface Fixture {
   /** Name the file gets in the test (may differ from the fixture's own name). */
@@ -24,8 +25,6 @@ const dropZone = (page: Page) => page.getByRole('button', { name: /^Drop any fil
 const question = (page: Page) => page.getByText(/^What do you want to do with/);
 const chips = (page: Page) =>
   page.getByRole('list', { name: 'Suggested tools' }).getByRole('button');
-const received = (page: Page) =>
-  page.getByRole('list', { name: /ready from the home page/ }).getByRole('listitem');
 
 const IMAGE_CHIPS = [
   'Compress',
@@ -61,6 +60,7 @@ function dataTransfer(page: Page, files: Fixture[]) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto('./');
+  await watchDeliveries(page);
   // The pre-rendered drop box takes files once its code has loaded and hydrated.
   await expect(page.getByTestId('home-drop')).toHaveAttribute('data-live', 'true');
 });
@@ -72,7 +72,7 @@ test('picked files lead to the tools for them', async ({ page }) => {
 
   await chips(page).filter({ hasText: 'Make a PDF' }).click();
   await expect(page).toHaveURL(/\/images-to-pdf$/);
-  await expect(received(page)).toHaveText(['one.jpg', 'two.png']);
+  await expectDelivered(page, 'images-to-pdf', ['one.jpg', 'two.png']);
 });
 
 test('the drop button is named by its own text, and takes clicks anywhere in the box', async ({
@@ -119,7 +119,7 @@ test('dropped files lead to the tools for them', async ({ page }) => {
 
   await chips(page).filter({ hasText: 'Merge' }).click();
   await expect(page).toHaveURL(/\/merge-pdf$/);
-  await expect(received(page)).toHaveText(['a.pdf', 'b.pdf']);
+  await expectDelivered(page, 'merge-pdf', ['a.pdf', 'b.pdf']);
 });
 
 test('a pasted image leads to the image tools, with a useful name', async ({ page }) => {
@@ -140,7 +140,7 @@ test('a pasted image leads to the image tools, with a useful name', async ({ pag
 
   await chips(page).filter({ hasText: 'Compress' }).click();
   await expect(page).toHaveURL(/\/compress-image$/);
-  await expect(received(page)).toHaveText([/^pasted-\d{4}-\d{2}-\d{2}-\d+\.png$/]);
+  await expectDelivered(page, 'compress-image', [/^pasted-\d{4}-\d{2}-\d{2}-\d+\.png$/]);
 });
 
 test('a JPEG renamed .png counts as an image', async ({ page }) => {
@@ -150,7 +150,7 @@ test('a JPEG renamed .png counts as an image', async ({ page }) => {
 
   await chips(page).filter({ hasText: 'Convert' }).click();
   await expect(page).toHaveURL(/\/convert-image$/);
-  await expect(received(page)).toHaveText(['jpeg-renamed.png']);
+  await expectDelivered(page, 'convert-image', ['jpeg-renamed.png']);
 });
 
 test('a text file renamed .jpg is "unknown"', async ({ page }) => {
@@ -172,5 +172,5 @@ test('a PDF renamed .jpg is a PDF, and RAW photos are recognised by their bytes'
 
   await chips(page).filter({ hasText: 'Split' }).click();
   await expect(page).toHaveURL(/\/split-pdf$/);
-  await expect(received(page)).toHaveText(['pdf-renamed.jpg']);
+  await expectDelivered(page, 'split-pdf', ['pdf-renamed.jpg']);
 });

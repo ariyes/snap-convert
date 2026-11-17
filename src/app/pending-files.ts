@@ -41,6 +41,20 @@ export function usePendingFiles(toolId: string, onFiles: (files: File[]) => void
   });
   useEffect(() => {
     const files = takePendingFiles(toolId);
-    if (files.length > 0) onFilesRef.current(files);
+    if (files.length === 0) return;
+    onFilesRef.current(files);
+    // A local, in-page signal (nothing leaves the device) so end-to-end tests can confirm hand-off
+    // without depending on how each tool shows its files.
+    window.dispatchEvent(
+      new CustomEvent<FilesDeliveredDetail>(FILES_DELIVERED_EVENT, {
+        detail: { toolId, names: files.map((f) => f.name) },
+      }),
+    );
   }, [toolId]);
+}
+
+export const FILES_DELIVERED_EVENT = 'snapconvert:files-delivered';
+export interface FilesDeliveredDetail {
+  toolId: string;
+  names: string[];
 }

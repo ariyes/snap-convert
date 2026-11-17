@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { formatPages, tools } from '../src/tools/registry';
+import { expectDelivered, watchDeliveries } from './support/delivered';
 
 const PAGES = [...tools, ...formatPages];
 
@@ -184,6 +185,7 @@ test.describe('drop → suggestion → tool', () => {
     page,
   }) => {
     await page.goto('./');
+    await watchDeliveries(page);
     await chooseFiles(page, [jpg('one.jpg'), jpg('two.jpg'), jpg('three.jpg'), pdf('doc.pdf')]);
     await expect(page.getByText('What do you want to do with 3 images and 1 PDF?')).toBeVisible();
     const chips = page.getByRole('list', { name: 'Suggested tools' }).getByRole('button');
@@ -205,21 +207,17 @@ test.describe('drop → suggestion → tool', () => {
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     await chips.filter({ hasText: 'Compress' }).click();
     await expect(page).toHaveURL(/\/compress-image$/);
-    await expect(page.getByText('3 files ready from the home page:')).toBeVisible();
-    await expect(
-      page.getByRole('list', { name: /ready from the home page/ }).getByRole('listitem'),
-    ).toHaveText(['one.jpg', 'two.jpg', 'three.jpg']);
+    await expectDelivered(page, 'compress-image', ['one.jpg', 'two.jpg', 'three.jpg']);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
   });
 
   test('PDF tools receive only the PDFs', async ({ page }) => {
     await page.goto('./');
+    await watchDeliveries(page);
     await chooseFiles(page, [jpg('photo.jpg'), pdf('a.pdf'), pdf('b.pdf')]);
     await page.getByRole('button', { name: 'Merge' }).click();
     await expect(page).toHaveURL(/\/merge-pdf$/);
-    await expect(
-      page.getByRole('list', { name: /ready from the home page/ }).getByRole('listitem'),
-    ).toHaveText(['a.pdf', 'b.pdf']);
+    await expectDelivered(page, 'merge-pdf', ['a.pdf', 'b.pdf']);
   });
 
   test('RAW files suggest RAW to JPG (coming soon); unknown files get a message; Clear hides the panel', async ({
