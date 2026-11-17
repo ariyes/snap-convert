@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import type { ImageJobInput } from '@/core/contracts/image';
 import type { ImagesToPdfInput } from '@/core/contracts/pdf';
 import type { Job, JobKind } from '@/core/contracts/queue';
+import { parseJpeg } from '@/engines/image/metadata';
 import { buildPdf, ConversionCache, ImageFailed } from './build';
 import { formatBytes } from './format';
 import { JobCancelled, runQueued, type QueueLike } from './queue-job';
@@ -127,7 +128,9 @@ describe('buildPdf', () => {
     const input = pdfJob.input as ImagesToPdfInput;
     expect(input.images.map((i) => i.name)).toEqual(['b.webp', 'a.jpg', 'c.png']);
     expect(input.images[0]?.blob).toBe(converted);
-    expect(input.images[1]?.blob).toBe(files[1]?.file);
+    // The JPEG goes in as it is (same image data), minus its metadata.
+    const scan = async (blob: Blob) => parseJpeg(new Uint8Array(await blob.arrayBuffer())).scan;
+    expect(await scan(input.images[1]!.blob)).toEqual(await scan(files[1]!.file));
     expect(input).toMatchObject({
       pageSize: 'a4',
       orientation: 'auto',
@@ -140,6 +143,45 @@ describe('buildPdf', () => {
     expect(store.getState().jobs).toEqual([]);
     expect(seen.at(-1)).toBe(1);
     expect(seen.every((p, i) => i === 0 || p >= (seen[i - 1] ?? 0))).toBe(true);
+  });
+
+  it('takes the location out of JPEGs kept as they are, without a job', async () => {
+    const { queue, store } = fakeQueue();
+    const cache = new ConversionCache(queue);
+    const file = fixture('images/gps.jpg', 'g.jpg');
+    const { promise, jobId, converted } = await cache.ensure(file, 'original');
+    expect([jobId, converted, store.getState().jobs]).toEqual([null, false, []]);
+    const out = new Uint8Array(await (await promise).arrayBuffer());
+    const original = new Uint8Array(await file.file.arrayBuffer());
+    expect(out.length).toBeLessThan(original.length);
+    // The GPS latitude (51° 30′, stored big- or little-endian) is gone.
+    const latitude = (little: boolean) => {
+      const b = new Uint8Array(16);
+      const v = new DataView(b.buffer);
+      [51, 1, 30, 1].forEach((n, i) => v.setUint32(i * 4, n, little));
+      return Buffer.from(b);
+    };
+    const has = (bytes: Uint8Array) =>
+      Buffer.from(bytes).includes(latitude(true)) || Buffer.from(bytes).includes(latitude(false));
+    expect(has(original)).toBe(true);
+    expect(has(out)).toBe(false);
+    // Cached: the next build reuses it.
+    expect((await cache.ensure(file, 'original')).promise).toBe(promise);
+  });
+
+  it('re-encodes a JPEG whose header can’t be read, so nothing slips through', async () => {
+    const { queue, store } = fakeQueue();
+    const cache = new ConversionCache(queue);
+    const whole = readFileSync(path.resolve('tests/fixtures/images/gps.jpg'));
+    const file = {
+      ...fixture('images/gps.jpg', 'cut.jpg'),
+      file: new File([whole.subarray(0, 40)], 'cut.jpg'),
+    };
+    const { jobId, converted } = await cache.ensure(file, 'original');
+    expect(jobId).not.toBeNull();
+    expect(converted).toBe(true);
+    const [job] = store.getState().jobs;
+    expect(job?.input).toMatchObject({ format: 'jpeg', metadata: 'strip-all', quality: 92 });
   });
 
   it('reuses converted images on the next build', async () => {

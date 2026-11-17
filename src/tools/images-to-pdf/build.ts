@@ -5,9 +5,10 @@ import type { ImageJobInput, ImageJobResult } from '@/core/contracts/image';
 import type { IntakeFile } from '@/core/contracts/intake';
 import type { ImagesToPdfInput, PdfOutput, PdfResult } from '@/core/contracts/pdf';
 import type { PdfOp } from '@/engines/pdf';
-import { conversionFor, readHead } from './prepare';
+import { conversionFor, imageType, readHead, reencodeFor } from './prepare';
 import { JobCancelled, runQueued, type QueueLike } from './queue-job';
 import { strings } from './strings';
+import { stripLocation } from './strip-location';
 import { toPdfPageOptions, type ImagesToPdfSettings, type QualityChoice } from './settings';
 
 const IMAGES_TO_PDF: PdfOp = 'images-to-pdf';
@@ -44,8 +45,8 @@ export class ConversionCache {
   }
 
   /**
-   * The PDF-ready blob of `file`: the file itself when it's already JPEG or PNG (and the quality
-   * is Original), otherwise the result of an image job (started here unless one is running).
+   * The PDF-ready blob of `file`: with Original quality a PNG as it is and a JPEG without its
+   * location data, otherwise the result of an image job (started here unless one is running).
    * `jobId` is set only when this call started the job.
    */
   async ensure(
@@ -55,13 +56,27 @@ export class ConversionCache {
   ): Promise<{ promise: Promise<Blob>; jobId: string | null; converted: boolean }> {
     const key = ConversionCache.key(file.id, quality);
     const existing = this.entries.get(key);
-    if (existing) return { promise: existing.promise, jobId: null, converted: true };
+    if (existing) {
+      return { promise: existing.promise, jobId: null, converted: existing.jobId !== null };
+    }
 
-    const input: ImageJobInput | null = conversionFor(file, await readHead(file.file), quality);
-    // Another call may have started it while the head was being read.
+    const head = await readHead(file.file);
+    let input: ImageJobInput | null = conversionFor(file, head, quality);
+    // A JPEG kept as it is loses its location data first (pixels untouched). One whose header
+    // can't be read safely is re-encoded instead, so its location can't slip through.
+    let stripped: Blob | null = null;
+    if (!input && imageType(head) === 'jpeg') {
+      stripped = await stripLocation(file.file);
+      if (!stripped) input = reencodeFor(file);
+    }
+    // Another call may have started it while the file was being read.
     const raced = this.entries.get(key);
-    if (raced) return { promise: raced.promise, jobId: null, converted: true };
-    if (!input) return { promise: Promise.resolve(file.file), jobId: null, converted: false };
+    if (raced) return { promise: raced.promise, jobId: null, converted: raced.jobId !== null };
+    if (!input) {
+      const promise = Promise.resolve(stripped ?? file.file);
+      if (stripped) this.entries.set(key, { promise, jobId: null });
+      return { promise, jobId: null, converted: false };
+    }
 
     const job = runQueued<ImageJobInput, ImageJobResult>(
       this.queue,
