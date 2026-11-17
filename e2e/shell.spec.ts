@@ -130,7 +130,7 @@ test.describe('tool links', () => {
       await page.getByRole('link', { name: new RegExp(`^${tool.name}`) }).click();
       await expect(page).toHaveURL(new RegExp(`/snap-convert/${tool.id}$`));
       await expect(page.getByRole('heading', { level: 1 })).toContainText(tool.name);
-      await expect(page).toHaveTitle(`${tool.name} — Snap Convert`);
+      await expect(page).toHaveTitle(tool.title ?? `${tool.name} — Snap Convert`);
       if (tool.phase === 2)
         await expect(page.getByRole('heading', { name: 'Coming soon', exact: true })).toBeVisible();
       await page.getByRole('link', { name: 'All tools' }).first().click();
@@ -176,7 +176,7 @@ test.describe('tool links', () => {
   test('format pages show their own heading', async ({ page }) => {
     await page.goto('./png-to-jpg');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('PNG to JPG');
-    await expect(page).toHaveTitle('PNG to JPG — Snap Convert');
+    await expect(page).toHaveTitle('PNG to JPG Converter — Free, No Upload | Snap Convert');
   });
 });
 

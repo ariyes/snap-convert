@@ -176,7 +176,9 @@ test.describe('format pages', () => {
       const response = await request.get(`./${page.id}`);
       expect(response.status(), page.id).toBe(200);
       const html = await response.text();
-      expect(html, page.id).toContain(`<title>${page.name} — Snap Convert</title>`);
+      expect(html, page.id).toContain(
+        `<title>${page.title ?? `${page.name} — Snap Convert`}</title>`,
+      );
       expect(html, page.id).toMatch(new RegExp(`<h1[^>]*>${page.name}</h1>`));
     }
   });
