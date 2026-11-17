@@ -75,14 +75,37 @@ test('picked files lead to the tools for them', async ({ page }) => {
   await expect(received(page)).toHaveText(['one.jpg', 'two.png']);
 });
 
-test('dropped files lead to the tools for them', async ({ page, browserName }) => {
-  // GOVERNOR: WebKit gives in-memory files an entry (webkitGetAsEntry) whose file() fails with
-  // NotFoundError, and P11's filesFromDataTransfer then drops the file instead of falling back
-  // to item.getAsFile(). Real file drops are unaffected; fixing it is a change in src/features/intake.
-  test.fixme(
-    browserName === 'webkit',
-    'WebKit: synthetic drop entries have no file (P11 follow-up)',
+test('the drop button is named by its own text, and takes clicks anywhere in the box', async ({
+  page,
+}) => {
+  const zone = dropZone(page);
+  // WCAG 2.5.3: the name is the button's visible text; the formats and paste hint describe it.
+  await expect(zone).toHaveAccessibleName('Drop any files here Choose files');
+  await expect(zone).toHaveAccessibleDescription(
+    /^JPG · PNG · WebP · AVIF · HEIC · PDF · RAW or paste with (Ctrl|Command) \+ V$/,
   );
+  // The formats line and paste hint sit outside the button but inside the box: the button's
+  // overlay still takes clicks there, and in the box's corners, so the whole box opens the picker.
+  const hits = await page.evaluate(() => {
+    const button = document.querySelector('[data-testid="home-drop"] [role="button"]');
+    const box = button?.parentElement?.getBoundingClientRect();
+    const sub = button?.nextElementSibling?.getBoundingClientRect();
+    const hint = button?.nextElementSibling?.nextElementSibling?.getBoundingClientRect();
+    if (!box || !sub || !hint) return 'missing';
+    const points: Array<[number, number]> = [
+      [sub.x + sub.width / 2, sub.y + sub.height / 2],
+      [hint.x + 4, hint.y + hint.height / 2],
+      [box.x + 8, box.y + 8],
+      [box.right - 8, box.bottom - 8],
+    ];
+    return points.map(([x, y]) => document.elementFromPoint(x, y) === button);
+  });
+  expect(hits).toEqual([true, true, true, true]);
+});
+
+test('dropped files lead to the tools for them', async ({ page }) => {
+  // In-memory files: WebKit's entries for them can't be opened, so this also covers the fallback
+  // to the plain file in filesFromDataTransfer.
   const dt = await dataTransfer(page, [pdf('a.pdf'), pdf('b.pdf'), photo('c.jpg')]);
   const zone = dropZone(page);
   await zone.dispatchEvent('dragenter', { dataTransfer: dt });
