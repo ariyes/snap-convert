@@ -103,14 +103,20 @@ export default function BulkResizeRoute() {
     [],
   );
 
-  const signature = settingsSignature(settings);
-  const stale = runSignature !== null && runSignature !== signature;
-
   const jobsById = useMemo(() => {
     const map = new Map<string, BulkJob>();
     for (const job of allJobs) if (isBulkJob(job)) map.set(job.id, job);
     return map;
   }, [allJobs]);
+
+  const busy = Object.values(jobIds).some((id) => {
+    const status = jobsById.get(id)?.status;
+    return status === 'waiting' || status === 'working';
+  });
+  // Settings changed after a run: its results are stale. A run that's still going finishes first
+  // (with the settings it started with); then it's stale.
+  const signature = settingsSignature(settings);
+  const stale = !busy && runSignature !== null && runSignature !== signature;
 
   /** Each file's job with the current settings (none when stale or not run yet). */
   const fileJobs = useMemo(() => {
