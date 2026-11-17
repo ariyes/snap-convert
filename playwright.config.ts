@@ -23,6 +23,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${port}/snap-convert/`,
     trace: 'on-first-retry',
+    // No transitions: accessibility scans must not catch a button mid-fade (the UI honours this setting).
+    reducedMotion: 'reduce',
   },
   projects: [
     { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'], ...desktop } },

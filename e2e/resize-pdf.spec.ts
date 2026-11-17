@@ -236,16 +236,10 @@ test('the workspace has no serious accessibility issues', async ({ page }) => {
   await open(page, ['encrypted.pdf', 'a4-3-pages.pdf']);
   await expect(page.getByTestId('preview-page')).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
-  const serious = results.violations
-    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-    // P11b: DropZone's accessible name leaves out its formats line (label-content-name-mismatch).
-    .map((v) => ({
-      ...v,
-      nodes: v.nodes.filter(
-        (n) => !(v.id === 'label-content-name-mismatch' && n.html.includes('role="button"')),
-      ),
-    }))
-    .filter((v) => v.nodes.length > 0);
+  // The DropZone naming issue was fixed in P11b, so nothing is filtered.
+  const serious = results.violations.filter(
+    (v) => v.impact === 'serious' || v.impact === 'critical',
+  );
   expect(
     serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
   ).toEqual([]);
