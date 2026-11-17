@@ -78,8 +78,18 @@ export function isGraphic(img: Pixels): boolean {
   // Very few colours in a decent-sized picture: palette art, even with soft edges.
   if (s.samples >= 4096 && s.colours <= 64) return true;
   // Mostly flat areas, and the edges between them are hard rather than grainy.
-  return s.flat >= 0.3 && s.subtle < 0.5;
+  return s.flat >= MIN_FLAT_SHARE && s.subtle < MAX_SUBTLE_SHARE;
 }
+
+/** At least this share of neighbour pairs must be exactly equal for flat-colour art. */
+const MIN_FLAT_SHARE = 0.3;
+/**
+ * Graphics: where neighbours differ, it's almost always a hard edge or anti-aliasing. Measured on
+ * the reference set: text screenshot 0.03, logo 0.07 (0.19 after a Lanczos resize). A photo on a
+ * clipped white background is just as flat, but its subject is textured: the product-on-white
+ * photo scores 0.50 (it was flagged by the old 0.5 limit). 0.3 sits between the two groups.
+ */
+const MAX_SUBTLE_SHARE = 0.3;
 
 const _contract: IsGraphic = isGraphic;
 void _contract;
