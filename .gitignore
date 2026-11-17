@@ -26,3 +26,7 @@ Thumbs.db
 
 # Vitest browser mode failure screenshots
 __screenshots__/
+
+# Real-world test files (P24): generated on first use, or the owner's own files
+tests/fixtures/real/generated/
+tests/fixtures/real/owner/
