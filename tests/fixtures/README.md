@@ -30,11 +30,14 @@ Without `VITE_WRITE_FIXTURES=1` the generator is skipped. License: same as the p
 
 ### `quality/` (synthetic members of the reference set)
 
-| File                  | What it is                                                                                                                                                        |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sky-gradient.png`    | 2400×1600 smooth sky gradient with a soft glow; neighbouring pixels differ by ≤ 1 level (banding check)                                                           |
-| `text-screenshot.png` | 1600×1000 settings-page screenshot: text from 11 to 32 px, serif, monospace, 1 px table rules                                                                     |
-| `line-art-logo.png`   | 2000×2000 logo, word mark, fan of 1–4 px lines, mid-grey panel for halo checks (96 / 176 levels), 1 px and 1.5 px line gratings and a zone plate for moiré checks |
+| File                   | What it is                                                                                                                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sky-gradient.png`     | 2400×1600 smooth sky gradient with a soft glow; neighbouring pixels differ by ≤ 1 level (banding check)                                                                                                        |
+| `text-screenshot.png`  | 1600×1000 settings-page screenshot: text from 11 to 32 px, serif, monospace, 1 px table rules                                                                                                                  |
+| `line-art-logo.png`    | 2000×2000 logo, word mark, fan of 1–4 px lines, mid-grey panel for halo checks (96 / 176 levels), 1 px and 1.5 px line gratings and a zone plate for moiré checks                                              |
+| `logo-soft-shadow.png` | 1200×800 transparent logo (P24b): flat orange badge with a soft drop shadow, blue dot with an outer glow, word mark with a soft shadow, red tag line. Must be detected as a graphic (no 4:2:0 fringes in JPEG) |
+
+Regenerate only the soft-shadow logo with `-t "soft-shadow"` added to the command above.
 
 ## Downloaded photos
 
@@ -53,4 +56,5 @@ Kept as published (not re-encoded) unless noted.
 The seven files in `quality/` are the reference set from the image quality standard
 (`docs/03-features.md`): photo with fine detail (hair, foliage), night photo with noise,
 product on white, smooth sky gradient, text screenshot, logo/line art, portrait phone photo
-with EXIF rotation. Each is under 3 MB.
+with EXIF rotation. Each is under 3 MB. P24b added an eighth, `logo-soft-shadow.png` (logo
+with drop shadow and glow), after the QA pass found such logos were taken for photos.

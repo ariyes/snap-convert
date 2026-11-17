@@ -306,6 +306,68 @@ function lineArt(): ImageData {
   return img;
 }
 
+/**
+ * A transparent logo the way design tools export them: flat colours, anti-aliased edges, a soft
+ * drop shadow under the badge, an outer glow around the dot and a soft shadow under the word
+ * mark (P24b: these soft edges made it look like a photo, so JPEG got colour fringes).
+ */
+function softShadowLogo(): ImageData {
+  const width = 1200;
+  const height = 800;
+  return draw(width, height, (ctx) => {
+    // Badge: rounded square with a drop shadow, white lightning bolt on top.
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = 28;
+    ctx.shadowOffsetY = 10;
+    ctx.fillStyle = '#c2410c';
+    ctx.beginPath();
+    ctx.roundRect(120, 140, 400, 400, 90);
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(350, 190);
+    ctx.lineTo(220, 370);
+    ctx.lineTo(310, 370);
+    ctx.lineTo(285, 490);
+    ctx.lineTo(420, 305);
+    ctx.lineTo(330, 305);
+    ctx.closePath();
+    ctx.fill();
+    // Blue dot with an outer glow.
+    ctx.save();
+    ctx.shadowColor = 'rgba(37, 99, 235, 0.7)';
+    ctx.shadowBlur = 40;
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.arc(1010, 200, 70, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // Word mark with a soft shadow, and a red tag line.
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 4;
+    ctx.font = 'bold 120px Arial, sans-serif';
+    ctx.fillStyle = '#1c1917';
+    ctx.fillText('SNAP', 590, 400);
+    ctx.fillStyle = '#0f766e';
+    ctx.fillText('CONVERT', 590, 530);
+    ctx.restore();
+    ctx.font = 'bold 44px Arial, sans-serif';
+    ctx.fillStyle = '#e11d48';
+    ctx.fillText('images · PDFs · RAW', 600, 640);
+  });
+}
+
+async function writeSoftShadowLogo(): Promise<void> {
+  await save(
+    'tests/fixtures/quality/logo-soft-shadow.png',
+    await encode(softShadowLogo(), 'image/png'),
+  );
+}
+
 async function writeQualitySet(): Promise<void> {
   await save('tests/fixtures/quality/sky-gradient.png', await encode(skyGradient(), 'image/png'));
   await save(
@@ -318,4 +380,5 @@ async function writeQualitySet(): Promise<void> {
 describe.runIf(enabled)('generate fixtures', () => {
   it('writes tests/fixtures/images', writeImages, 60_000);
   it('writes the synthetic part of tests/fixtures/quality', writeQualitySet, 120_000);
+  it('writes tests/fixtures/quality/logo-soft-shadow.png', writeSoftShadowLogo, 60_000);
 });
