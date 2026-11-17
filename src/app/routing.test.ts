@@ -114,7 +114,7 @@ describe('prerender list', () => {
 
 describe('head tags', () => {
   it('falls back to the name and short line, with a canonical URL', () => {
-    const page = getPage('compress-image')!;
+    const page = { ...getPage('compress-image')!, title: undefined, description: undefined };
     expect(toolPageMeta(page)).toEqual(
       expect.arrayContaining([
         { title: 'Compress image — Snap Convert' },
