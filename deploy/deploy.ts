@@ -35,7 +35,7 @@ import { parseArgs, promisify } from 'node:util';
 import { brotliCompress, constants as zlibConstants, gzip } from 'node:zlib';
 import { checkBuild, formatBytes, listFiles, sizeReport } from './check-build.ts';
 import { readEnvFile, REPO_ROOT, templateOptionsFromEnv, writeHeaders } from './csp.ts';
-import { LIVE_URL } from './headers.ts';
+import { BASE_PATH, LIVE_URL } from './headers.ts';
 
 const gzipAsync = promisify(gzip);
 const brotliAsync = promisify(brotliCompress);
@@ -261,6 +261,7 @@ async function main(): Promise<void> {
   if (report.problems.length > 0) {
     throw new Error(`Build check failed:\n  - ${report.problems.join('\n  - ')}`);
   }
+  say(`Build check passed: every path is under ${BASE_PATH}`);
 
   // 2. Stage.
   const stageRoot = path.join(REPO_ROOT, 'build/deploy');
