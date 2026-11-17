@@ -3,23 +3,6 @@
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
-/** 512 B · 4.2 KB · 38 KB · 3.4 MB · 1.2 GB (as in the prototype). */
-export function formatBytes(bytes: number): string {
-  const b = Math.max(0, Math.round(bytes));
-  if (b < 1024) return `${b} B`;
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(b < 10240 ? 1 : 0)} KB`;
-  if (b < 1024 ** 3) return `${(b / 1024 ** 2).toFixed(1)} MB`;
-  return `${(b / 1024 ** 3).toFixed(2)} GB`;
-}
-
-/** "about 40 s left" / "about 3 min left"; null seconds → "estimating time…". */
-export function formatTimeLeft(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds)) return bulkStrings.estimating;
-  const s = Math.max(1, Math.round(seconds));
-  if (s < 60) return `about ${s} s left`;
-  return `about ${Math.round(s / 60)} min left`;
-}
-
 export const bulkStrings = {
   // Empty state
   dropTitle: 'Drop as many images as you like',
@@ -68,7 +51,6 @@ export const bulkStrings = {
   estimated: 'Estimated:',
   about: 'about',
   processing: (n: number) => `Processing ${n} at a time…`,
-  estimating: 'estimating time…',
   overallProgress: 'Overall progress',
   done: (n: number) => `${n} done`,
   failedCount: (n: number) => `${n} failed`,

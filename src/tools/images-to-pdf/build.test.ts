@@ -7,7 +7,6 @@ import type { ImagesToPdfInput } from '@/core/contracts/pdf';
 import type { Job, JobKind } from '@/core/contracts/queue';
 import { parseJpeg } from '@/engines/image/metadata';
 import { buildPdf, ConversionCache, ImageFailed } from './build';
-import { formatBytes } from './format';
 import { JobCancelled, runQueued, type QueueLike } from './queue-job';
 import { defaultSettings } from './settings';
 
@@ -243,20 +242,5 @@ describe('buildPdf', () => {
     expect(ids).toHaveLength(1);
     controller.abort();
     await expect(building).rejects.toBeInstanceOf(JobCancelled);
-  });
-});
-
-describe('formatBytes', () => {
-  it.each([
-    [0, '0 B'],
-    [830, '830 B'],
-    [4710, '4.6 KB'],
-    [512_000, '500 KB'],
-    [3_565_158, '3.4 MB'],
-    [52_428_800, '50 MB'],
-    [3 * 1024 ** 3, '3.0 GB'],
-    [Number.NaN, '—'],
-  ])('%d → %s', (n, text) => {
-    expect(formatBytes(n)).toBe(text);
   });
 });

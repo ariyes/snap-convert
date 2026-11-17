@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ImageJobResult } from '@/core/contracts/image';
 import { PRESET_IDS, getPreset, minRecommendedSide } from '@/engines/optimize';
-import {
-  describeResult,
-  formatBytes,
-  formatTimeLeft,
-  plannedSizeText,
-  smallImageWarning,
-  webName,
-  webNames,
-} from './result';
+import { describeResult, plannedSizeText, smallImageWarning, webName, webNames } from './result';
 import { optimizeStrings as t } from './strings';
 
 function result(patch: Partial<ImageJobResult> = {}): ImageJobResult {
@@ -135,21 +127,5 @@ describe('names', () => {
       'A-web (2).jpg',
       'b-web.jpg',
     ]);
-  });
-});
-
-describe('formatting', () => {
-  it('formats bytes', () => {
-    expect(formatBytes(500)).toBe('500 B');
-    expect(formatBytes(1536)).toBe('1.5 KB');
-    expect(formatBytes(412 * 1024)).toBe('412 KB');
-    expect(formatBytes(3.4 * 1024 * 1024)).toBe('3.4 MB');
-  });
-
-  it('formats time left', () => {
-    expect(formatTimeLeft(null)).toBe(t.estimating);
-    expect(formatTimeLeft(40.4)).toBe('about 40 s left');
-    expect(formatTimeLeft(0.2)).toBe('about 1 s left');
-    expect(formatTimeLeft(125)).toBe('about 2 min left');
   });
 });

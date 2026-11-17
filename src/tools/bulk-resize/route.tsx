@@ -40,14 +40,13 @@ import { PanelDivider, ToolEmptyState, ToolPage, Workspace } from '@/features/to
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { Button, Card, ProgressBar, toast } from '@/ui';
-import { withQualityFlag } from '@/tools/_shared';
+import { EXTENSIONS, formatBytes, formatTimeLeft, withQualityFlag } from '@/tools/_shared';
 import { FileRow, type BulkJob } from './file-row';
 import { LeaveGuard } from './leave-guard';
 import { makeSampleFiles } from './sample-specs';
 import {
   BULK_DEFAULTS,
   estimateFileBytes,
-  extensionFor,
   jobOptions,
   outputNames,
   plannedFormat,
@@ -55,7 +54,7 @@ import {
   type BulkSettings,
   TOOL_ID,
 } from './settings';
-import { formatBytes, formatTimeLeft, bulkStrings as t } from './strings';
+import { bulkStrings as t } from './strings';
 import { useBulkExport } from './use-bulk-export';
 import { WindowedList } from './windowed-list';
 
@@ -608,9 +607,10 @@ export default function BulkResizeRoute() {
           width: firstPlan?.output.width,
           height: firstPlan?.output.height,
           n: 1,
-          format: extensionFor(
-            plannedFormat(settings.format, first?.name ?? 'image.jpg', first?.kind ?? 'image'),
-          ),
+          format:
+            EXTENSIONS[
+              plannedFormat(settings.format, first?.name ?? 'image.jpg', first?.kind ?? 'image')
+            ],
         }}
       />
       <MetadataSelect value={settings} onChange={update} format={settings.format} helper={false} />

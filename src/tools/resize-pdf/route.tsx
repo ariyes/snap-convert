@@ -50,7 +50,8 @@ import {
   type ResizeSettings,
   type Unit,
 } from './settings';
-import { formatBytes, resizeStrings as t } from './strings';
+import { formatBytes } from '@/tools/_shared';
+import { resizeStrings as t } from './strings';
 
 const TOOL = 'resize-pdf';
 const ACCEPT = ['pdf'] as const;

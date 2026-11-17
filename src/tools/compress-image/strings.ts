@@ -31,10 +31,6 @@ export const compressStrings = {
   dims: (width: number, height: number) => `${width}×${height}`,
   dimsLabel: 'New dimensions',
   progress: (done: number, total: number) => `Compressed ${done} of ${total}`,
-  timeLeft: (seconds: number) =>
-    seconds < 60
-      ? `about ${Math.max(1, Math.round(seconds))} s left`
-      : `about ${Math.round(seconds / 60)} min left`,
   progressLabel: 'Compression progress',
   failedCount: (n: number) => (n === 1 ? '1 image failed' : `${n} images failed`),
   retry: 'Try again',

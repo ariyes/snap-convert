@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ImageJobResult } from '@/core/contracts/image';
-import { formatBytes, sizeChange } from './format';
+import { formatBytes, formatTimeLeft, sizeChange } from './format';
 import { planJobs, type JobEntry } from './job-plan';
 import { baseName, outputFileName, outputFileNames } from './names';
 import { resultNotes } from './notes';
@@ -24,6 +24,16 @@ describe('formatBytes', () => {
   it('shows a dash for nonsense', () => {
     expect(formatBytes(Number.NaN)).toBe('—');
     expect(formatBytes(-1)).toBe('—');
+  });
+});
+
+describe('formatTimeLeft', () => {
+  it('says how much time is left', () => {
+    expect(formatTimeLeft(null)).toBe('estimating time…');
+    expect(formatTimeLeft(Number.NaN)).toBe('estimating time…');
+    expect(formatTimeLeft(0.2)).toBe('about 1 s left');
+    expect(formatTimeLeft(40)).toBe('about 40 s left');
+    expect(formatTimeLeft(185)).toBe('about 3 min left');
   });
 });
 

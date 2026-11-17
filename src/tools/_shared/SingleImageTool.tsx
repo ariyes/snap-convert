@@ -34,7 +34,7 @@ import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { Button, Card, Note, strings as uiStrings } from '@/ui';
 import { useBlobUrls } from './blob-urls';
-import { formatBytes, sizeChange } from './format';
+import { formatBytes, formatTimeLeft, sizeChange } from './format';
 import { outputFileNames } from './names';
 import { resultNotes } from './notes';
 import { singleImageStrings as strings } from './strings';
@@ -365,7 +365,7 @@ function FileStrip({
         className="m-0 flex flex-wrap items-center gap-x-2 text-ui text-muted"
       >
         <span>{strings.progress(done, files.length)}</span>
-        {eta !== null && <span>· {strings.timeLeft(eta)}</span>}
+        {eta !== null && <span>· {formatTimeLeft(eta)}</span>}
         {failed > 0 && <span className="text-bad">· {strings.failedCount(failed)}</span>}
       </p>
       <ul

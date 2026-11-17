@@ -42,12 +42,16 @@ import {
   strings as uiStrings,
   toast,
 } from '@/ui';
-import { formatBytes } from '../merge-pdf/format';
-import { PdfPageThumb } from '../merge-pdf/pdf-thumb';
-import { samplePdfFile, SPLIT_SAMPLE } from '../merge-pdf/sample-pdfs';
-import { useFileDrop } from '../merge-pdf/use-file-drop';
-import { INFO_LOADING, usePdfInfos } from '../merge-pdf/use-pdf-infos';
-import { usePdfJob } from '../merge-pdf/use-pdf-job';
+import { formatBytes } from '@/tools/_shared';
+import {
+  INFO_LOADING,
+  PdfPageThumb,
+  samplePdfFile,
+  SPLIT_SAMPLE,
+  useFileDrop,
+  usePdfInfos,
+  usePdfJob,
+} from '@/tools/_shared/pdf';
 import { planSplit, SPLIT_MODES, togglePage, type SplitMode, type SplitPlan } from './plan';
 import { splitStrings as t } from './strings';
 

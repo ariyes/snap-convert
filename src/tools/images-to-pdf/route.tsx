@@ -42,7 +42,7 @@ import {
   Select,
 } from '@/ui';
 import { buildPdf, ConversionCache, ImageFailed } from './build';
-import { formatBytes } from './format';
+import { formatBytes } from '@/tools/_shared';
 import { PageGrid } from './page-grid';
 import { JobCancelled } from './queue-job';
 import {

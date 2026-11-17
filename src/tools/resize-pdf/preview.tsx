@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
 import { fitSize, type Size } from '@/core/sizing';
 import { usePageThumbnail } from '@/engines/pdf';
 import { Helper } from '@/ui';
+import { BitmapCanvas } from '@/tools/_shared';
 import { formatSide, previewLayout, type ResizeSettings } from './settings';
 import { resizeStrings as t } from './strings';
 
@@ -9,19 +9,6 @@ import { resizeStrings as t } from './strings';
 export const PREVIEW_BOX: Size = { width: 280, height: 210 };
 /** Small first-page thumbnails in the file list (CSS px, long side). */
 export const ROW_THUMB = 40;
-
-/** Draws an ImageBitmap the hook owns into a canvas (the hook closes the bitmap later). */
-function BitmapCanvas({ bitmap, className }: { bitmap: ImageBitmap; className?: string }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
-  }, [bitmap]);
-  return <canvas ref={ref} aria-hidden="true" className={className} />;
-}
 
 export interface PagePreviewProps {
   file: Blob;

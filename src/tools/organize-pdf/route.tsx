@@ -22,7 +22,8 @@ import { track } from '@/lib/analytics';
 import { Button, Card, Helper, Input, Label, Note, ProgressBar } from '@/ui';
 import { PageGrid } from './page-grid';
 import { samePages, toOrganizePages, type PageItem } from './pages';
-import { formatBytes, organizeStrings as t } from './strings';
+import { formatBytes } from '@/tools/_shared';
+import { organizeStrings as t } from './strings';
 import { HistoryButtons, Toolbar } from './toolbar';
 import { useOrganizer } from './use-organizer';
 

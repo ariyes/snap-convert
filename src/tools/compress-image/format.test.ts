@@ -1,15 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compressedName, downloadNames, formatBytes, savedPercent, savedText } from './format';
-
-describe('formatBytes', () => {
-  it('formats like the prototype', () => {
-    expect(formatBytes(830)).toBe('830 B');
-    expect(formatBytes(9_600)).toBe('9.4 KB');
-    expect(formatBytes(158_903)).toBe('155 KB');
-    expect(formatBytes(2_183_168)).toBe('2.1 MB');
-    expect(formatBytes(Number.NaN)).toBe('—');
-  });
-});
+import { compressedName, downloadNames, savedPercent, savedText } from './format';
 
 describe('saved', () => {
   it('is a whole percentage, positive when smaller', () => {

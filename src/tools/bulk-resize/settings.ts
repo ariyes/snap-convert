@@ -11,7 +11,13 @@ import {
   toJobOptions,
   type ImageSettingsValues,
 } from '@/features/image-settings';
-import { QUALITY_FLAG_DEFAULT, qualityGuardFor, type QualityFlag } from '@/tools/_shared';
+import {
+  baseName,
+  EXTENSIONS,
+  QUALITY_FLAG_DEFAULT,
+  qualityGuardFor,
+  type QualityFlag,
+} from '@/tools/_shared';
 
 export const TOOL_ID = 'bulk-resize';
 
@@ -51,17 +57,6 @@ export function settingsSignature(settings: BulkSettings): string {
   return JSON.stringify(jobOptions(settings));
 }
 
-/** File extension of an output format. */
-export function extensionFor(format: ImageFormat): string {
-  return format === 'jpeg' ? 'jpg' : format;
-}
-
-/** "photo.final.jpg" → "photo.final". */
-export function baseName(name: string): string {
-  const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(0, dot) : name;
-}
-
 function sourceFormat(name: string, kind: FileKind): ImageFormat {
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
   if (kind === 'heic') return 'jpeg';
@@ -88,7 +83,7 @@ export interface NameEntry {
 
 /** One output name: pattern applied to the base name, plus the output extension. */
 export function outputName(pattern: string, entry: NameEntry): string {
-  const ext = extensionFor(entry.format);
+  const ext = EXTENSIONS[entry.format];
   const base = applyNamePattern(pattern, {
     name: baseName(entry.name),
     width: entry.width,
