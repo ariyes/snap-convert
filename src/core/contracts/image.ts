@@ -20,7 +20,7 @@ export interface DecodedImage {
   pixels: ImageData;              // orientation already applied, sRGB
   width: number;
   height: number;
-  sourceFormat: ImageFormat | 'heic' | 'gif' | 'bmp' | 'unknown';
+  sourceFormat: ImageFormat | 'heic' | 'gif' | 'bmp' | 'raw' | 'unknown';
   hasAlpha: boolean;
   metadata: ImageMetadata;
   reducedFrom?: Size;             // set when a huge image was decoded at reduced size
@@ -59,6 +59,15 @@ export interface ImageJobInput {
   height?: number;
   background?: string;            // colour behind transparency when the output can't keep alpha (JPEG); default '#ffffff' (D29)
   qualityGuard?: boolean;         // true on default/preset runs: raise quality until SSIM ≥ 0.97; false when the user set quality (D28, D29)
+  raw?: RawOptions;               // camera RAW files only (P29, D40); default { mode: 'fast', whiteBalance: 'as-shot', exposure: 0, highlights: 'clip' }
+}
+
+/** How a camera RAW file is turned into pixels (P29). Ignored for other files. */
+export interface RawOptions {
+  mode: 'fast' | 'full';          // fast: the camera's own full-size JPEG when there is one; full: develop the RAW data
+  whiteBalance: 'as-shot' | 'auto';
+  exposure: number;               // stops, −2…+2
+  highlights: 'clip' | 'recover';
 }
 export interface ImageJobResult {
   blob: Blob;
@@ -70,7 +79,7 @@ export interface ImageJobResult {
   quality: number;                // quality actually used
   ssim: number;                   // visual score vs the resized pixels (1 = identical)
   graphic: boolean;               // isGraphic() said text/logo/flat art (UI may suggest PNG)
-  notes: Array<'target-unreachable' | 'format-fallback' | 'not-enlarged' | 'padded' | 'cropped' | 'metadata-jpeg-only' | 'reduced-decode' | 'guard-short' | 'kept-original'>;
+  notes: Array<'target-unreachable' | 'format-fallback' | 'not-enlarged' | 'padded' | 'cropped' | 'metadata-jpeg-only' | 'reduced-decode' | 'guard-short' | 'kept-original' | 'raw-preview' | 'raw-half-size'>; // raw-preview: the camera's JPEG was used; raw-half-size: developed at half size to fit memory
   guard?: { steps: number; reached: boolean };  // quality-guard outcome (D29)
   suggestedSize?: Size;           // with 'target-unreachable': dimensions that would fit
   suggestedFormat?: ImageFormat;  // with 'target-unreachable' on PNG: a lossy format that would fit

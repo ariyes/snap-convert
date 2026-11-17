@@ -3,6 +3,7 @@
 export * from './sizing';
 export * from './image';
 export * from './pdf';
+export * from './raw';
 export * from './queue';
 export * from './intake';
 export * from './export';
