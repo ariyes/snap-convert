@@ -207,20 +207,31 @@ nothing blocks `/snap-convert/`. It lists only the main sitemap.
 The app's footer and header link to the source code (AGPL-3.0 requires it). The link today is
 `https://github.com/crkayes/snap-convert` (`SOURCE_URL` in `src/app/site.ts`).
 
-- [ ] Before publishing, know what goes public: the whole git history, including `docs/`,
-  `prompts/`, `prototype/` and `CLAUDE.md`, and the author name and email on every commit
-  (see them with `git log --format="%an <%ae>" | Sort-Object -Unique`). `.env`, `deploy/.env` and `tests/fixtures/real/owner/` are
-  git-ignored and stay private. Check nothing else is: `git ls-files | Select-String "\.env"`
-  should list only `.env.example` and `deploy/.env.example`.
+You decided (D35, D36): the public repository gets **code only**, and every commit uses your
+**GitHub private email**. Your working repo stays as it is; a separate public copy is made.
+
+- [ ] Find your GitHub private email: GitHub → Settings → Emails → tick "Keep my email addresses
+  private"; GitHub shows an address like `12345678+crkayes@users.noreply.github.com`.
+- [ ] Make the public copy (Git Bash, in the project folder; takes about 2 minutes):
+  ```bash
+  deploy/publish-public.sh 12345678+crkayes@users.noreply.github.com ../snap-convert-public
+  ```
+  It removes `prompts/`, `prototype/`, `CLAUDE.md` and all of `docs/` except the deploy docs
+  (`docs/launch/headers.md`, `docs/launch/checklist.md`, `docs/launch/screenshots/`) from every
+  commit, sets every commit's email to the private one, and fails if any private folder or your
+  old email is left anywhere in the history. `.env`, `deploy/.env` and `tests/fixtures/real/owner/`
+  are git-ignored and never included.
 - [ ] On GitHub, create a **public**, **empty** repository (no README, licence or .gitignore —
   the project has them). Name it `snap-convert` under the account `crkayes` to match
   `SOURCE_URL`. If the account or name differ, tell the governor the real URL first:
   `SOURCE_URL` must change, then build and deploy again.
-- [ ] Push:
-  ```powershell
+- [ ] Push **the public copy** (not the working repo):
+  ```bash
+  cd ../snap-convert-public
   git remote add origin https://github.com/crkayes/snap-convert.git
   git push -u origin main
   ```
+  For later updates, ask the governor: the public copy is regenerated from the working repo.
 - [ ] Repository settings: description "Free, private image and PDF converter that runs in your
   browser", website `https://crkayes.com/snap-convert/`. GitHub should show "AGPL-3.0" from the
   `LICENSE` file.
