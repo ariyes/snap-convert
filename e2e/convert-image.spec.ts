@@ -116,7 +116,9 @@ test('transparent PNG → JPG uses the chosen background; → WebP keeps the tra
 
 test('every input format converts to every output format', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.endsWith('phone'), 'Format matrix: once per engine is enough');
-  test.setTimeout(240_000);
+  // 7 files × 4 formats. With cross-origin isolation (D43) WebKit encodes AVIF on several threads:
+  // faster alone (~32 s vs ~40 s), but slower when the whole suite shares the CPU. Generous limits.
+  test.setTimeout(480_000);
   await page.goto('convert-image');
   const inputs = [
     fixture('images/no-exif.jpg', 'jpg-in.jpg'),
@@ -136,7 +138,7 @@ test('every input format converts to every output format', async ({ page }, test
       await expect(zipButton).toBeDisabled();
     }
     await expect(page.getByText(`${inputs.length} of ${inputs.length} ready`)).toBeVisible({
-      timeout: 120_000,
+      timeout: 240_000,
     });
     await expect(zipButton).toBeEnabled();
     const [zip] = await Promise.all([page.waitForEvent('download'), zipButton.click()]);
