@@ -31,6 +31,10 @@ export default defineConfig({
       'pdf-lib',
       'pdfjs-dist/legacy/build/pdf.mjs',
       'fflate',
+      // Camera RAW decoders (P29). Their .wasm and thread-worker URLs are passed explicitly, so
+      // pre-bundling them is safe.
+      'flashraw',
+      '@colorhythm/libraw-wasm',
     ],
   },
   worker: { format: 'es' },
