@@ -125,10 +125,13 @@ function FileRowImpl({
         <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
           {ready?.camera && <span className="truncate">{ready.camera}</span>}
           {source && (
-            <span className="font-mono whitespace-nowrap" data-testid="row-dims">
-              {formatMegapixels(source)} · <span className="sr-only">{t.dims}: </span>
-              {dims(source)}
-              {to !== null && <span className="text-accent"> → {to}</span>}
+            <span className="font-mono" data-testid="row-dims">
+              <span className="whitespace-nowrap">{formatMegapixels(source)}</span> ·{' '}
+              <span className="whitespace-nowrap">
+                <span className="sr-only">{t.dims}: </span>
+                {dims(source)}
+              </span>
+              {to !== null && <span className="whitespace-nowrap text-accent"> → {to}</span>}
             </span>
           )}
           {tag && <span className="text-faint">{tag}</span>}

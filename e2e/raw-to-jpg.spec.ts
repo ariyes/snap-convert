@@ -81,26 +81,57 @@ async function seriousViolations(page: Page): Promise<string[]> {
     .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 }
 
-/** Mean luminance in linear light (0–1) of a JPEG, decoded by the browser. */
-function meanLinearLuminance(page: Page, bytes: Uint8Array): Promise<number> {
-  return page.evaluate(async (data) => {
-    const bitmap = await createImageBitmap(
-      new Blob([new Uint8Array(data)], { type: 'image/jpeg' }),
-    );
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(bitmap, 0, 0);
-    const px = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
-    const lin = (v: number) => {
-      const c = v / 255;
-      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-    };
-    let sum = 0;
-    for (let i = 0; i < px.length; i += 4) {
-      sum += 0.2126 * lin(px[i]!) + 0.7152 * lin(px[i + 1]!) + 0.0722 * lin(px[i + 2]!);
-    }
-    return sum / (px.length / 4);
-  }, Array.from(bytes));
+/**
+ * How much brighter image `b` is than `a` (same size), in linear light: over the whole image,
+ * and over the shadows and mid-tones of `a` (linear luminance 0.01–0.15), below the highlight
+ * shoulder where one stop should double the light.
+ */
+function brightnessRatios(
+  page: Page,
+  a: Uint8Array,
+  b: Uint8Array,
+): Promise<{ all: number; midtones: number }> {
+  return page.evaluate(
+    async ([da, db]) => {
+      const luminance = async (data: number[]) => {
+        const bitmap = await createImageBitmap(
+          new Blob([new Uint8Array(data)], { type: 'image/jpeg' }),
+        );
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(bitmap, 0, 0);
+        const px = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
+        const lin = (v: number) => {
+          const c = v / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        };
+        const out = new Float32Array(px.length / 4);
+        for (let i = 0; i < out.length; i++) {
+          out[i] =
+            0.2126 * lin(px[i * 4]!) + 0.7152 * lin(px[i * 4 + 1]!) + 0.0722 * lin(px[i * 4 + 2]!);
+        }
+        return out;
+      };
+      const la = await luminance(da);
+      const lb = await luminance(db);
+      let sa = 0,
+        sb = 0,
+        ma = 0,
+        mb = 0;
+      for (let i = 0; i < la.length; i++) {
+        sa += la[i]!;
+        sb += lb[i]!;
+        if (la[i]! >= 0.01 && la[i]! <= 0.15) {
+          ma += la[i]!;
+          mb += lb[i]!;
+        }
+      }
+      return { all: sb / sa, midtones: mb / ma };
+    },
+    [Array.from(a), Array.from(b)] as const,
+  );
 }
 
 test.beforeEach(async ({ page }) => {
@@ -279,18 +310,19 @@ test.describe('camera RAW files', { tag: '@heavy' }, () => {
       await runButton(page).click();
       await expect(summary(page)).toContainText('1 done', { timeout: 240_000 });
       const file = await download(page, /^Download$/);
-      return meanLinearLuminance(page, file.bytes);
+      return file.bytes;
     };
     const base = await brightness(0);
     const plusOne = await brightness(1);
-    const ratio = plusOne / base;
+    const ratio = await brightnessRatios(page, base, plusOne);
     test.info().annotations.push({
       type: 'exposure',
-      description: `mean linear luminance 0 EV ${base.toFixed(4)}, +1 EV ${plusOne.toFixed(4)}, ×${ratio.toFixed(2)}`,
+      description: `+1 EV vs 0 EV, linear light: ×${ratio.all.toFixed(2)} overall, ×${ratio.midtones.toFixed(2)} in shadows and mid-tones`,
     });
-    // One stop doubles the light; the highlight shoulder holds the brightest parts back a little.
-    expect(ratio).toBeGreaterThan(1.5);
-    expect(ratio).toBeLessThan(2.3);
+    // One stop doubles the light below the highlight shoulder; brights are held back by it.
+    expect(ratio.midtones).toBeGreaterThan(1.6);
+    expect(ratio.midtones).toBeLessThan(2.5);
+    expect(ratio.all).toBeGreaterThan(1.3);
   });
 
   test.describe('on an iPhone', () => {

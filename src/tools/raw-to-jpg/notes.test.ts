@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ImageJobResult } from '@/core/contracts/image';
-import { rawResultNotes } from './notes';
+import { rawResultNotes, type RawNoteContext } from './notes';
 import { rawToJpgStrings as t } from './strings';
 
 const result = (
@@ -8,7 +8,7 @@ const result = (
   bytes = 5_000_000,
 ): Pick<ImageJobResult, 'notes' | 'bytes' | 'format'> => ({ notes, bytes, format: 'jpeg' });
 
-const ctx = { bytes: 25_000_000, resized: false, mode: 'fast' as const, phone: false };
+const ctx: RawNoteContext = { bytes: 25_000_000, resized: false, mode: 'fast', phone: false };
 const texts = (r: ReturnType<typeof result>, c = ctx) => rawResultNotes(r, c).map((n) => n.text);
 
 describe('rawResultNotes', () => {

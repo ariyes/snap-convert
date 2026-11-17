@@ -123,7 +123,7 @@ describe('settings → job input', () => {
 describe('stored settings', () => {
   it('drops values outside the controls', () => {
     const clean = sanitizeSettings(
-      { ...RAW_DEFAULTS, mode: 'ultra', exposure: 0.3, format: 'keep', quality: 5 } as unknown,
+      { ...RAW_DEFAULTS, mode: 'ultra', exposure: 0.3, format: 'keep', quality: 5 },
       RAW_DEFAULTS,
       RAW_SCHEMA,
     );
