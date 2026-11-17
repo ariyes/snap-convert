@@ -4,10 +4,10 @@ import {
   CircleAlert,
   Download,
   FileText,
+  FileUp,
   FolderArchive,
   LoaderCircle,
   Lock,
-  FileUp,
   Scissors,
   Trash2,
 } from 'lucide-react';
@@ -365,7 +365,7 @@ function SplitSettingsPanel({
               id={nId}
               value={settings.n}
               min={1}
-              max={Math.max(1, pageCount)}
+              max={pageCount > 0 ? pageCount : undefined}
               disabled={locked}
               onValueChange={(n) => onChange({ n })}
             />

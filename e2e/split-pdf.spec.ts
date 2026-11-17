@@ -110,6 +110,7 @@ test('invalid ranges show the exact message and disable Split', async ({ page })
 
 test('every N pages', async ({ page }) => {
   await pick(page, 'report.pdf', await numberedPdf(10));
+  await expect(tiles(page)).toHaveCount(10);
   await chooseMode(page, 'Every N pages');
   await page.getByLabel('Pages per part').fill('4');
   await expect(splitButton(page)).toHaveText('Split into 3 PDFs');
