@@ -77,6 +77,7 @@ export const strings = {
   defaultName: 'images',
   neverStretched:
     'Each image is fitted inside the margins and centred — never stretched. HEIC, WebP and AVIF become JPEG (or PNG) first.',
+  locationRemoved: 'Location data is removed from your photos.',
 
   // Page labels in the preview
   pageLabel: (size: PageSizeChoice, landscape: boolean) =>

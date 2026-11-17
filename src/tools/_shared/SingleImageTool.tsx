@@ -34,7 +34,7 @@ import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { Button, Card, Note, strings as uiStrings } from '@/ui';
 import { useBlobUrls } from './blob-urls';
-import { formatBytes, sizeChange } from './format';
+import { formatBytes, formatTimeLeft, sizeChange } from './format';
 import { outputFileNames } from './names';
 import { resultNotes } from './notes';
 import { singleImageStrings as strings } from './strings';
@@ -121,7 +121,7 @@ export function SingleImageTool({
 
   const { byFile, retry } = useImageJobs(files, jobOptions, {
     first: selected?.id,
-    onQueued: (count) => track({ name: 'tool-run', tool: toolId, files: count }),
+    onRun: (count) => track({ name: 'tool-run', tool: toolId, files: count }),
   });
 
   // Results to export: every file that hasn't failed, in list order. Exporting waits until all
@@ -257,7 +257,8 @@ export function SingleImageTool({
               zipName={strings.zipName(toolId)}
               disabled={pending}
               onExport={(kind) => track({ name: 'download', tool: toolId, kind })}
-              className={EXPORT_BAR_CLASS}
+              variant="panel"
+              folder="wide"
             />
           }
         />
@@ -268,20 +269,6 @@ export function SingleImageTool({
 
 /** Stands in for results still being made; exporting is disabled until they're all real. */
 const EMPTY_BLOB = new Blob([]);
-
-/**
- * The export bar inside the settings panel (full-width buttons, Download first and tall) and in
- * the phone action bar (one row; "Save to folder" stays on wide screens).
- */
-const EXPORT_BAR_CLASS = cn(
-  'max-[880px]:h-auto! max-[880px]:gap-1.5',
-  '[&_button]:w-full [&>div:first-child]:flex-col',
-  'min-[880px]:[&>div:first-child>button:first-child]:h-12 min-[880px]:[&>div:first-child>button:first-child]:text-base',
-  'max-[880px]:[&>div:first-child]:flex-row-reverse max-[880px]:[&>div:first-child]:flex-nowrap',
-  // Natural widths, sharing what's left: "Download all 30 as ZIP" needs more room than "Download".
-  'max-[880px]:[&_button]:min-w-0 max-[880px]:[&_button]:flex-auto max-[880px]:[&_button]:px-3 max-[880px]:[&_button]:text-ui',
-  'max-[880px]:[&_button[title]]:hidden',
-);
 
 function sourceSize(file: IntakeFile | undefined): Size | undefined {
   if (!file || file.width === undefined || file.height === undefined) return undefined;
@@ -365,7 +352,7 @@ function FileStrip({
         className="m-0 flex flex-wrap items-center gap-x-2 text-ui text-muted"
       >
         <span>{strings.progress(done, files.length)}</span>
-        {eta !== null && <span>· {strings.timeLeft(eta)}</span>}
+        {eta !== null && <span>· {formatTimeLeft(eta)}</span>}
         {failed > 0 && <span className="text-bad">· {strings.failedCount(failed)}</span>}
       </p>
       <ul

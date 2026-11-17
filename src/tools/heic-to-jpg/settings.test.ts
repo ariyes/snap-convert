@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withQualityFlag } from '@/tools/_shared';
 import { parseSettings } from '@/features/settings';
 import { HEIC_DEFAULTS, HEIC_FORMATS, heicJobOptions, heicSettingsSchema } from './settings';
 
@@ -23,7 +24,16 @@ describe('HEIC to JPG', () => {
       qualityGuard: true,
     });
     expect(heicJobOptions({ ...HEIC_DEFAULTS, resizeEnabled: true }).resize).toBeUndefined();
-    expect(heicJobOptions({ ...HEIC_DEFAULTS, quality: 75 }).qualityGuard).toBe(false);
+  });
+
+  it('turns the quality guard off once the user moves the quality slider (D28/D29)', () => {
+    const moved = { ...HEIC_DEFAULTS, ...withQualityFlag({ quality: 75 }) };
+    expect(heicJobOptions(moved).qualityGuard).toBe(false);
+    // Back at 90 by hand: still the user's choice, not inferred from "equals the default".
+    const back = { ...moved, ...withQualityFlag({ quality: HEIC_DEFAULTS.quality }) };
+    expect(heicJobOptions(back).qualityGuard).toBe(false);
+    const png = { ...HEIC_DEFAULTS, ...withQualityFlag({ format: 'png' as const }) };
+    expect(heicJobOptions(png).qualityGuard).toBe(true);
   });
 
   it('only remembers JPG or PNG', () => {

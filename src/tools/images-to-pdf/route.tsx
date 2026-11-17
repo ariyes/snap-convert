@@ -1,7 +1,15 @@
 // Images to PDF (P18, PDF-01): photos or scans → one PDF, one fitted page per image, in the
 // user's order. Images are made PDF-ready by the image worker when needed (HEIC, WebP, AVIF,
 // GIF, BMP, or "Smaller file"), then the PDF worker builds the document — both via the queue.
-import { CircleAlert, Download, FileCheck2, FileImage, LoaderCircle, X } from 'lucide-react';
+import {
+  CircleAlert,
+  Download,
+  FileCheck2,
+  FileImage,
+  LoaderCircle,
+  MapPinOff,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { IntakeFile } from '@/core/contracts/intake';
 import type { PageOrientation, PdfOutput } from '@/core/contracts/pdf';
@@ -34,9 +42,9 @@ import {
   Select,
 } from '@/ui';
 import { buildPdf, ConversionCache, ImageFailed } from './build';
-import { formatBytes } from './format';
+import { formatBytes } from '@/tools/_shared';
 import { PageGrid } from './page-grid';
-import { JobCancelled } from './queue-job';
+import { JobCancelled } from '@/tools/_shared';
 import {
   defaultSettings,
   MARGIN_CHOICES,
@@ -356,6 +364,9 @@ export default function ImagesToPdfRoute() {
         </span>
       </Field>
       <Note>{strings.neverStretched}</Note>
+      <Note icon={MapPinOff} data-testid="location-note">
+        {strings.locationRemoved}
+      </Note>
       <Status run={run} done={done} />
     </>
   );

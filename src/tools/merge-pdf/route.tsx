@@ -37,14 +37,18 @@ import { Field, PanelSection, ToolEmptyState, ToolPage, Workspace } from '@/feat
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { Button, Card, Helper, IconButton, Input, Label, Note, ProgressBar, toast } from '@/ui';
-import { formatBytes } from './format';
-import { PdfPageThumb } from './pdf-thumb';
-import { MERGE_SAMPLES, samplePdfFile } from './sample-pdfs';
+import { formatBytes, usePointerReorder, type ReorderDrag } from '@/tools/_shared';
+import {
+  INFO_LOADING,
+  MERGE_SAMPLES,
+  PdfPageThumb,
+  samplePdfFile,
+  useFileDrop,
+  usePdfInfos,
+  usePdfJob,
+  type PdfInfoState,
+} from '@/tools/_shared/pdf';
 import { mergeStrings as t, pagesText } from './strings';
-import { useFileDrop } from './use-file-drop';
-import { INFO_LOADING, usePdfInfos, type PdfInfoState } from './use-pdf-infos';
-import { usePdfJob } from './use-pdf-job';
-import { usePointerReorder, type ReorderDrag } from './use-pointer-reorder';
 
 const TOOL_ID = 'merge-pdf';
 const PDF_ONLY = ['pdf'] as const;

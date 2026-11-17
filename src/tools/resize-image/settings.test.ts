@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withQualityFlag } from '@/tools/_shared';
 import { planSize } from '@/features/image-settings';
 import { parseSettings } from '@/features/settings';
 import {
@@ -56,8 +57,16 @@ describe('resizeJobOptions', () => {
     });
   });
 
-  it('turns the quality guard off once the user picks a quality (D28)', () => {
-    expect(resizeJobOptions(settings({ quality: 70 })).qualityGuard).toBe(false);
+  it('turns the quality guard off once the user moves the quality slider (D28/D29)', () => {
+    expect(resizeJobOptions(RESIZE_DEFAULTS).qualityGuard).toBe(true);
+    const moved = settings(withQualityFlag({ quality: 70 }));
+    expect(resizeJobOptions(moved).qualityGuard).toBe(false);
+    // Back at 85 by hand: still the user's choice, not inferred from "equals the default".
+    const back = { ...moved, ...withQualityFlag({ quality: RESIZE_DEFAULTS.quality }) };
+    expect(resizeJobOptions(back).qualityGuard).toBe(false);
+    expect(resizeJobOptions(settings(withQualityFlag({ resizeSize: 800 }))).qualityGuard).toBe(
+      true,
+    );
   });
 
   it('never sends a target size, even if one is stored', () => {

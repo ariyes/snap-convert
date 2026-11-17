@@ -31,10 +31,6 @@ export const compressStrings = {
   dims: (width: number, height: number) => `${width}×${height}`,
   dimsLabel: 'New dimensions',
   progress: (done: number, total: number) => `Compressed ${done} of ${total}`,
-  timeLeft: (seconds: number) =>
-    seconds < 60
-      ? `about ${Math.max(1, Math.round(seconds))} s left`
-      : `about ${Math.round(seconds / 60)} min left`,
   progressLabel: 'Compression progress',
   failedCount: (n: number) => (n === 1 ? '1 image failed' : `${n} images failed`),
   retry: 'Try again',
@@ -52,14 +48,13 @@ export const compressStrings = {
   targetUnreachableFormat: (kb: number) =>
     `Can't reach ${kb} KB as a PNG. A smaller format or smaller dimensions get there.`,
   resizeTo: (px: number) => `Resize to ${px} px`,
+  checkingSize: 'Finding a size that fits…',
   switchTo: (format: string) => `Switch to ${format}`,
   formatFallback: (format: string) =>
     `Saved as ${format}: the original format can't be saved again in the browser.`,
   cantShowOriginal: "This browser can't show the original file, so both sides show the result.",
 
   // Downloads
-  downloadAllShort: 'All (ZIP)',
   zipName: 'snap-convert-compressed',
-  zipping: (percent: number) => `Creating ZIP… ${percent}%`,
   nameSuffix: '-compressed',
 } as const;

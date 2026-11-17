@@ -101,13 +101,6 @@ test('the small-image warning shows only for images below the destination size',
 });
 
 test.describe('image runs', () => {
-  test.beforeEach(({ browserName }) => {
-    // GOVERNOR: Playwright's WebKit (Windows build) has no OffscreenCanvas in workers, so every
-    // image job fails with "Can't find variable: OffscreenCanvas" (src/engines/image uses it to
-    // decode, orient and encode). Real Safari 16.4+ has it. Fixing it is a change in src/engines/image.
-    test.fixme(browserName === 'webkit', 'WebKit: no OffscreenCanvas in workers (P12 follow-up)');
-  });
-
   test('one photo: resized for the web, progressive JPG, no metadata, checklist shown', async ({
     page,
   }) => {

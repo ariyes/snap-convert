@@ -17,7 +17,7 @@ import { useToolPage } from '@/app/use-tool-page';
 import type { ImageJobInput } from '@/core/contracts/image';
 import type { IntakeFile } from '@/core/contracts/intake';
 import { computePoolSize, readDevice, useQueue } from '@/core/queue';
-import { exportStrings, type ExportKind } from '@/features/export';
+import { ExportBar, exportStrings, useExport, type ExportKind } from '@/features/export';
 import {
   FormatSelect,
   imageSettingsSchema,
@@ -40,21 +40,21 @@ import { PanelDivider, ToolEmptyState, ToolPage, Workspace } from '@/features/to
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { Button, Card, ProgressBar, toast } from '@/ui';
+import { EXTENSIONS, formatBytes, formatTimeLeft, withQualityFlag } from '@/tools/_shared';
 import { FileRow, type BulkJob } from './file-row';
 import { LeaveGuard } from './leave-guard';
 import { makeSampleFiles } from './sample-specs';
 import {
   BULK_DEFAULTS,
   estimateFileBytes,
-  extensionFor,
   jobOptions,
   outputNames,
   plannedFormat,
   settingsSignature,
+  type BulkSettings,
   TOOL_ID,
 } from './settings';
-import { formatBytes, formatTimeLeft, bulkStrings as t } from './strings';
-import { useBulkExport } from './use-bulk-export';
+import { bulkStrings as t } from './strings';
 import { WindowedList } from './windowed-list';
 
 /** Row height before it's measured (one line of details). */
@@ -70,14 +70,33 @@ function isBulkJob(job: { kind: string; op: string }): job is BulkJob {
   return job.kind === 'image' && job.op === 'process';
 }
 
+/** The finished results with their output names, in list order. */
+function resultsToExport(
+  done: readonly IntakeFile[],
+  jobs: ReadonlyMap<string, BulkJob>,
+  names: ReadonlyMap<string, string>,
+): Array<{ blob: Blob; name: string }> {
+  const out: Array<{ blob: Blob; name: string }> = [];
+  for (const f of done) {
+    const result = jobs.get(f.id)?.result;
+    if (result) out.push({ blob: result.blob, name: names.get(f.id) ?? result.name });
+  }
+  return out;
+}
+
 export default function BulkResizeRoute() {
   const page = useToolPage();
   const accepts = page.accepts;
   const { files, add, remove, clear } = useFileList(TOOL_ID);
-  const [settings, update, resetSettings] = useToolSettings(
+  const [settings, save, resetSettings] = useToolSettings<BulkSettings>(
     TOOL_ID,
     BULK_DEFAULTS,
     imageSettingsSchema,
+  );
+  // Moving the quality slider switches the quality guard off (D28/D29).
+  const update = useCallback(
+    (patch: Partial<BulkSettings>) => save(withQualityFlag(patch)),
+    [save],
   );
 
   // ---------- Jobs ----------
@@ -301,19 +320,15 @@ export default function BulkResizeRoute() {
   });
   const getExportFiles = useCallback(() => {
     const { doneFiles: done, fileJobs: jobs, outNames: names } = latest.current;
-    const out: Array<{ blob: Blob; name: string }> = [];
-    for (const f of done) {
-      const result = jobs.get(f.id)?.result;
-      if (result) out.push({ blob: result.blob, name: names.get(f.id) ?? result.name });
-    }
-    return out;
+    return resultsToExport(done, jobs, names);
   }, []);
+  const exportFiles = resultsToExport(doneFiles, fileJobs, outNames);
   const onExported = useCallback((kind: ExportKind) => {
     const ids = latest.current.doneFiles.map((f) => latest.current.fileJobs.get(f.id)?.id ?? '');
     setExportedIds((prev) => new Set([...prev, ...ids]));
     track({ name: 'download', tool: TOOL_ID, kind });
   }, []);
-  const exportState = useBulkExport(getExportFiles, t.zipName, onExported);
+  const exportState = useExport(getExportFiles, t.zipName, onExported);
   const exporting = exportState.status.kind === 'busy';
 
   const unsaved = doneFiles.some((f) => {
@@ -395,16 +410,16 @@ export default function BulkResizeRoute() {
         {t.working}
       </Button>
     ) : phase === 'done' ? (
-      <Button
-        variant="primary"
-        size="lg"
-        block
-        disabled={exporting || counts.done === 0}
-        onClick={() => void exportState.zip()}
-      >
-        <FolderArchive aria-hidden="true" />
-        {t.downloadZip}
-      </Button>
+      // Shares its export state with the summary bar, which shows progress and Save to folder.
+      <ExportBar
+        variant="panel"
+        state={exportState}
+        files={exportFiles}
+        zipOnly
+        zipLabel={t.downloadZip}
+        folder="never"
+        showStatus={false}
+      />
     ) : (
       <Button
         variant="primary"
@@ -601,9 +616,10 @@ export default function BulkResizeRoute() {
           width: firstPlan?.output.width,
           height: firstPlan?.output.height,
           n: 1,
-          format: extensionFor(
-            plannedFormat(settings.format, first?.name ?? 'image.jpg', first?.kind ?? 'image'),
-          ),
+          format:
+            EXTENSIONS[
+              plannedFormat(settings.format, first?.name ?? 'image.jpg', first?.kind ?? 'image')
+            ],
         }}
       />
       <MetadataSelect value={settings} onChange={update} format={settings.format} helper={false} />

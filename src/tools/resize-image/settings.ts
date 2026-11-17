@@ -9,7 +9,12 @@ import {
   type ResizeFieldMode,
 } from '@/features/image-settings';
 import { oneOf, type SettingsSchema } from '@/features/settings';
-import type { ImageJobOptions } from '@/tools/_shared';
+import {
+  QUALITY_FLAG_DEFAULT,
+  qualityGuardFor,
+  type ImageJobOptions,
+  type QualityFlag,
+} from '@/tools/_shared';
 
 /** The 3 × 3 crop positions, row by row. */
 export const ANCHORS: readonly Anchor[] = [
@@ -33,13 +38,14 @@ export const RESIZE_MODES: readonly ResizeFieldMode[] = [
   'exact',
 ];
 
-export interface ResizeToolSettings extends ImageSettingsValues {
+export interface ResizeToolSettings extends ImageSettingsValues, QualityFlag {
   /** Which part Fill keeps. */
   anchor: Anchor;
 }
 
 export const RESIZE_DEFAULTS: Readonly<ResizeToolSettings> = {
   ...IMAGE_SETTINGS_DEFAULTS,
+  ...QUALITY_FLAG_DEFAULT,
   format: 'keep',
   quality: 85,
   resizeEnabled: true,
@@ -54,7 +60,7 @@ export const resizeSettingsSchema: SettingsSchema<ResizeToolSettings> = {
   anchor: oneOf(ANCHORS),
 };
 
-/** Job settings for every file. The quality guard runs while quality is the default (D28, D29). */
+/** Job settings for every file. The quality guard runs until the user sets the quality (D28, D29). */
 export function resizeJobOptions(settings: ResizeToolSettings): ImageJobOptions {
   const options = toJobOptions({ ...settings, qualityMode: 'quality', resizeEnabled: true });
   return {
@@ -64,6 +70,6 @@ export function resizeJobOptions(settings: ResizeToolSettings): ImageJobOptions 
       ...options.exact,
       anchor: options.exact.fit === 'fill' ? settings.anchor : 'center',
     },
-    qualityGuard: settings.quality === RESIZE_DEFAULTS.quality,
+    qualityGuard: qualityGuardFor(settings),
   };
 }

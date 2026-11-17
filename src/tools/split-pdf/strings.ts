@@ -44,8 +44,6 @@ export const splitStrings = {
   partPages: (n: number) => plural(n, 'page', 'pages'),
   downloadPart: (name: string) => `Download ${name}`,
   downloadPdf: 'Download PDF',
-  downloadAllShort: 'All (ZIP)',
-  zipping: (percent: number) => `Creating ZIP… ${percent}%`,
   zipSuffix: '-split',
   done: 'Split. Ready to download',
 } as const;

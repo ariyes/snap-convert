@@ -61,16 +61,6 @@ async function addFiles(page: Page, files: Fixture[]) {
   await expect(listRows(page).first()).toBeVisible({ timeout: 20_000 });
 }
 
-/**
- * The image pipeline (P12) decodes and encodes with OffscreenCanvas in its worker. Playwright's
- * WebKit build for Windows has none (Safari 16.4+ does), so every image job fails there: skip the
- * tests that process images in such a browser.
- */
-async function needsOffscreenCanvas(page: Page) {
-  const supported = await page.evaluate(() => typeof OffscreenCanvas !== 'undefined');
-  test.skip(!supported, 'No OffscreenCanvas in this browser build: the image pipeline cannot run');
-}
-
 async function downloadZip(page: Page): Promise<Record<string, Uint8Array>> {
   const download = page.waitForEvent('download');
   // The summary's button on wide screens, the fixed action bar's on phones.
@@ -89,7 +79,6 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('50 mixed images resize into one ZIP with pattern names', async ({ page }) => {
-  await needsOffscreenCanvas(page);
   test.slow();
   const files = fiftyFiles();
   await addFiles(page, files);
@@ -143,7 +132,6 @@ test('50 mixed images resize into one ZIP with pattern names', async ({ page }) 
 test('a broken file fails with a reason; Retry runs a stopped good file again', async ({
   page,
 }) => {
-  await needsOffscreenCanvas(page);
   test.slow();
   const photos = Array.from({ length: 6 }, (_, i) =>
     as('quality/photo-fine-detail.jpg', `photo-${i + 1}.jpg`),
@@ -188,7 +176,6 @@ test('a broken file fails with a reason; Retry runs a stopped good file again', 
 });
 
 test('changing settings after a run marks results stale and re-enables Run', async ({ page }) => {
-  await needsOffscreenCanvas(page);
   await addFiles(page, [
     as('images/no-exif.jpg', 'a.jpg'),
     as('quality/photo-product-on-white.jpg', 'b.jpg'),
@@ -217,7 +204,6 @@ test('changing settings after a run marks results stale and re-enables Run', asy
 });
 
 test('12 sample files are made on the device', async ({ page }) => {
-  await needsOffscreenCanvas(page);
   await page.getByRole('button', { name: 'Try with 12 sample files' }).click();
   await expect(listRows(page)).toHaveCount(12);
   await expect(listRows(page).filter({ hasText: 'panorama-beach.jpg' })).toContainText(
@@ -243,7 +229,6 @@ test('long lists only render the rows near the screen', async ({ page }) => {
 });
 
 test('leaving with results that were not downloaded asks first', async ({ page }) => {
-  await needsOffscreenCanvas(page);
   await addFiles(page, [as('images/no-exif.jpg', 'a.jpg')]);
   await runButton(page).click();
   await expect(summary(page)).toContainText('1 done', { timeout: 60_000 });

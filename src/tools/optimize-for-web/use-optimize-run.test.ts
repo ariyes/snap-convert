@@ -95,6 +95,21 @@ describe('syncJobs', () => {
     ]);
   });
 
+  it('counts one tool-run per user run, not per re-run for new settings', () => {
+    syncJobs([intake('a'), intake('b')], { destination: 'web', format: 'jpeg' });
+    syncJobs([intake('a'), intake('b')], { destination: 'email', format: 'webp' });
+    syncJobs([intake('a'), intake('b')], { destination: 'blog', format: 'jpeg' });
+    expect(track).toHaveBeenCalledTimes(1);
+    // Adding a file is a new run, for that file only (even together with a settings change).
+    syncJobs([intake('a'), intake('b'), intake('c')], { destination: 'web', format: 'jpeg' });
+    expect(track).toHaveBeenCalledTimes(2);
+    expect(track).toHaveBeenLastCalledWith({
+      name: 'tool-run',
+      tool: 'optimize-for-web',
+      files: 1,
+    });
+  });
+
   it('drops the jobs of removed files, and all jobs when the page leaves', () => {
     const settings = { destination: 'web', format: 'jpeg' } as const;
     syncJobs([intake('a'), intake('b')], settings);

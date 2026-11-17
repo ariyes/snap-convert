@@ -1,17 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { withQualityFlag } from '@/tools/_shared';
 import {
-  baseName,
   BULK_DEFAULTS,
   estimateBytes,
   estimateFileBytes,
-  extensionFor,
   jobOptions,
   outputName,
   outputNames,
   plannedFormat,
   settingsSignature,
 } from './settings';
-import { formatBytes, formatTimeLeft } from './strings';
 
 describe('Bulk defaults (IMG-08)', () => {
   it('resize to 1920 px on the longest side, JPG at 80, {name}-{width}w, details removed', () => {
@@ -39,8 +37,17 @@ describe('jobOptions', () => {
     });
   });
 
-  it('switches the quality guard off once the user picks a quality (D28/D29)', () => {
-    expect(jobOptions({ ...BULK_DEFAULTS, quality: 65 }).qualityGuard).toBe(false);
+  it('switches the quality guard off once the user moves the quality slider (D28/D29)', () => {
+    const moved = { ...BULK_DEFAULTS, ...withQualityFlag({ quality: 65 }) };
+    expect(jobOptions(moved).qualityGuard).toBe(false);
+    // Back at 80 by hand: still the user's choice, not inferred from "equals the default".
+    const back = { ...moved, ...withQualityFlag({ quality: BULK_DEFAULTS.quality }) };
+    expect(jobOptions(back).qualityGuard).toBe(false);
+    // Other controls leave the flag alone; Reset brings the guard back.
+    expect(withQualityFlag({ resizeSize: 1200 })).toEqual({ resizeSize: 1200 });
+    expect(jobOptions(BULK_DEFAULTS).qualityGuard).toBe(true);
+    // A changed flag makes earlier results stale.
+    expect(settingsSignature(back)).not.toBe(settingsSignature(BULK_DEFAULTS));
   });
 
   it('never uses a target size (Bulk has quality only)', () => {
@@ -82,17 +89,6 @@ describe('settingsSignature', () => {
 });
 
 describe('names', () => {
-  it('drops only the last extension', () => {
-    expect(baseName('photo.final.jpg')).toBe('photo.final');
-    expect(baseName('.hidden')).toBe('.hidden');
-    expect(baseName('noext')).toBe('noext');
-  });
-
-  it('uses jpg for JPEG', () => {
-    expect(extensionFor('jpeg')).toBe('jpg');
-    expect(extensionFor('webp')).toBe('webp');
-  });
-
   it('plans the output format from "Same as original"', () => {
     expect(plannedFormat('keep', 'a.PNG', 'image')).toBe('png');
     expect(plannedFormat('keep', 'a.heic', 'heic')).toBe('jpeg');
@@ -160,22 +156,5 @@ describe('estimates', () => {
     expect(estimateFileBytes({ size: 1_000, format: 'jpeg' }, size, size, 'png', 80)).toBe(
       estimateBytes(size, 'png', 80),
     );
-  });
-});
-
-describe('formatting', () => {
-  it('formats bytes like the prototype', () => {
-    expect(formatBytes(512)).toBe('512 B');
-    expect(formatBytes(4300)).toBe('4.2 KB');
-    expect(formatBytes(38 * 1024)).toBe('38 KB');
-    expect(formatBytes(3.4 * 1024 ** 2)).toBe('3.4 MB');
-    expect(formatBytes(1.5 * 1024 ** 3)).toBe('1.50 GB');
-  });
-
-  it('says how much time is left', () => {
-    expect(formatTimeLeft(null)).toBe('estimating time…');
-    expect(formatTimeLeft(0.2)).toBe('about 1 s left');
-    expect(formatTimeLeft(40)).toBe('about 40 s left');
-    expect(formatTimeLeft(185)).toBe('about 3 min left');
   });
 });

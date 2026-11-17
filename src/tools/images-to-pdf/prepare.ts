@@ -131,6 +131,25 @@ export function conversionFor(
   };
 }
 
+/**
+ * Re-encodes a JPEG whose header can't be read safely (JPEG 92, no metadata), so it can't carry
+ * its location into the PDF.
+ */
+export function reencodeFor(
+  file: Pick<IntakeFile, 'file' | 'name' | 'width' | 'height'>,
+): ImageJobInput {
+  return {
+    file: file.file,
+    name: file.name,
+    metadata: 'strip-all',
+    width: file.width,
+    height: file.height,
+    format: 'jpeg',
+    quality: CONVERT_JPEG_QUALITY,
+    qualityGuard: false,
+  };
+}
+
 /** Reads the first {@link HEAD_BYTES} of a file. */
 export async function readHead(file: Blob): Promise<Uint8Array> {
   return new Uint8Array(await file.slice(0, HEAD_BYTES).arrayBuffer());

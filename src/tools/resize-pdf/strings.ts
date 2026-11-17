@@ -5,13 +5,6 @@ import type { SizeChoice, Unit } from './settings';
 const pages = (n: number) => (n === 1 ? '1 page' : `${n} pages`);
 const pdfs = (n: number) => (n === 1 ? '1 PDF' : `${n} PDFs`);
 
-/** 1234567 → "1.2 MB". */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 ** 2) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-}
-
 export const resizeStrings = {
   dropTitle: 'Drop PDF files here',
   dropSubtitle: 'PDF — one or more. Every page gets the same paper size.',

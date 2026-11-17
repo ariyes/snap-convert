@@ -9,7 +9,12 @@ import {
   type ResizeFieldMode,
 } from '@/features/image-settings';
 import { oneOf, type SettingCheck, type SettingsSchema } from '@/features/settings';
-import type { ImageJobOptions } from '@/tools/_shared';
+import {
+  QUALITY_FLAG_DEFAULT,
+  qualityGuardFor,
+  type ImageJobOptions,
+  type QualityFlag,
+} from '@/tools/_shared';
 
 /** Formats Convert saves to; there is no "Same as original" here. */
 export const CONVERT_FORMATS: readonly ImageFormat[] = ['jpeg', 'png', 'webp', 'avif'];
@@ -22,13 +27,14 @@ export const CONVERT_RESIZE_MODES: readonly ResizeFieldMode[] = [
   'percent',
 ];
 
-export interface ConvertToolSettings extends Omit<ImageSettingsValues, 'format'> {
+export interface ConvertToolSettings extends Omit<ImageSettingsValues, 'format'>, QualityFlag {
   format: ImageFormat;
   /** Colour behind transparent areas when saving as JPG (D29). */
   background: string;
 }
 
 export const CONVERT_DEFAULTS: Readonly<ConvertToolSettings> = {
+  ...QUALITY_FLAG_DEFAULT,
   ...IMAGE_SETTINGS_DEFAULTS,
   format: 'jpeg',
   quality: 85,
@@ -46,11 +52,11 @@ export const convertSettingsSchema: SettingsSchema<ConvertToolSettings> = {
   background: isHexColour,
 };
 
-/** Job settings for every file. The quality guard runs while quality is the default (D28, D29). */
+/** Job settings for every file. The quality guard runs until the user sets the quality (D28, D29). */
 export function convertJobOptions(settings: ConvertToolSettings): ImageJobOptions {
   return {
     ...toJobOptions({ ...settings, qualityMode: 'quality' }, { optional: true }),
     background: settings.background,
-    qualityGuard: settings.quality === CONVERT_DEFAULTS.quality,
+    qualityGuard: qualityGuardFor(settings),
   };
 }

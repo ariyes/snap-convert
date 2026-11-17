@@ -10,7 +10,8 @@ import { fitSize, type Size } from '@/core/sizing';
 import { imageSettingsStrings, planSize, type ResizeValues } from '@/features/image-settings';
 import { cn } from '@/lib/utils';
 import { Badge, Button, IconButton, ProgressBar } from '@/ui';
-import { formatBytes, bulkStrings as t } from './strings';
+import { formatBytes } from '@/tools/_shared';
+import { bulkStrings as t } from './strings';
 
 export type BulkJob = Job<ImageJobInput, ImageJobResult>;
 

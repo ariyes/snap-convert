@@ -14,12 +14,12 @@ import type { PresetId } from '@/engines/optimize';
 import { Button, IconButton, ProgressBar } from '@/ui';
 import {
   describeResult,
-  formatBytes,
   plannedSizeText,
   sizeText,
   smallImageWarning,
   type ResultNote,
 } from './result';
+import { formatBytes } from '@/tools/_shared';
 import { optimizeStrings as t } from './strings';
 import type { OptimizeJob } from './use-optimize-run';
 

@@ -14,7 +14,7 @@ import {
 import { useToolSettings } from '@/features/settings';
 import { PanelDivider } from '@/features/tool-layout';
 import { Helper } from '@/ui';
-import { SingleImageTool, type SingleImageContext } from '@/tools/_shared';
+import { SingleImageTool, withQualityFlag, type SingleImageContext } from '@/tools/_shared';
 import { isFormatPage, type PageMeta } from '@/tools/registry';
 import { BackgroundPicker } from './background-picker';
 import {
@@ -48,14 +48,15 @@ function ConvertImage({ page }: { page: PageMeta }) {
     [stored, pageFormat],
   );
 
+  // Moving the quality slider switches the quality guard off (D28/D29).
   const update = (patch: Partial<ConvertToolSettings>) => {
     if (preset === undefined || patch.format === undefined) {
-      updateStored(patch);
+      updateStored(withQualityFlag(patch));
       return;
     }
     const { format, ...rest } = patch;
     setPageFormat(format);
-    if (Object.keys(rest).length > 0) updateStored(rest);
+    if (Object.keys(rest).length > 0) updateStored(withQualityFlag(rest));
   };
   const reset = () => {
     resetStored();

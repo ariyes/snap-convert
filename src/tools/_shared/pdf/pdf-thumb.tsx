@@ -1,8 +1,8 @@
 import { FileWarning } from 'lucide-react';
-import { useEffect, useRef } from 'react';
 import { usePageThumbnail } from '@/engines/pdf';
 import { cn } from '@/lib/utils';
-import { useInView } from './use-in-view';
+import { BitmapCanvas } from '../bitmap-canvas';
+import { useInView } from '../use-in-view';
 
 export interface PdfPageThumbProps {
   file: Blob;
@@ -21,13 +21,6 @@ export interface PdfPageThumbProps {
 export function PdfPageThumb({ file, pageIndex, maxSize, className }: PdfPageThumbProps) {
   const [ref, inView] = useInView<HTMLDivElement>();
   const { bitmap, error } = usePageThumbnail(file, pageIndex, maxSize, inView);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !bitmap) return;
-    canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
-  }, [bitmap]);
 
   const state = bitmap ? 'ready' : error ? 'error' : 'loading';
   return (
@@ -38,13 +31,8 @@ export function PdfPageThumb({ file, pageIndex, maxSize, className }: PdfPageThu
       className={cn('relative grid size-full place-items-center', className)}
     >
       {bitmap ? (
-        <canvas
-          ref={canvasRef}
-          width={bitmap.width}
-          height={bitmap.height}
-          // object-contain letterboxes the page inside the box: never stretched.
-          className="size-full object-contain"
-        />
+        // object-contain letterboxes the page inside the box: never stretched.
+        <BitmapCanvas bitmap={bitmap} className="size-full object-contain" />
       ) : error ? (
         <FileWarning className="size-6 text-faint" />
       ) : (

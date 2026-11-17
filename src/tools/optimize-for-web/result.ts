@@ -121,24 +121,6 @@ export function webNames(resultNames: readonly string[]): string[] {
   return uniqueNames(resultNames.map(webName));
 }
 
-/** 1536 → "1.5 KB", 3_400_000 → "3.2 MB". */
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '—';
-  if (bytes < 1024) return `${Math.round(bytes)} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
-  const mb = kb / 1024;
-  if (mb < 1024) return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
-  return `${(mb / 1024).toFixed(1)} GB`;
-}
-
-/** Time left (IMG-08): "about 40 s left", "about 2 min left", or "estimating time…". */
-export function formatTimeLeft(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds)) return t.estimating;
-  const s = Math.max(1, Math.round(seconds));
-  return s < 60 ? t.secondsLeft(s) : t.minutesLeft(Math.round(s / 60));
-}
-
 /** "4032×3024". */
 export function sizeText(s: Size): string {
   return `${s.width}×${s.height}`;

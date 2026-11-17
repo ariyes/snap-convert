@@ -11,12 +11,23 @@ import {
   toJobOptions,
   type ImageSettingsValues,
 } from '@/features/image-settings';
+import {
+  baseName,
+  EXTENSIONS,
+  QUALITY_FLAG_DEFAULT,
+  qualityGuardFor,
+  type QualityFlag,
+} from '@/tools/_shared';
 
 export const TOOL_ID = 'bulk-resize';
 
+/** Bulk's settings: the shared image settings plus the "user set quality" flag (D28/D29). */
+export type BulkSettings = ImageSettingsValues & QualityFlag;
+
 /** IMG-08 defaults: longest side 1920 px, JPG, quality 80, `{name}-{width}w`, details removed. */
-export const BULK_DEFAULTS: Readonly<ImageSettingsValues> = {
+export const BULK_DEFAULTS: Readonly<BulkSettings> = {
   ...IMAGE_SETTINGS_DEFAULTS,
+  ...QUALITY_FLAG_DEFAULT,
   format: 'jpeg',
   quality: 80,
   qualityMode: 'quality',
@@ -31,30 +42,19 @@ export type BulkJobOptions = Omit<ImageJobInput, 'file' | 'name' | 'width' | 'he
 
 /**
  * Everything an image job needs except the file. Bulk has no target-size mode. The quality guard
- * (D28/D29) is on while quality is at its default, and off once the user picked their own.
+ * (D28/D29) is on for default runs, and off once the user moved the quality slider.
  */
-export function jobOptions(settings: ImageSettingsValues): BulkJobOptions {
+export function jobOptions(settings: BulkSettings): BulkJobOptions {
   const options = toJobOptions({ ...settings, qualityMode: 'quality' });
-  return { ...options, qualityGuard: settings.quality === BULK_DEFAULTS.quality };
+  return { ...options, qualityGuard: qualityGuardFor(settings) };
 }
 
 /**
  * A key for the settings that change the output pixels or bytes. Results made with another key are
  * stale. The file-name pattern is not part of it: names are applied on export.
  */
-export function settingsSignature(settings: ImageSettingsValues): string {
+export function settingsSignature(settings: BulkSettings): string {
   return JSON.stringify(jobOptions(settings));
-}
-
-/** File extension of an output format. */
-export function extensionFor(format: ImageFormat): string {
-  return format === 'jpeg' ? 'jpg' : format;
-}
-
-/** "photo.final.jpg" → "photo.final". */
-export function baseName(name: string): string {
-  const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(0, dot) : name;
 }
 
 function sourceFormat(name: string, kind: FileKind): ImageFormat {
@@ -83,7 +83,7 @@ export interface NameEntry {
 
 /** One output name: pattern applied to the base name, plus the output extension. */
 export function outputName(pattern: string, entry: NameEntry): string {
-  const ext = extensionFor(entry.format);
+  const ext = EXTENSIONS[entry.format];
   const base = applyNamePattern(pattern, {
     name: baseName(entry.name),
     width: entry.width,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withQualityFlag } from '@/tools/_shared';
 import { parseSettings } from '@/features/settings';
 import { formatPages } from '@/tools/registry';
 import {
@@ -49,12 +50,25 @@ describe('convertJobOptions', () => {
     ).toMatchObject({ resize: { mode: 'width', value: 800, upscale: false } });
   });
 
-  it('turns the quality guard off once the user picks a quality (D28)', () => {
-    expect(convertJobOptions(settings({ format: 'webp', quality: 60 }))).toMatchObject({
+  it('turns the quality guard off once the user moves the quality slider (D28/D29)', () => {
+    const moved = settings({ format: 'webp', ...withQualityFlag({ quality: 60 }) });
+    expect(convertJobOptions(moved)).toMatchObject({
       format: 'webp',
       quality: 60,
       qualityGuard: false,
     });
+    // Back at 85 by hand: still the user's choice.
+    const back = { ...moved, ...withQualityFlag({ quality: CONVERT_DEFAULTS.quality }) };
+    expect(convertJobOptions(back).qualityGuard).toBe(false);
+    // A format change leaves the guard on.
+    expect(
+      convertJobOptions(settings(withQualityFlag({ format: 'png' as const }))).qualityGuard,
+    ).toBe(true);
+  });
+
+  it('remembers the flag', () => {
+    const stored = JSON.stringify({ quality: 85, qualitySet: true });
+    expect(parseSettings(stored, CONVERT_DEFAULTS, convertSettingsSchema).qualitySet).toBe(true);
   });
 });
 

@@ -2,13 +2,6 @@
 
 const pages = (n: number) => (n === 1 ? '1 page' : `${n} pages`);
 
-/** 1234567 → "1.2 MB". */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 ** 2) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-}
-
 export const organizeStrings = {
   dropTitle: 'Drop a PDF here',
   dropSubtitle: 'PDF — one file. You can reorder, rotate and delete its pages next.',

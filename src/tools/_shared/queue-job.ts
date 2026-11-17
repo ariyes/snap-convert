@@ -1,6 +1,6 @@
-// Runs one job on the shared queue and waits for it. The queue is shared by every tool, so this
-// page only ever touches the jobs it added, and removes each one as soon as it has finished (the
-// result is kept by the caller).
+// Runs one job on the shared queue and waits for it (Images to PDF, Compress). The queue is shared
+// by every tool, so a page only ever touches the jobs it added, and removes each one as soon as it
+// has finished (the result is kept by the caller).
 
 import type { Job, JobKind } from '@/core/contracts/queue';
 import type { QueueState } from '@/core/queue';

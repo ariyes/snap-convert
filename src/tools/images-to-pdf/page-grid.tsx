@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'rea
 import type { IntakeFile } from '@/core/contracts/intake';
 import { cn } from '@/lib/utils';
 import { Button, Card, IconButton } from '@/ui';
-import { formatBytes } from './format';
+import { formatBytes } from '@/tools/_shared';
 import type { PageOptions } from './page-layout';
 import { PagePreview } from './page-preview';
 import { strings } from './strings';

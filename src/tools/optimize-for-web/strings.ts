@@ -95,9 +95,6 @@ export const optimizeStrings = {
   // Summary and actions
   working: (done: number, total: number) => `Optimizing ${done} of ${total}…`,
   workingShort: (done: number, total: number) => `${done}/${total}…`,
-  estimating: 'estimating time…',
-  secondsLeft: (s: number) => `about ${s} s left`,
-  minutesLeft: (m: number) => `about ${m} min left`,
   runProgress: 'Progress of all images',
   summaryDone: (n: number) => `${n} done`,
   summaryFailed: (n: number) => `${n} failed`,

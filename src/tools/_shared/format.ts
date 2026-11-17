@@ -1,4 +1,4 @@
-// Small display helpers for the single-image screen: file sizes and size change.
+// Small display helpers every tool uses: file sizes, size change and time left.
 import { singleImageStrings as strings } from './strings';
 
 const UNITS = strings.byteUnits;
@@ -18,6 +18,12 @@ export function formatBytes(bytes: number): string {
     return `1 ${UNITS[unit + 1]}`;
   }
   return `${value.toFixed(digits)} ${UNITS[unit]}`;
+}
+
+/** Time left for a run: "about 40 s left", "about 3 min left"; unknown → "estimating time…". */
+export function formatTimeLeft(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds)) return strings.estimatingTime;
+  return strings.timeLeft(seconds);
 }
 
 export type SizeChange =

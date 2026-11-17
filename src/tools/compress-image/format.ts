@@ -1,15 +1,8 @@
-// Small display helpers: byte sizes, percentage saved and output file names.
+// Small display helpers: percentage saved and output file names (sizes: tools/_shared).
 import type { ImageFormat, ImageJobResult } from '@/core/contracts/image';
 import { applyNamePattern, uniqueNames } from '@/features/export';
+import { baseName, EXTENSIONS } from '@/tools/_shared';
 import { compressStrings as t } from './strings';
-
-/** "830 B", "9.4 KB", "155 KB", "2.1 MB" (as in the prototype). */
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '—';
-  if (bytes < 1024) return `${Math.round(bytes)} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB`;
-  return `${(bytes / 1048576).toFixed(1)} MB`;
-}
 
 /**
  * Change in size as a whole percentage: positive when smaller (saved), negative when bigger.
@@ -27,19 +20,6 @@ export function savedText(original: number, result: number): string {
   if (p > 0) return `−${p}%`;
   if (p < 0) return `+${-p}%`;
   return t.savedNone;
-}
-
-const EXTENSIONS: Record<ImageFormat, string> = {
-  jpeg: 'jpg',
-  png: 'png',
-  webp: 'webp',
-  avif: 'avif',
-};
-
-/** "IMG_1.HEIC" → "IMG_1". */
-export function baseName(name: string): string {
-  const base = name.replace(/\.[^./\\]*$/, '');
-  return base || name;
 }
 
 /** `<name>-compressed.<ext>`, the extension from the format actually saved. */

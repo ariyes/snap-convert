@@ -7,7 +7,8 @@ import type { IntakeFile } from '@/core/contracts/intake';
 import { acceptAttribute } from '@/features/intake';
 import { cn } from '@/lib/utils';
 import { Button, Card, CompareSlider, Note, ProgressBar } from '@/ui';
-import { formatBytes, savedPercent, savedText } from './format';
+import { formatBytes, formatTimeLeft } from '@/tools/_shared';
+import { savedPercent, savedText } from './format';
 import type { ResultNote } from './notes';
 import { ACCEPT } from './settings';
 import { compressStrings as t } from './strings';
@@ -120,7 +121,7 @@ export function Stage({
         <div className="flex flex-col gap-1.5 text-ui text-muted" role="status">
           <span>
             {t.progress(progress.done, progress.total)}
-            {progress.etaSeconds !== null && ` · ${t.timeLeft(progress.etaSeconds)}`}
+            {progress.etaSeconds !== null && ` · ${formatTimeLeft(progress.etaSeconds)}`}
           </span>
           <ProgressBar
             size="lg"
@@ -216,7 +217,15 @@ export function Stage({
             <span className="flex flex-wrap items-center justify-between gap-2">
               <span>{note.text}</span>
               {note.action && (
-                <Button size="sm" onClick={() => onNoteAction(note)}>
+                <Button
+                  size="sm"
+                  onClick={() => onNoteAction(note)}
+                  disabled={note.action.pending}
+                  aria-busy={note.action.pending || undefined}
+                >
+                  {note.action.pending && (
+                    <LoaderCircle aria-hidden="true" className="animate-spin" />
+                  )}
                   {note.action.label}
                 </Button>
               )}

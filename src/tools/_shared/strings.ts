@@ -23,6 +23,7 @@ export const singleImageStrings = {
   failed: "Couldn't process this image",
   noPreview: 'No preview for this file yet',
   progress: (done: number, total: number) => `${done} of ${total} ready`,
+  estimatingTime: 'estimating time…',
   timeLeft: (seconds: number) =>
     seconds < 60
       ? `about ${Math.max(1, Math.round(seconds))} s left`

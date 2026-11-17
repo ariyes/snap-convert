@@ -8,7 +8,7 @@ import type { IntakeFile } from '@/core/contracts/intake';
 import { useQueue } from '@/core/queue';
 import { useToolPage } from '@/app/use-tool-page';
 import { usePendingFiles } from '@/app/pending-files';
-import type { ExportKind } from '@/features/export';
+import { ExportBar, type ExportKind } from '@/features/export';
 import {
   clearPresetOnChange,
   DimsPreview,
@@ -24,7 +24,6 @@ import { useToolSettings } from '@/features/settings';
 import { PanelDivider, ToolEmptyState, ToolPage, Workspace } from '@/features/tool-layout';
 import { track } from '@/lib/analytics';
 import { toast } from '@/ui';
-import { Downloads } from './downloads';
 import { downloadNames } from './format';
 import { resultNotes, type ResultNote } from './notes';
 import {
@@ -46,6 +45,7 @@ import {
 import { Stage, type Shown } from './stage';
 import { compressStrings as t } from './strings';
 import { useCompressJobs } from './use-compress-jobs';
+import { useSizeSuggestion } from './use-size-suggestion';
 
 /** `value`, once it has stopped changing for `ms`. */
 function useDebounced<T>(value: T, ms: number): T {
@@ -82,6 +82,9 @@ function useHydrated(): boolean {
     () => false,
   );
 }
+
+/** No results to export yet (stable, so the export bar keeps its state between renders). */
+const NO_OUTPUTS: ReadonlyArray<{ blob: Blob; name: string }> = [];
 
 export default function CompressImageRoute() {
   const page = useToolPage();
@@ -122,6 +125,8 @@ export default function CompressImageRoute() {
     selected?.id ?? null,
     settled.options,
     settled.key,
+    // One tool-run per user-started run (files added); re-runs on a settings change don't count.
+    (count) => track({ name: 'tool-run', tool: TOOL_ID, files: count }),
   );
   const etaSeconds = useQueue((s) => s.stats.etaSeconds);
   const upToDate = settled.key === liveKey;
@@ -152,19 +157,19 @@ export default function CompressImageRoute() {
   const currentIndex = finished.findIndex((x) => x.file.id === selected?.id);
   const current = fresh && currentIndex >= 0 ? (outputs[currentIndex] ?? null) : null;
 
-  // One tool-run count per finished run (settings × files); never any file details.
-  const runSignature = allSettled ? `${settled.key}|${files.map((f) => f.id).join(',')}` : null;
-  const finishedCount = finished.length;
-  useEffect(() => {
-    if (runSignature !== null && finishedCount > 0) {
-      track({ name: 'tool-run', tool: TOOL_ID, files: finishedCount });
-    }
-  }, [runSignature, finishedCount]);
-
   const onExport = (kind: ExportKind) => track({ name: 'download', tool: TOOL_ID, kind });
 
+  // "Resize to N px" is offered only once that size was tried and fits.
+  const suggestion = useSizeSuggestion(
+    selected,
+    fresh && shown ? shown.result : undefined,
+    settings,
+    settled.key,
+  );
   const notes: ResultNote[] =
-    fresh && shown && selected ? resultNotes(shown.result, selected.size, settings) : [];
+    fresh && shown && selected
+      ? resultNotes(shown.result, selected.size, settings, suggestion)
+      : [];
   const metadataJpegOnly = fresh && shown?.result.notes.includes('metadata-jpeg-only');
 
   const remove = (id: string) => {
@@ -278,10 +283,13 @@ export default function CompressImageRoute() {
               </>
             }
             actions={
-              <Downloads
-                current={current}
-                all={allSettled ? outputs : null}
-                total={files.length}
+              <ExportBar
+                variant="panel"
+                folder="wide"
+                files={allSettled ? outputs : NO_OUTPUTS}
+                single={current}
+                count={allSettled ? outputs.length : files.length}
+                zipName={t.zipName}
                 onExport={onExport}
               />
             }

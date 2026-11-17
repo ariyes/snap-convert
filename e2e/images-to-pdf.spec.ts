@@ -171,19 +171,9 @@ function expectNotStretched(img: DrawnImage) {
 
 test.describe.configure({ timeout: 180_000 });
 
-/**
- * GOVERNOR: Playwright's WebKit build on Windows has no OffscreenCanvas, which the image pipeline
- * (P12, image worker) needs, so every image job fails there with "Can't find variable:
- * OffscreenCanvas". Real Safari has had it since 16.4. Tests that convert images are skipped on
- * WebKit until the pipeline has a fallback or the CI WebKit has OffscreenCanvas.
- */
-const NO_IMAGE_WORKER_ON_WEBKIT = 'Playwright WebKit has no OffscreenCanvas for the image worker';
-
 test('ten mixed images become a ten-page PDF in the chosen order, never stretched', async ({
   page,
-  browserName,
 }) => {
-  test.fixme(browserName === 'webkit', NO_IMAGE_WORKER_ON_WEBKIT);
   await open(page);
   const tallJpg = await drawn(page, 'tall.jpg', 60, 100, 'image/jpeg');
   const tallPng = await drawn(page, 'tall.png', 50, 120, 'image/png');
@@ -275,7 +265,43 @@ test('ten mixed images become a ten-page PDF in the chosen order, never stretche
   expect(filterOf('sample.gif')).toBe('FlateDecode');
 });
 
-test('"Original" embeds JPEG bytes unchanged', async ({ page }) => {
+/** A JPEG's header segments (marker + payload) and its compressed image data (from SOS on). */
+function jpegParts(bytes: Uint8Array): { segments: Array<[number, Buffer]>; scan: Buffer } {
+  const b = Buffer.from(bytes);
+  const segments: Array<[number, Buffer]> = [];
+  let at = 2;
+  while (at + 4 <= b.length && b[at] === 0xff) {
+    const marker = b[at + 1] ?? 0;
+    if (marker === 0xda) return { segments, scan: b.subarray(at) };
+    const length = b.readUInt16BE(at + 2);
+    segments.push([marker, b.subarray(at + 4, at + 2 + length)]);
+    at += 2 + length;
+  }
+  throw new Error('No image data in the JPEG');
+}
+
+/** The EXIF orientation of a JPEG (1 when none), and whether its EXIF links a GPS directory. */
+function exifOf(bytes: Uint8Array): { orientation: number; gps: boolean } {
+  const exif = jpegParts(bytes).segments.find(
+    ([m, d]) => m === 0xe1 && d.subarray(0, 6).toString('latin1') === 'Exif\0\0',
+  );
+  if (!exif) return { orientation: 1, gps: false };
+  const tiff = exif[1].subarray(6);
+  const little = tiff.readUInt16BE(0) === 0x4949;
+  const u16 = (o: number) => (little ? tiff.readUInt16LE(o) : tiff.readUInt16BE(o));
+  const u32 = (o: number) => (little ? tiff.readUInt32LE(o) : tiff.readUInt32BE(o));
+  const ifd = u32(4);
+  let orientation = 1;
+  let gps = false;
+  for (let i = 0; i < u16(ifd); i++) {
+    const tag = u16(ifd + 2 + i * 12);
+    if (tag === 0x0112) orientation = u16(ifd + 2 + i * 12 + 8);
+    if (tag === 0x8825) gps = true;
+  }
+  return { orientation, gps };
+}
+
+test('"Original" embeds JPEG image data unchanged (no re-encode)', async ({ page }) => {
   await open(page);
   const photo = fixture('quality/photo-fine-detail.jpg');
   const rotated = fixture('quality/photo-portrait-exif-rotated.jpg');
@@ -285,18 +311,61 @@ test('"Original" embeds JPEG bytes unchanged', async ({ page }) => {
   for (const [i, file] of [photo, rotated].entries()) {
     const kept = imageOn(doc.getPage(i));
     expect(kept.filter).toBe('DCTDecode');
-    expect(Buffer.from(kept.bytes).equals(file.buffer)).toBe(true);
+    // Only header metadata may change (location removed); the compressed pixels are the same.
+    expect(jpegParts(kept.bytes).scan.equals(jpegParts(file.buffer).scan)).toBe(true);
+    expect(exifOf(kept.bytes).orientation).toBe(exifOf(file.buffer).orientation);
     expectNotStretched(kept);
   }
   // EXIF orientation 6 is applied by the drawing (a quarter turn), so the page is portrait.
+  expect(exifOf(rotated.buffer).orientation).toBe(6);
   expect(doc.getPage(1).getSize()).toEqual({ width: 612, height: 792 });
 });
 
-test('"Smaller file" makes a smaller PDF that still looks the same', async ({
-  page,
-  browserName,
-}) => {
-  test.fixme(browserName === 'webkit', NO_IMAGE_WORKER_ON_WEBKIT);
+test('location data never ends up in the PDF, and pages stay upright', async ({ page }) => {
+  await open(page);
+  // gps.jpg: 96 × 64 upright test card whose EXIF holds a GPS position (51° 30′ N, 0° 7′ W).
+  const located = fixture('images/gps.jpg');
+  const rotated = fixture('quality/photo-portrait-exif-rotated.jpg');
+  await pick(page, [located, rotated]);
+  await expect(page.getByTestId('location-note')).toHaveText(
+    'Location data is removed from your photos.',
+  );
+
+  /** The GPS latitude rationals as stored (big- or little-endian), and the GPS link in the EXIF. */
+  const latitude = (little: boolean) => {
+    const b = Buffer.alloc(16);
+    [51, 1, 30, 1].forEach((n, i) =>
+      little ? b.writeUInt32LE(n, i * 4) : b.writeUInt32BE(n, i * 4),
+    );
+    return b;
+  };
+  const hasLatitude = (b: Buffer) => b.includes(latitude(true)) || b.includes(latitude(false));
+  expect(hasLatitude(located.buffer)).toBe(true);
+  expect(exifOf(located.buffer).gps).toBe(true);
+
+  const pdf = await makeAndDownload(page);
+  // Not in the file at all (images are stored uncompressed as JPEG bytes)…
+  expect(hasLatitude(pdf)).toBe(false);
+  const doc = await PDFDocument.load(pdf);
+  const kept = imageOn(doc.getPage(0));
+  expect(kept.filter).toBe('DCTDecode');
+  // …nor linked from the embedded photo's EXIF; its image data is untouched.
+  expect(exifOf(kept.bytes).gps).toBe(false);
+  expect(hasLatitude(Buffer.from(kept.bytes))).toBe(false);
+  expect(jpegParts(kept.bytes).scan.equals(jpegParts(located.buffer).scan)).toBe(true);
+
+  // Upright: the landscape test card on a landscape page, drawn without a turn…
+  expect(doc.getPage(0).getSize()).toEqual({ width: 792, height: 612 });
+  expect(kept.matrix[1]).toBeCloseTo(0);
+  expect(kept.matrix[0]).toBeGreaterThan(0);
+  expect(kept.matrix[3]).toBeGreaterThan(0);
+  expectNotStretched(kept);
+  // …and the EXIF-rotated phone photo still turned to portrait.
+  expect(exifOf(imageOn(doc.getPage(1)).bytes).orientation).toBe(6);
+  expect(doc.getPage(1).getSize()).toEqual({ width: 612, height: 792 });
+});
+
+test('"Smaller file" makes a smaller PDF that still looks the same', async ({ page }) => {
   await open(page);
   const photo = fixture('quality/photo-fine-detail.jpg'); // 4032 × 2268
   await pick(page, [photo]);

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 import { exactPlacement, type Size } from '@/core/sizing';
 import { usePageThumbnail } from '@/engines/pdf';
+import { BitmapCanvas, useInView } from '@/tools/_shared';
 import type { Rotation } from './pages';
 
 /** Thumbnails are rendered this many CSS px on the long side (sharp at the device pixel ratio). */
@@ -33,37 +34,6 @@ export function thumbStyle(page: Size, rotate: Rotation): CSSProperties {
   };
 }
 
-/** True while the element is on screen (or near it), so only visible thumbnails render. */
-function useInView<T extends Element>() {
-  const ref = useRef<T>(null);
-  // Without IntersectionObserver every thumbnail renders.
-  const [inView, setInView] = useState(() => typeof IntersectionObserver === 'undefined');
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      (entries) => setInView(entries.some((e) => e.isIntersecting)),
-      { rootMargin: '300px' },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, inView] as const;
-}
-
-/** Draws an ImageBitmap the hook owns into a canvas (the hook closes the bitmap later). */
-function BitmapCanvas({ bitmap, className }: { bitmap: ImageBitmap; className?: string }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
-  }, [bitmap]);
-  return <canvas ref={ref} aria-hidden="true" className={className} />;
-}
-
 export interface PageThumbProps {
   file: Blob;
   /** 0-based page index in `file`. */
@@ -76,7 +46,7 @@ export interface PageThumbProps {
 /** One page, turned by `rotate`, fitted in a 1 : 1.3 area. Renders only near the screen. Paper uses
  * the `handle` token: white in both themes. */
 export function PageThumb({ file, index, size, rotate }: PageThumbProps) {
-  const [ref, inView] = useInView<HTMLDivElement>();
+  const [ref, inView] = useInView<HTMLDivElement>('300px');
   const { bitmap } = usePageThumbnail(file, index, THUMB_SIZE, inView);
   return (
     <div ref={ref} className="relative aspect-[1/1.3] w-full overflow-hidden rounded-md bg-sunk">
