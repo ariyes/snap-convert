@@ -5,7 +5,10 @@ import { prerenderRoutes } from '../src/app/prerender-routes';
 import { canonicalUrl, formatPages, isAvailable, SITE_URL, tools } from '../src/tools/registry';
 
 /** Every page the build pre-renders, as its public URL. */
-const EXPECTED_URLS = prerenderRoutes.map((r) => (r === '/' ? SITE_URL : canonicalUrl(r.slice(1))));
+const notBuiltYet = new Set([...tools, ...formatPages].filter((p) => !isAvailable(p)).map((p) => p.id));
+const EXPECTED_URLS = prerenderRoutes
+  .filter((r) => !notBuiltYet.has(r.slice(1)))
+  .map((r) => (r === '/' ? SITE_URL : canonicalUrl(r.slice(1))));
 
 async function sitemapLocs(request: APIRequestContext): Promise<string[]> {
   const res = await request.get('sitemap.xml');
@@ -46,8 +49,9 @@ test.describe('sitemap and robots.txt', () => {
     const locs = await sitemapLocs(request);
     expect(new Set(locs).size).toBe(locs.length);
     expect([...locs].sort()).toEqual([...EXPECTED_URLS].sort());
-    for (const id of [...tools, ...formatPages].map((p) => p.id)) {
-      expect(locs).toContain(canonicalUrl(id));
+    for (const p of [...tools, ...formatPages]) {
+      if (isAvailable(p)) expect(locs).toContain(canonicalUrl(p.id));
+      else expect(locs).not.toContain(canonicalUrl(p.id));
     }
   });
 

@@ -11,12 +11,16 @@ import { HomeDropZone } from '../home/home-drop-zone';
 import { filesForTool, toDroppedFiles, type DroppedFile, type Suggestion } from '../home/suggest';
 import { SuggestionPanel } from '../home/suggestion-panel';
 import { ToolGroups } from '../home/tool-groups';
+import { homeStructuredData } from '@/tools/registry';
 import { pageMeta } from '../meta';
 import { setPendingFiles } from '../pending-files';
 import { appStrings } from '../strings';
 
 export function meta() {
-  return pageMeta({ title: appStrings.homeTitle, description: appStrings.homeDescription });
+  return [
+    ...pageMeta({ title: appStrings.homeTitle, description: appStrings.homeDescription }),
+    { 'script:ld+json': homeStructuredData },
+  ];
 }
 
 const trustIcons: LucideIcon[] = [ShieldCheck, InfinityIcon, Lock];

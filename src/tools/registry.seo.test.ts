@@ -129,11 +129,16 @@ describe('SEO fields', () => {
 describe('sitemap', () => {
   const urls = sitemapUrls();
 
-  it('lists every pre-rendered page exactly once, at its canonical address', () => {
-    expect(urls).toHaveLength(prerenderRoutes.length);
+  it('lists every pre-rendered page except tools not built yet, exactly once, at its canonical address', () => {
+    const comingSoon = pages.filter((p) => !isAvailable(p));
+    expect(comingSoon.length).toBeGreaterThan(0);
+    expect(urls).toHaveLength(prerenderRoutes.length - comingSoon.length);
     expect(new Set(urls).size).toBe(urls.length);
     expect(urls[0]).toBe(SITE_URL);
-    for (const p of pages) expect(urls).toContain(canonicalUrl(p.id));
+    for (const p of pages) {
+      if (isAvailable(p)) expect(urls).toContain(canonicalUrl(p.id));
+      else expect(urls).not.toContain(canonicalUrl(p.id));
+    }
     expect(urls).toEqual(
       expect.arrayContaining([canonicalUrl('credits'), canonicalUrl('privacy')]),
     );

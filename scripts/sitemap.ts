@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { prerenderRoutes } from '../src/app/prerender-routes';
-import { SITE_URL } from '../src/tools/registry';
+import { getPage, isAvailable, SITE_URL } from '../src/tools/registry';
 
 /**
  * sitemap.xml for search engines (P22), written into the build folder after pre-rendering, so it
@@ -18,7 +18,12 @@ export function sitemapUrls(
   routes: readonly string[] = prerenderRoutes,
   site: string = SITE_URL,
 ): string[] {
-  const urls = routes.map((route) => {
+  // Pages for tools that aren't built yet are left out (and marked noindex) until they ship.
+  const listed = routes.filter((route) => {
+    const page = getPage(route.replace(/^\/+|\/+$/g, ''));
+    return !page || isAvailable(page);
+  });
+  const urls = listed.map((route) => {
     const rel = route.replace(/^\/+|\/+$/g, '');
     return rel ? `${site}${rel}` : site;
   });

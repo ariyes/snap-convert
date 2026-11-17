@@ -27,7 +27,7 @@ const text = {
   allTextsSuffix: ' (plain text).',
 
   ownTitle: 'Snap Convert’s license',
-  ownCopyright: 'Copyright © 2026 the Snap Convert authors.',
+  ownCopyright: 'Copyright © 2026 Kayes.',
   ownNotice: [
     'Snap Convert is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3.',
     'Snap Convert is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.',

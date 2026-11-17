@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { formatPages, tools } from '../src/tools/registry';
+import { formatPages, getPage, isAvailable, tools } from '../src/tools/registry';
 import { expectDelivered, watchDeliveries } from './support/delivered';
 
 const PAGES = [...tools, ...formatPages];
@@ -150,9 +150,16 @@ test.describe('tool links', () => {
       const description = /<meta name="description" content="([^"]+)"/.exec(html)?.[1];
       expect(title, path).toBeTruthy();
       expect(description, path).toBeTruthy();
-      expect(html, path).toContain(
-        `<link rel="canonical" href="https://crkayes.com/snap-convert/${path}"/>`,
-      );
+      const page = getPage(path);
+      if (page && !isAvailable(page)) {
+        // Tools not built yet stay out of search results until they ship.
+        expect(html, path).toContain('<meta name="robots" content="noindex"/>');
+        expect(html, path).not.toContain('rel="canonical"');
+      } else {
+        expect(html, path).toContain(
+          `<link rel="canonical" href="https://crkayes.com/snap-convert/${path}"/>`,
+        );
+      }
       seen.titles.add(title!);
       seen.descriptions.add(description!);
     }
