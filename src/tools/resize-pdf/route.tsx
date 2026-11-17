@@ -514,6 +514,11 @@ function FileRow({
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-sm font-medium">{file.name}</span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-xs text-muted">
+          {row.encrypted && (
+            <Badge variant="warn" className="font-sans">
+              {t.encrypted}
+            </Badge>
+          )}
           {info.status === 'reading' && <span>{t.reading}</span>}
           {info.status === 'error' && <span className="text-bad">{t.unreadable}</span>}
           {info.status === 'ready' && !row.encrypted && (
@@ -536,7 +541,6 @@ function FileRow({
         )}
       </span>
       <span className="flex items-center gap-1">
-        {row.encrypted && <Badge variant="warn">{t.encrypted}</Badge>}
         {job?.status === 'waiting' && <span className="text-xs text-faint">{t.waiting}</span>}
         {job?.status === 'working' && (
           <ProgressBar value={job.progress} label={t.progressLabel(file.name)} />

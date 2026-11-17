@@ -117,7 +117,23 @@ export function Toolbar({ organizer, disabled }: { organizer: Organizer; disable
         onClick={organizer.remove}
         disabled={none}
       />
-      <span aria-hidden="true" className="mx-1 h-5 w-px bg-line" />
+    </div>
+  );
+}
+
+/** Undo and redo (also Ctrl/⌘ + Z and Ctrl/⌘ + Shift + Z anywhere on the page). */
+export function HistoryButtons({
+  organizer,
+  disabled,
+}: {
+  organizer: Organizer;
+  disabled: boolean;
+}) {
+  const apple = useSyncExternalStore(noSubscribe, isApplePlatform, () => false);
+  const mod = apple ? '⌘' : 'Ctrl';
+  const ariaMod = apple ? 'Meta' : 'Control';
+  return (
+    <span className="flex items-center gap-0.5">
       <ToolButton
         icon={Undo2}
         label={t.undo}
@@ -136,6 +152,6 @@ export function Toolbar({ organizer, disabled }: { organizer: Organizer; disable
         disabled={disabled || !organizer.canRedo}
         showLabel={false}
       />
-    </div>
+    </span>
   );
 }

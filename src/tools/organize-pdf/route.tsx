@@ -23,7 +23,7 @@ import { Button, Card, Helper, Input, Label, Note, ProgressBar } from '@/ui';
 import { PageGrid } from './page-grid';
 import { samePages, toOrganizePages, type PageItem } from './pages';
 import { formatBytes, organizeStrings as t } from './strings';
-import { Toolbar } from './toolbar';
+import { HistoryButtons, Toolbar } from './toolbar';
 import { useOrganizer } from './use-organizer';
 
 const TOOL = 'organize-pdf';
@@ -258,8 +258,11 @@ function Editor({
           {file.name}{' '}
           <span className="font-normal text-muted">· {t.summary(pages.length, info.pages)}</span>
         </strong>
-        <span className="text-ui text-faint">
-          {t.selectedCount(organizer.selected.size)} · {t.dragHint}
+        <span className="flex items-center gap-2 text-ui text-faint">
+          <span>
+            {t.selectedCount(organizer.selected.size)} · {t.dragHint}
+          </span>
+          <HistoryButtons organizer={organizer} disabled={working} />
         </span>
       </div>
       <div className="border-b border-line px-2 py-1.5">
