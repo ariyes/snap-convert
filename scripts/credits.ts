@@ -181,6 +181,14 @@ const COMPONENTS: readonly ComponentSpec[] = [
     licenseUrl: 'https://github.com/strukturag/libde265/blob/master/COPYING',
   },
   {
+    name: 'Rust crates in FlashRaw: rayon 1.12.0 and rayon-core 1.13.0, crossbeam-epoch 0.9.21, serde_json 1.0.151, itoa 1.0.18, js-sys 0.3.106, dlmalloc 0.2.14, wasm-bindgen and the Rust standard library (MIT OR Apache-2.0); zune-core 0.4.12, zune-inflate 0.2.54, zune-jpeg 0.4.21 (MIT OR Apache-2.0 OR Zlib); zlib-rs 0.6.8 (Zlib); moxcms 0.8.1 and pxfm 0.1.30 (BSD-3-Clause OR Apache-2.0); for JPEG XL DNGs: jxl-oxide 0.12.6 and its jxl-* crates, once_cell, hashbrown (MIT OR Apache-2.0), tracing-core (MIT), brotli-decompressor (BSD-3-Clause OR MIT)',
+    role: 'Libraries compiled into the FlashRaw WebAssembly (camera RAW decoder)',
+    license: 'MIT OR Apache-2.0, Zlib, BSD-3-Clause',
+    url: 'https://github.com/ybouane/flashraw',
+    includedIn: 'flashraw',
+    licenseUrl: 'https://crates.io/',
+  },
+  {
     name: 'LibRaw 0.22.1',
     role: 'Camera RAW decoder (WebAssembly), used when FlashRaw can’t read a file',
     license: 'LGPL-2.1-only OR CDDL-1.0',

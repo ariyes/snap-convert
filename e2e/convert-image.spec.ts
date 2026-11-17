@@ -114,43 +114,46 @@ test('transparent PNG → JPG uses the chosen background; → WebP keeps the tra
   expect(alpha.pixels[2]![3], 'right third stays opaque').toBe(255);
 });
 
-test('every input format converts to every output format', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name.endsWith('phone'), 'Format matrix: once per engine is enough');
-  // 7 files × 4 formats. With cross-origin isolation (D43) WebKit encodes AVIF on several threads:
-  // faster alone (~32 s vs ~40 s), but slower when the whole suite shares the CPU. Generous limits.
-  test.setTimeout(480_000);
-  await page.goto('convert-image');
-  const inputs = [
-    fixture('images/no-exif.jpg', 'jpg-in.jpg'),
-    fixture('images/opaque.png', 'png-in.png'),
-    fixture('images/sample.webp', 'webp-in.webp'),
-    fixture('images/sample.avif', 'avif-in.avif'),
-    fixture('images/sample.gif', 'gif-in.gif'),
-    fixture('images/sample.bmp', 'bmp-in.bmp'),
-    fixture('images/iphone-7.heic', 'heic-in.heic'),
-  ];
-  await addFiles(page, inputs);
-  const zipButton = page.getByRole('button', { name: `Download all ${inputs.length} as ZIP` });
+test(
+  'every input format converts to every output format',
+  { tag: '@heavy' },
+  async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.endsWith('phone'), 'Format matrix: once per engine is enough');
+    // 7 files × 4 formats: tagged @heavy, so it runs after the rest of the suite (playwright.config.ts).
+    test.setTimeout(480_000);
+    await page.goto('convert-image');
+    const inputs = [
+      fixture('images/no-exif.jpg', 'jpg-in.jpg'),
+      fixture('images/opaque.png', 'png-in.png'),
+      fixture('images/sample.webp', 'webp-in.webp'),
+      fixture('images/sample.avif', 'avif-in.avif'),
+      fixture('images/sample.gif', 'gif-in.gif'),
+      fixture('images/sample.bmp', 'bmp-in.bmp'),
+      fixture('images/iphone-7.heic', 'heic-in.heic'),
+    ];
+    await addFiles(page, inputs);
+    const zipButton = page.getByRole('button', { name: `Download all ${inputs.length} as ZIP` });
 
-  for (const format of ['jpeg', 'png', 'webp', 'avif'] as const) {
-    if (format !== 'jpeg') {
-      await chooseFormat(page, LABEL[format]);
-      await expect(zipButton).toBeDisabled();
+    for (const format of ['jpeg', 'png', 'webp', 'avif'] as const) {
+      if (format !== 'jpeg') {
+        await chooseFormat(page, LABEL[format]);
+        await expect(zipButton).toBeDisabled();
+      }
+      await expect(page.getByText(`${inputs.length} of ${inputs.length} ready`)).toBeVisible({
+        timeout: 240_000,
+      });
+      await expect(zipButton).toBeEnabled();
+      const [zip] = await Promise.all([page.waitForEvent('download'), zipButton.click()]);
+      const entries = unzipSync(await bytesOf(zip));
+      expect(Object.keys(entries), format).toEqual(
+        inputs.map((f) => `${path.parse(f.name).name}.${EXT[format]}`),
+      );
+      for (const [name, bytes] of Object.entries(entries)) {
+        expect(sniff(bytes), `${name} as ${format}`).toBe(format);
+      }
     }
-    await expect(page.getByText(`${inputs.length} of ${inputs.length} ready`)).toBeVisible({
-      timeout: 240_000,
-    });
-    await expect(zipButton).toBeEnabled();
-    const [zip] = await Promise.all([page.waitForEvent('download'), zipButton.click()]);
-    const entries = unzipSync(await bytesOf(zip));
-    expect(Object.keys(entries), format).toEqual(
-      inputs.map((f) => `${path.parse(f.name).name}.${EXT[format]}`),
-    );
-    for (const [name, bytes] of Object.entries(entries)) {
-      expect(sniff(bytes), `${name} as ${format}`).toBe(format);
-    }
-  }
-});
+  },
+);
 
 test.describe('format pages', () => {
   const inputFor = {

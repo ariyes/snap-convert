@@ -4,6 +4,7 @@
 // The multithreaded build is used only when the page is cross-origin isolated (D43), with at most
 // four threads; everything works single-threaded.
 
+import { wasmThreadsAllowed } from '@/lib/webkit';
 import type * as FlashRawNamespace from 'flashraw';
 import type { DecodedFrame, FlashRaw as FlashRawFile, PreviewDescriptor } from 'flashraw';
 import simdWasm from 'flashraw/wasm/simd?url';
@@ -21,7 +22,8 @@ export const MAX_THREADS = 4;
 let loaded: Promise<FlashRawModule> | undefined;
 
 function threadCount(): number {
-  if (globalThis.crossOriginIsolated !== true || typeof SharedArrayBuffer !== 'function') return 0;
+  // One thread on WebKit until threads are proven on real Safari (src/lib/webkit.ts).
+  if (!wasmThreadsAllowed()) return 0;
   const cores = globalThis.navigator?.hardwareConcurrency ?? 1;
   return Math.max(0, Math.min(cores, MAX_THREADS));
 }

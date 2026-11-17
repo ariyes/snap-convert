@@ -170,7 +170,7 @@ const jpeg = { format: 'jpeg', quality: 80, metadata: 'strip-location' };
 let harness: Harness | undefined;
 test.use({ allowRequests: [/^http:\/\/127\.0\.0\.1:\d+\//] });
 
-test.describe('camera RAW in this browser', () => {
+test.describe('camera RAW in this browser', { tag: '@heavy' }, () => {
   test.skip(missing.length > 0, MISSING);
 
   test.beforeAll(async () => {

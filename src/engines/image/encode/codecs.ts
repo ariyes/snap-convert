@@ -8,6 +8,7 @@ import type { ImageFormat } from '@/core/contracts/image';
 import type { EncodeOptions as MozJpegEncodeOptions } from '@jsquash/jpeg/meta.js';
 import type { OptimiseOptions } from '@jsquash/oxipng/meta.js';
 import type { EncodeOptions as WebpEncodeOptions } from '@jsquash/webp/meta.js';
+import { wasmThreadsAllowed } from '@/lib/webkit';
 import { CodecUnavailableError } from './errors';
 import type { AvifOptions } from './options';
 import { encodeStrings } from './strings';
@@ -23,8 +24,48 @@ const importers: { [F in ImageFormat]: () => Promise<Codecs[F]> } = {
   jpeg: async () => (await import('@jsquash/jpeg/encode.js')).default,
   png: async () => (await import('@jsquash/oxipng/optimise.js')).default,
   webp: async () => (await import('@jsquash/webp/encode.js')).default,
-  avif: async () => (await import('@jsquash/avif/encode.js')).default,
+  avif: async () =>
+    wasmThreadsAllowed()
+      ? (await import('@jsquash/avif/encode.js')).default
+      : singleThreadAvif(),
 };
+
+/**
+ * jSquash's AVIF encoder picks its multi-threaded build by itself whenever threads exist. Where we
+ * don't want threads (WebKit, see src/lib/webkit.ts) this loads the single-threaded build directly
+ * and calls it the way jSquash's encode() does (we never use lossless AVIF).
+ */
+async function singleThreadAvif(): Promise<Codecs['avif']> {
+  const [codec, utils, meta] = (await Promise.all([
+    import('@jsquash/avif/codec/enc/avif_enc.js'),
+    import('@jsquash/avif/utils.js'),
+    import('@jsquash/avif/meta.js'),
+  ])) as unknown as [AvifCodecModule, AvifUtilsModule, AvifMetaModule];
+  const module = utils.initEmscriptenModule(codec.default);
+  return async (img, options) => {
+    const encoder = await module;
+    const output = encoder.encode(new Uint8Array(img.data.buffer), img.width, img.height, {
+      ...meta.defaultOptions,
+      ...options,
+    });
+    if (!output) throw new Error('Encoding error.');
+    return output.buffer as ArrayBuffer;
+  };
+}
+
+/** The parts of jSquash's AVIF internals used above (its own files are plain JS to the linter). */
+interface AvifEncoderInstance {
+  encode(data: Uint8Array, width: number, height: number, options: object): Uint8Array | null;
+}
+interface AvifCodecModule {
+  default: unknown;
+}
+interface AvifUtilsModule {
+  initEmscriptenModule(factory: unknown): Promise<AvifEncoderInstance>;
+}
+interface AvifMetaModule {
+  defaultOptions: object;
+}
 
 const loaded = new Map<ImageFormat, Promise<unknown>>();
 
@@ -52,11 +93,7 @@ export function loadCodec<F extends ImageFormat>(format: F): Promise<Codecs[F]> 
   return p;
 }
 
-/** True when the AVIF encoder can use its multi-threaded build (needs cross-origin isolation). */
+/** True when the AVIF encoder uses its multi-threaded build (cross-origin isolated, not WebKit). */
 export function canUseThreads(): boolean {
-  return (
-    globalThis.crossOriginIsolated === true &&
-    typeof SharedArrayBuffer === 'function' &&
-    (globalThis.navigator?.hardwareConcurrency ?? 1) > 1
-  );
+  return wasmThreadsAllowed();
 }

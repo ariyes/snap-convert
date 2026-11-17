@@ -13,6 +13,17 @@ const firefoxProjects = [
   { name: 'firefox-phone', use: { ...devices['Desktop Firefox'], ...phone } },
 ];
 
+const browserProjects = [
+  { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'], ...desktop } },
+  { name: 'chromium-phone', use: { ...devices['Desktop Chrome'], ...phone, isMobile: true } },
+  ...(includeFirefox ? firefoxProjects : []),
+  { name: 'webkit-desktop', use: { ...devices['Desktop Safari'], ...desktop } },
+  { name: 'webkit-phone', use: { ...devices['Desktop Safari'], ...phone, isMobile: true } },
+];
+
+/** Tag for tests too heavy to share the machine with the rest of the suite. */
+const HEAVY = /@heavy/;
+
 /** End-to-end tests run against the production build (pre-rendered pages), served by `vite preview`. */
 export default defineConfig({
   testDir: './e2e',
@@ -27,11 +38,16 @@ export default defineConfig({
     reducedMotion: 'reduce',
   },
   projects: [
-    { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'], ...desktop } },
-    { name: 'chromium-phone', use: { ...devices['Desktop Chrome'], ...phone, isMobile: true } },
-    ...(includeFirefox ? firefoxProjects : []),
-    { name: 'webkit-desktop', use: { ...devices['Desktop Safari'], ...desktop } },
-    { name: 'webkit-phone', use: { ...devices['Desktop Safari'], ...phone, isMobile: true } },
+    ...browserProjects.map((p) => ({ ...p, grepInvert: HEAVY })),
+    // Tests tagged @heavy (61 MP RAW develops, the 7 × 4 format matrix) run last, once every
+    // other project has finished, so they never fight the rest of the suite for CPU and memory.
+    // To run only them in one browser: --project=webkit-desktop-heavy.
+    ...browserProjects.map((p) => ({
+      ...p,
+      name: `${p.name}-heavy`,
+      grep: HEAVY,
+      dependencies: browserProjects.map((b) => b.name),
+    })),
   ],
   webServer: {
     command: `pnpm build && pnpm preview --port ${port} --strictPort`,
