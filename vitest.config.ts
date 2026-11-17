@@ -19,7 +19,20 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  optimizeDeps: { exclude: wasmPackages },
+  optimizeDeps: {
+    exclude: wasmPackages,
+    // Pre-bundle the engines' lazily imported dependencies up front. Otherwise Vite discovers them
+    // mid-run in a fresh checkout, reloads the browser and every running browser test fails.
+    include: [
+      'comlink',
+      'exifr',
+      'pica/pica_main',
+      'libheif-js/libheif-wasm/libheif.js',
+      'pdf-lib',
+      'pdfjs-dist/legacy/build/pdf.mjs',
+      'fflate',
+    ],
+  },
   worker: { format: 'es' },
   test: {
     projects: [
