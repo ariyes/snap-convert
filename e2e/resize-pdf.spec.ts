@@ -3,6 +3,7 @@
 // (selectable text).
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import { decodePDFRawStream, PDFArray, PDFDocument, PDFRawStream, type PDFPage } from 'pdf-lib';
@@ -229,4 +230,23 @@ test('custom size in inches', async ({ page }) => {
   const file = await download(page, 'Download');
   const doc = await PDFDocument.load(file.bytes);
   for (const p of doc.getPages()) expectPlaced(p, { width: 360, height: 360 }, A4);
+});
+
+test('the workspace has no serious accessibility issues', async ({ page }) => {
+  await open(page, ['encrypted.pdf', 'a4-3-pages.pdf']);
+  await expect(page.getByTestId('preview-page')).toBeVisible();
+  const results = await new AxeBuilder({ page }).analyze();
+  const serious = results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    // P11b: DropZone's accessible name leaves out its formats line (label-content-name-mismatch).
+    .map((v) => ({
+      ...v,
+      nodes: v.nodes.filter(
+        (n) => !(v.id === 'label-content-name-mismatch' && n.html.includes('role="button"')),
+      ),
+    }))
+    .filter((v) => v.nodes.length > 0);
+  expect(
+    serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
+  ).toEqual([]);
 });

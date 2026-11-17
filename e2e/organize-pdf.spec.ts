@@ -3,6 +3,7 @@
 // shown.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 
@@ -234,4 +235,17 @@ test('a password-protected PDF is explained', async ({ page }) => {
   });
   await expect(page.getByRole('alert')).toContainText('password-protected');
   await expect(options(page)).toHaveCount(0);
+});
+
+test('the page grid has no serious accessibility issues', async ({ page }) => {
+  await open(page, { name: 'twelve.pdf', buffer: await twelvePages() });
+  await expect(options(page)).toHaveCount(12);
+  await tile(page, 2).click();
+  const results = await new AxeBuilder({ page }).analyze();
+  const serious = results.violations.filter(
+    (v) => v.impact === 'serious' || v.impact === 'critical',
+  );
+  expect(
+    serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
+  ).toEqual([]);
 });

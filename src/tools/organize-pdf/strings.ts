@@ -27,10 +27,9 @@ export const organizeStrings = {
     count === original ? pages(count) : `${pages(count)} (of ${original})`,
   selectedCount: (n: number) => (n === 0 ? 'None selected' : `${n} selected`),
   dragHint: 'Drag to reorder',
-  pageLabel: (position: number, original: number, rotate: number) =>
-    `Page ${position}${position === original ? '' : `, originally page ${original}`}${
-      rotate ? `, turned ${rotate}°` : ''
-    }`,
+  /** Read after the caption ("Page 5") by screen readers. */
+  pageDetails: (position: number, rotate: number) =>
+    `, position ${position}${rotate ? `, turned ${rotate}°` : ''}`,
   pageCaption: (original: number) => `Page ${original}`,
   turned: (rotate: number) => `${rotate}°`,
   dragCount: (n: number) => (n === 1 ? 'Moving 1 page' : `Moving ${n} pages`),

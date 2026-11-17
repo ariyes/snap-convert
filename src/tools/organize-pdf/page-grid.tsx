@@ -326,7 +326,6 @@ export function PageGrid({ file, organizer, sizes, disabled = false }: PageGridP
               }}
               role="option"
               aria-selected={isSelected}
-              aria-label={t.pageLabel(position + 1, page.id + 1, page.rotate)}
               tabIndex={page.id === focusId ? 0 : -1}
               data-page={page.id + 1}
               data-rotate={page.rotate}
@@ -354,7 +353,10 @@ export function PageGrid({ file, organizer, sizes, disabled = false }: PageGridP
               {drag?.before === pages.length && position === pages.length - 1 && (
                 <DropMarker side="right" />
               )}
-              <span className="absolute top-1.5 left-1.5 z-[1] grid h-[22px] min-w-[22px] place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-on-accent">
+              <span
+                aria-hidden="true"
+                className="absolute top-1.5 left-1.5 z-[1] grid h-[22px] min-w-[22px] place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-on-accent"
+              >
                 {position + 1}
               </span>
               {isSelected && (
@@ -365,9 +367,12 @@ export function PageGrid({ file, organizer, sizes, disabled = false }: PageGridP
               )}
               <PageThumb file={file} index={page.id} size={size} rotate={page.rotate} />
               <div className="flex items-center justify-between gap-1.5 text-xs text-muted">
-                <span className="truncate font-medium text-fg">{t.pageCaption(page.id + 1)}</span>
+                <span className="truncate font-medium text-fg">
+                  {t.pageCaption(page.id + 1)}
+                  <span className="sr-only">{t.pageDetails(position + 1, page.rotate)}</span>
+                </span>
                 {page.rotate !== 0 && (
-                  <span className="inline-flex items-center gap-1 font-mono">
+                  <span aria-hidden="true" className="inline-flex items-center gap-1 font-mono">
                     <RotateCw aria-hidden="true" className="size-3" />
                     {t.turned(page.rotate)}
                   </span>
