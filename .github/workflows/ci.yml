@@ -43,6 +43,13 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Deploy kit (P25): its own tsconfig and Node test runner, outside the app's suites.
+      - name: Typecheck deploy kit
+        run: pnpm exec tsc -p deploy
+
+      - name: Deploy kit tests
+        run: node --test deploy/
+
       - name: Unit and browser tests
         run: pnpm test
 

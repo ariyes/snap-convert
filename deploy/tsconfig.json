@@ -1,0 +1,9 @@
+{
+  // The root tsconfig.json covers src/, e2e/, tests/ and scripts/; this one adds the deploy
+  // scripts (P25) for ESLint's type-aware rules and `pnpm exec tsc -p deploy`.
+  "extends": "../tsconfig.json",
+  "include": ["./**/*.ts"],
+  "compilerOptions": {
+    "types": ["node"]
+  }
+}

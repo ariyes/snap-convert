@@ -87,7 +87,8 @@ Types and caching (from P21 and docs/05, repeated here so the config is in one p
 | `manifest.webmanifest` | `Content-Type: application/manifest+json` |
 | `sw.js` | `Cache-Control: no-cache` |
 | HTML, `*.data`, `sitemap.xml`, `robots.txt` | `Cache-Control: no-cache` |
-| `assets/*` (hashed names), `icons/*`, `og/*`, fonts | `Cache-Control: public, max-age=31536000, immutable` |
+| `assets/*` (hashed names, incl. fonts) | `Cache-Control: public, max-age=31536000, immutable` |
+| `icons/*`, `og/*` (names not hashed) | `Cache-Control: public, max-age=604800` (7 days) |
 
 ## nginx gotcha
 
