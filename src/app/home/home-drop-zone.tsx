@@ -31,7 +31,7 @@ export function HomeDropZone({ onFiles }: { onFiles: (files: IntakeFile[]) => vo
         fallback={
           <div
             aria-hidden="true"
-            className="mt-7 h-[278px] rounded-2xl border-[1.5px] border-dashed border-line bg-card"
+            className="mt-7 h-[277px] rounded-2xl border-[1.5px] border-dashed border-line bg-card"
           />
         }
       >
