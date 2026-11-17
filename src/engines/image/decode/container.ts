@@ -2,6 +2,8 @@
 // the real format (from the first bytes, never the extension), the stored pixel size
 // (so huge images are refused before decoding), the raw EXIF block and the ICC profile.
 
+import { inflate } from './inflate';
+
 export type SniffedFormat = 'jpeg' | 'png' | 'webp' | 'avif' | 'heic' | 'gif' | 'bmp' | 'unknown';
 
 /** Colour description from an ISO-BMFF `colr` box of type `nclx` (HEIC / AVIF without an ICC profile). */
@@ -116,13 +118,13 @@ function tiffStart(block: Uint8Array): Uint8Array | undefined {
   return bom === 'II' || bom === 'MM' ? data : undefined;
 }
 
-/** Inflates zlib data (PNG iCCP) with the browser's built-in decompressor. */
-async function inflate(data: Uint8Array): Promise<Uint8Array | undefined> {
+/** ICC profiles are small; anything bigger than this in an iCCP chunk is broken. */
+const MAX_ICC_BYTES = 16 * 1024 * 1024;
+
+/** Inflates a PNG iCCP profile (DecompressionStream, or fflate where that's missing). */
+async function inflateProfile(data: Uint8Array): Promise<Uint8Array | undefined> {
   try {
-    const stream = new Blob([data as Uint8Array<ArrayBuffer>])
-      .stream()
-      .pipeThrough(new DecompressionStream('deflate'));
-    return new Uint8Array(await new Response(stream).arrayBuffer());
+    return await inflate(data, MAX_ICC_BYTES);
   } catch {
     return undefined;
   }
@@ -209,7 +211,7 @@ async function readPng(b: Uint8Array): Promise<Parts> {
       out.exif = tiffStart(data);
     } else if (type === 'iCCP') {
       const nul = data.indexOf(0);
-      if (nul > 0 && data[nul + 1] === 0) out.icc = await inflate(data.subarray(nul + 2));
+      if (nul > 0 && data[nul + 1] === 0) out.icc = await inflateProfile(data.subarray(nul + 2));
     } else if (type === 'IEND') {
       break;
     }
