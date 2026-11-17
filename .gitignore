@@ -32,3 +32,6 @@ __screenshots__/
 # Real-world test files (P24): generated on first use, or the owner's own files
 tests/fixtures/real/generated/
 tests/fixtures/real/owner/
+
+# Hand-over ZIP for the crkayes.com project (built from docs/launch/crkayes-content/)
+docs/launch/crkayes-content/*.zip
