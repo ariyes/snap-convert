@@ -217,7 +217,15 @@ export function Stage({
             <span className="flex flex-wrap items-center justify-between gap-2">
               <span>{note.text}</span>
               {note.action && (
-                <Button size="sm" onClick={() => onNoteAction(note)}>
+                <Button
+                  size="sm"
+                  onClick={() => onNoteAction(note)}
+                  disabled={note.action.pending}
+                  aria-busy={note.action.pending || undefined}
+                >
+                  {note.action.pending && (
+                    <LoaderCircle aria-hidden="true" className="animate-spin" />
+                  )}
                   {note.action.label}
                 </Button>
               )}

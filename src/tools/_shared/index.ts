@@ -6,6 +6,7 @@ export { formatBytes, formatTimeLeft, sizeChange, type SizeChange } from './form
 export { useInView } from './use-in-view';
 export { LONG_PRESS_MS, usePointerReorder, type ReorderDrag } from './use-pointer-reorder';
 export { planJobs, type JobEntry, type JobPlan } from './job-plan';
+export { JobCancelled, runQueued, type QueuedJob, type QueueLike } from './queue-job';
 export { baseName, EXTENSIONS, outputFileName, outputFileNames, type NamedResult } from './names';
 export { resultNotes, type ResultNote, type ResultNoteSource } from './notes';
 export {

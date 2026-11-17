@@ -40,30 +40,33 @@ export function isImageJobResult(value: unknown): value is ImageJobResult {
 export interface UseImageJobsOptions {
   /** Queued before the others (the file on screen). */
   first?: string;
-  /** Called after each batch is queued, with the number of files in it. */
-  onQueued?: (files: number) => void;
+  /**
+   * Called once per user-started run: when files are queued for the first time, with how many.
+   * Re-runs after a settings change (or a retry) are not new runs and do not call it.
+   */
+  onRun?: (files: number) => void;
 }
 
 export function useImageJobs(
   files: readonly IntakeFile[],
   options: ImageJobOptions,
-  { first, onQueued }: UseImageJobsOptions = {},
+  { first, onRun }: UseImageJobsOptions = {},
 ) {
   // Job options are plain data, so their JSON tells when the settings changed.
   const signature = JSON.stringify(options);
   const [entries, setEntries] = useState<ReadonlyMap<string, JobEntry>>(() => new Map());
   const entriesRef = useRef(new Map<string, JobEntry>());
   const appliedRef = useRef<string | null>(null);
-  const latest = useRef({ files, options, first, onQueued });
+  const latest = useRef({ files, options, first, onRun });
   useEffect(() => {
-    latest.current = { files, options, first, onQueued };
+    latest.current = { files, options, first, onRun };
   });
 
   useEffect(() => {
     const settingsChanged = appliedRef.current !== null && appliedRef.current !== signature;
     const timer = setTimeout(
       () => {
-        const { files: list, options: opts, first: top, onQueued: queued } = latest.current;
+        const { files: list, options: opts, first: top, onRun: run } = latest.current;
         const queue = useQueue.getState();
         const map = entriesRef.current;
         const plan = planJobs(
@@ -76,6 +79,8 @@ export function useImageJobs(
         for (const fileId of plan.forget) map.delete(fileId);
         const byId = new Map(list.map((f) => [f.id, f]));
         const adding = plan.add.flatMap((id) => byId.get(id) ?? []);
+        // Files never queued before make a new run; the rest are re-runs with new settings.
+        const newFiles = adding.filter((f) => !map.has(f.id)).length;
         if (adding.length > 0) {
           const ids = queue.add<ImageJobInput>(
             'image',
@@ -90,7 +95,7 @@ export function useImageJobs(
             if (file) map.set(file.id, { jobId, signature });
           });
           queue.start();
-          queued?.(adding.length);
+          if (newFiles > 0) run?.(newFiles);
         }
         appliedRef.current = signature;
         setEntries(new Map(map));

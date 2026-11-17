@@ -6,6 +6,8 @@ import type { ExportErrorCode } from './errors';
  */
 export const exportStrings = {
   saveToFolder: 'Save to folder',
+  /** The ZIP button in the phone action bar, where two buttons share one row. */
+  downloadAllShort: 'All (ZIP)',
   saveToFolderHint: 'Pick a folder on your device. Existing files are never replaced.',
   /** File name of the ZIP when the tool doesn't pass one (".zip" is added). */
   defaultZipName: 'snap-convert',

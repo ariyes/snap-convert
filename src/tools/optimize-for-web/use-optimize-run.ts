@@ -60,7 +60,10 @@ export function syncJobs(files: readonly IntakeFile[], settings: OptimizeSetting
       if (id !== undefined) kept[f.id] = id;
     });
     queue.start();
-    track({ name: 'tool-run', tool: TOOL_ID, files: missing.length });
+    // One tool-run per user-started run: files that had no job yet. A new destination or format
+    // runs the same files again, which isn't a new run.
+    const newFiles = missing.filter((f) => state.jobIds[f.id] === undefined).length;
+    if (newFiles > 0) track({ name: 'tool-run', tool: TOOL_ID, files: newFiles });
   }
 
   useRunStore.setState({ key, jobIds: kept });

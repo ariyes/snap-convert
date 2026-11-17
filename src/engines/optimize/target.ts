@@ -138,6 +138,58 @@ export async function findQualityForTarget(
 const BYTES_PIXEL_EXPONENT = 0.65;
 const SUGGESTION_MARGIN = 0.95;
 
+/** Most extra encodes spent checking a "Resize to N px" suggestion. */
+export const SUGGESTION_TRIES = 3;
+
+/** What one try at a suggested size gave: the bytes it came to, and whether that met the target. */
+export interface SizeTry {
+  bytes: number;
+  reached: boolean;
+  /** The pipeline's own next suggestion, when it still missed. */
+  suggestedSize?: Size;
+}
+
+export interface VerifiedSize {
+  /** The size to offer. */
+  size: Size;
+  /** A try at exactly this size met the target, so the one-tap fix works. */
+  verified: boolean;
+  tries: number;
+}
+
+const longest = (s: Size) => Math.max(s.width, s.height);
+
+/**
+ * `sizeForTarget` is an estimate and can be optimistic on detailed photos. This checks it by
+ * trying it — `tryAt` runs the real job at that size (same settings and target) — and steps the
+ * size down until a try fits, at most `maxTries` times (default 3). Each step is the job's own new
+ * suggestion, or the estimate from the bytes it got, and always strictly smaller (sizing rule).
+ * When no try fits, the next smaller size is offered unverified.
+ */
+export async function verifySuggestedSize(
+  suggested: Size,
+  targetBytes: number,
+  tryAt: (size: Size) => Promise<SizeTry>,
+  maxTries: number = SUGGESTION_TRIES,
+): Promise<VerifiedSize> {
+  let size = suggested;
+  let tries = 0;
+  while (tries < maxTries) {
+    const attempt = await tryAt(size);
+    tries += 1;
+    if (attempt.reached) return { size, verified: true, tries };
+    let next = attempt.suggestedSize ?? sizeForTarget(size, attempt.bytes, targetBytes);
+    // Always go smaller, by at least 10% of the longest side, so the search can't stall.
+    if (longest(next) > longest(size) * 0.9) {
+      next = fitSize(size, { mode: 'percent', value: 90 });
+    }
+    const smaller = { width: next.width, height: next.height };
+    if (longest(smaller) >= longest(size) || longest(smaller) < 1) break;
+    size = smaller;
+  }
+  return { size, verified: false, tries };
+}
+
 export function sizeForTarget(size: Size, bytes: number, targetBytes: number): Size {
   if (!(bytes > targetBytes) || !(targetBytes > 0))
     return { width: size.width, height: size.height };

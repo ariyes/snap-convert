@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Attempt } from './attempt';
-import { findQualityForTarget, sizeForTarget } from './target';
+import { findQualityForTarget, sizeForTarget, verifySuggestedSize, type SizeTry } from './target';
 
 /** A fake encoder: file size and score as functions of quality; counts calls. */
 function fakeEncoder(bytes: (q: number) => number, score: (q: number) => number = () => 0.99) {
@@ -180,5 +180,74 @@ describe('sizeForTarget', () => {
       width: 100,
       height: 50,
     });
+  });
+});
+
+describe('verifySuggestedSize', () => {
+  /** A photo whose file is `perPixel` bytes per pixel at any size (the estimate is optimistic). */
+  const photo = (perPixel: number, target: number) => {
+    const tried: number[] = [];
+    const tryAt = (s: { width: number; height: number }): Promise<SizeTry> => {
+      tried.push(Math.max(s.width, s.height));
+      const bytes = s.width * s.height * perPixel;
+      return Promise.resolve({ bytes, reached: bytes <= target });
+    };
+    return { tried, tryAt };
+  };
+
+  it('keeps a suggestion that fits after one try', async () => {
+    const { tried, tryAt } = photo(0.1, 100_000);
+    const result = await verifySuggestedSize({ width: 1000, height: 750 }, 100_000, tryAt);
+    expect(result).toEqual({ size: { width: 1000, height: 750 }, verified: true, tries: 1 });
+    expect(tried).toEqual([1000]);
+  });
+
+  it('steps an optimistic suggestion down until it fits (never stretched)', async () => {
+    const { tried, tryAt } = photo(0.2, 100_000);
+    const result = await verifySuggestedSize({ width: 1000, height: 750 }, 100_000, tryAt);
+    expect(result.verified).toBe(true);
+    expect(result.tries).toBeGreaterThan(1);
+    expect(result.tries).toBeLessThanOrEqual(3);
+    expect(result.size.width * result.size.height * 0.2).toBeLessThanOrEqual(100_000);
+    expect(Math.abs(result.size.width / result.size.height - 4 / 3)).toBeLessThan(0.01);
+    // Every try is smaller than the one before.
+    expect(tried.every((px, i) => i === 0 || px < (tried[i - 1] ?? Infinity))).toBe(true);
+  });
+
+  it("uses the job's own next suggestion when it gives one", async () => {
+    const sizes: number[] = [];
+    const result = await verifySuggestedSize({ width: 900, height: 600 }, 50_000, (s) => {
+      sizes.push(s.width);
+      return Promise.resolve(
+        s.width === 900
+          ? { bytes: 80_000, reached: false, suggestedSize: { width: 600, height: 400 } }
+          : { bytes: 40_000, reached: true },
+      );
+    });
+    expect(sizes).toEqual([900, 600]);
+    expect(result).toEqual({ size: { width: 600, height: 400 }, verified: true, tries: 2 });
+  });
+
+  it('gives up after three tries and offers the next smaller size unverified', async () => {
+    // Always twice the target, whatever the size (a file that won't shrink).
+    const tried: number[] = [];
+    const tryAt = (s: { width: number; height: number }): Promise<SizeTry> => {
+      tried.push(Math.max(s.width, s.height));
+      return Promise.resolve({ bytes: 2_000, reached: false });
+    };
+    const result = await verifySuggestedSize({ width: 2000, height: 1000 }, 1_000, tryAt);
+    expect(tried).toHaveLength(3);
+    expect(result.verified).toBe(false);
+    expect(result.tries).toBe(3);
+    expect(Math.max(result.size.width, result.size.height)).toBeLessThan(tried[2] ?? 0);
+  });
+
+  it('always moves at least 10% smaller, even when the estimate barely changes', async () => {
+    const sizes: number[] = [];
+    await verifySuggestedSize({ width: 1000, height: 1000 }, 99_999, (s) => {
+      sizes.push(s.width);
+      return Promise.resolve({ bytes: 100_000, reached: false });
+    });
+    expect(sizes[1]).toBeLessThanOrEqual(900);
   });
 });

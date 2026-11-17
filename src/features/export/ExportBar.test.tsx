@@ -151,6 +151,78 @@ describe('<ExportBar>', () => {
     );
   });
 
+  describe('panel variant', () => {
+    it('gives the ZIP button a short phone label when it shares the row with Download', () => {
+      render(<ExportBar variant="panel" files={three} selected={0} />);
+      const zip = screen.getByRole('button', { name: 'Download all 3 as ZIP' });
+      expect(zip.textContent).toContain(exportStrings.downloadAllShort);
+    });
+
+    it('keeps the full ZIP label when the ZIP button is alone', () => {
+      render(<ExportBar variant="panel" files={three} />);
+      const zip = screen.getByRole('button', { name: 'Download all 3 as ZIP' });
+      expect(zip.textContent).not.toContain(exportStrings.downloadAllShort);
+    });
+
+    it('can keep Save to folder out of the phone bar, or out entirely', () => {
+      vi.mocked(canSaveToFolder).mockReturnValue(true);
+      const { rerender } = render(<ExportBar variant="panel" files={three} folder="wide" />);
+      const folder = screen.getByRole('button', { name: exportStrings.saveToFolder });
+      expect(folder.className).toContain('max-[880px]:hidden');
+
+      rerender(<ExportBar variant="panel" files={three} folder="never" />);
+      expect(screen.queryByRole('button', { name: exportStrings.saveToFolder })).toBeNull();
+    });
+  });
+
+  it('shows Download before the file is ready when given single={null}', async () => {
+    const onExport = vi.fn();
+    const { rerender } = render(
+      <ExportBar files={[]} single={null} count={3} onExport={onExport} />,
+    );
+    const download = screen.getByRole('button', { name: strings.download });
+    expect(download.hasAttribute('disabled')).toBe(true);
+    // The ZIP button shows the number of files while they're still being made.
+    const zip = screen.getByRole('button', { name: 'Download all 3 as ZIP' });
+    expect(zip.hasAttribute('disabled')).toBe(true);
+
+    const ready = file('a-compressed.jpg');
+    rerender(<ExportBar files={[]} single={ready} count={3} onExport={onExport} />);
+    await userEvent.click(screen.getByRole('button', { name: strings.download }));
+    expect(downloadBlob).toHaveBeenCalledWith(ready.blob, 'a-compressed.jpg');
+    expect(onExport).toHaveBeenCalledWith('single');
+  });
+
+  it('uses a custom single label, and zipOnly makes even one file a ZIP', () => {
+    const { rerender } = render(<ExportBar files={[file('a.pdf')]} singleLabel="Download PDF" />);
+    expect(screen.getByRole('button', { name: 'Download PDF' })).toBeTruthy();
+
+    rerender(<ExportBar files={[file('a.jpg')]} zipOnly zipLabel="Download ZIP" />);
+    expect(screen.queryByRole('button', { name: strings.download })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Download ZIP' })).toBeTruthy();
+  });
+
+  it('can run on export state shared with the rest of the page', async () => {
+    const zip = vi.fn(() => Promise.resolve());
+    const state = {
+      status: { kind: 'busy', action: 'zip', progress: 0.5 } as const,
+      single: vi.fn(),
+      zip,
+      folder: vi.fn(() => Promise.resolve()),
+      reset: vi.fn(),
+      folderSupported: false,
+    };
+    const { rerender } = render(<ExportBar files={three} state={state} showStatus={false} />);
+    // Busy elsewhere: the bar is off and shows no progress of its own.
+    expect(screen.getByRole('button', { name: /as ZIP/ }).hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByRole('progressbar')).toBeNull();
+
+    rerender(<ExportBar files={three} state={{ ...state, status: { kind: 'idle' } }} />);
+    await userEvent.click(screen.getByRole('button', { name: /as ZIP/ }));
+    expect(zip).toHaveBeenCalledTimes(1);
+    expect(zipFiles).not.toHaveBeenCalled();
+  });
+
   it('disables every button when there is nothing to export or when disabled', () => {
     vi.mocked(canSaveToFolder).mockReturnValue(true);
     const { rerender } = render(<ExportBar files={[]} />);

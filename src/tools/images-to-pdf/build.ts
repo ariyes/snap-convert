@@ -6,7 +6,7 @@ import type { IntakeFile } from '@/core/contracts/intake';
 import type { ImagesToPdfInput, PdfOutput, PdfResult } from '@/core/contracts/pdf';
 import type { PdfOp } from '@/engines/pdf';
 import { conversionFor, imageType, readHead, reencodeFor } from './prepare';
-import { JobCancelled, runQueued, type QueueLike } from './queue-job';
+import { JobCancelled, runQueued, type QueueLike } from '@/tools/_shared';
 import { strings } from './strings';
 import { stripLocation } from './strip-location';
 import { toPdfPageOptions, type ImagesToPdfSettings, type QualityChoice } from './settings';

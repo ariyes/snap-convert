@@ -74,7 +74,10 @@ export function optionsKey(options: JobOptions): string {
 }
 
 /** The job input for one file. Intake's size lets the queue run 40 MP+ images alone. */
-export function jobInput(file: IntakeFile, options: JobOptions): ImageJobInput {
+export function jobInput(
+  file: Pick<IntakeFile, 'file' | 'name' | 'width' | 'height'>,
+  options: JobOptions,
+): ImageJobInput {
   return {
     ...options,
     file: file.file,

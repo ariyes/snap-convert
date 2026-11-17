@@ -7,7 +7,7 @@ import type { ImagesToPdfInput } from '@/core/contracts/pdf';
 import type { Job, JobKind } from '@/core/contracts/queue';
 import { parseJpeg } from '@/engines/image/metadata';
 import { buildPdf, ConversionCache, ImageFailed } from './build';
-import { JobCancelled, runQueued, type QueueLike } from './queue-job';
+import { JobCancelled, runQueued, type QueueLike } from '@/tools/_shared';
 import { defaultSettings } from './settings';
 
 /** A queue store that runs nothing by itself: tests finish jobs by hand. */

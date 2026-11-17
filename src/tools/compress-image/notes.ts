@@ -1,5 +1,6 @@
 // What a result's pipeline notes mean, in plain words (D24, D28, D30), with one-tap fixes.
 import type { ImageJobResult } from '@/core/contracts/image';
+import type { Size } from '@/core/contracts/sizing';
 import type { CompressSettings } from './settings';
 import { compressStrings as t, formatLabels } from './strings';
 
@@ -8,9 +9,15 @@ export interface ResultNote {
   text: string;
   /** Warnings get the warning colour; the rest are quiet information. */
   tone: 'info' | 'warn';
-  /** A one-tap fix: the settings patch and its button text. */
-  action?: { label: string; patch: Partial<CompressSettings> };
+  /** A one-tap fix: the settings patch and its button text. `pending`: not ready to tap yet. */
+  action?: { label: string; patch: Partial<CompressSettings>; pending?: boolean };
 }
+
+/**
+ * The "Resize to N px" size after it was checked by trying it (P20b): `checking` while the tries
+ * run, then the size to offer. Without one, the pipeline's own estimate is offered.
+ */
+export type SizeSuggestion = { status: 'checking' } | { status: 'ready'; size: Size };
 
 type NoteSettings = Pick<
   CompressSettings,
@@ -25,6 +32,7 @@ export function resultNotes(
   >,
   originalBytes: number,
   settings: NoteSettings,
+  suggestion?: SizeSuggestion,
 ): ResultNote[] {
   const has = (note: ImageJobResult['notes'][number]) => result.notes.includes(note);
   const out: ResultNote[] = [];
@@ -41,18 +49,21 @@ export function resultNotes(
         action: { label: t.switchTo(formatLabels[suggested]), patch: { format: suggested } },
       });
     } else {
-      const longest = size ? Math.max(size.width, size.height) : undefined;
+      const offered = suggestion?.status === 'ready' ? suggestion.size : size;
+      const longest = offered ? Math.max(offered.width, offered.height) : undefined;
       out.push({
         id: 'target-unreachable',
         tone: 'warn',
         text: t.targetUnreachable(settings.targetKb, result.width, result.height),
         action:
-          longest !== undefined && longest >= 1
-            ? {
-                label: t.resizeTo(longest),
-                patch: { resizeEnabled: true, resizeMode: 'longest', resizeSize: longest },
-              }
-            : undefined,
+          suggestion?.status === 'checking'
+            ? { label: t.checkingSize, patch: {}, pending: true }
+            : longest !== undefined && longest >= 1
+              ? {
+                  label: t.resizeTo(longest),
+                  patch: { resizeEnabled: true, resizeMode: 'longest', resizeSize: longest },
+                }
+              : undefined,
       });
     }
   }

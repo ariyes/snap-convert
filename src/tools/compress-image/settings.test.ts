@@ -132,7 +132,7 @@ describe('job options', () => {
   it('passes the file, its name and intake size to the job', () => {
     const file = new File(['x'], 'IMG_1.jpg', { type: 'image/jpeg' });
     const input = jobInput(
-      { id: '1', file, name: 'IMG_1.jpg', size: 1, kind: 'image', width: 4032, height: 3024 },
+      { file, name: 'IMG_1.jpg', width: 4032, height: 3024 },
       jobOptions(COMPRESS_DEFAULTS),
     );
     expect(input).toMatchObject({ file, name: 'IMG_1.jpg', width: 4032, height: 3024 });

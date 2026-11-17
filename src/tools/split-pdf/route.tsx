@@ -5,7 +5,6 @@ import {
   Download,
   FileText,
   FileUp,
-  FolderArchive,
   LoaderCircle,
   Lock,
   Scissors,
@@ -16,7 +15,7 @@ import { usePendingFiles } from '@/app/pending-files';
 import { useToolPage } from '@/app/use-tool-page';
 import type { IntakeFile } from '@/core/contracts/intake';
 import type { SplitInput } from '@/core/contracts/pdf';
-import { downloadBlob, ExportError, exportStrings, uniqueNames, zipFiles } from '@/features/export';
+import { downloadBlob, ExportBar, uniqueNames } from '@/features/export';
 import {
   acceptAttribute,
   DropZone,
@@ -39,7 +38,6 @@ import {
   NumberField,
   ProgressBar,
   Segmented,
-  strings as uiStrings,
   toast,
 } from '@/ui';
 import { formatBytes } from '@/tools/_shared';
@@ -67,9 +65,6 @@ interface SplitSettings {
 const DEFAULTS: SplitSettings = { mode: 'every-page', n: 2 };
 const SCHEMA = { mode: oneOf(SPLIT_MODES), n: numberIn(1, 100_000) };
 
-type ZipStatus =
-  { kind: 'idle' } | { kind: 'busy'; progress: number } | { kind: 'error'; message: string };
-
 export default function SplitPdfRoute() {
   const page = useToolPage();
   const { files, add, clear } = useFileList(TOOL_ID);
@@ -81,7 +76,6 @@ export default function SplitPdfRoute() {
   const [ranges, setRangesText] = useState('');
   const [rangesTouched, setRangesTouched] = useState(false);
   const [sampleBusy, setSampleBusy] = useState(false);
-  const [zip, setZip] = useState<ZipStatus>({ kind: 'idle' });
   const { job, result, run, cancel, discard } = usePdfJob();
 
   const working = job?.status === 'waiting' || job?.status === 'working';
@@ -95,10 +89,7 @@ export default function SplitPdfRoute() {
   const canSplit = ready && plan.ok && !working;
 
   // Any change makes an earlier result out of date.
-  const changed = () => {
-    discard();
-    setZip({ kind: 'idle' });
-  };
+  const changed = () => discard();
   const change = (patch: Partial<SplitSettings>) => {
     update(patch);
     changed();
@@ -151,7 +142,6 @@ export default function SplitPdfRoute() {
       ...(settings.mode === 'every-n' ? { n: settings.n } : {}),
       ...(settings.mode === 'ranges' ? { ranges } : {}),
     };
-    setZip({ kind: 'idle' });
     run('split', current.name, input);
     track({ name: 'tool-run', tool: TOOL_ID, files: 1 });
   };
@@ -169,23 +159,8 @@ export default function SplitPdfRoute() {
     track({ name: 'download', tool: TOOL_ID, kind: 'single' });
   };
 
-  const downloadAll = async () => {
-    if (parts.length === 0 || zip.kind === 'busy') return;
-    setZip({ kind: 'busy', progress: 0 });
-    try {
-      const blob = await zipFiles(
-        parts.map(({ blob, name }) => ({ blob, name })),
-        (progress) => setZip({ kind: 'busy', progress }),
-      );
-      const base = (current?.name ?? 'document').replace(/\.pdf$/i, '');
-      downloadBlob(blob, `${base}${t.zipSuffix}.zip`);
-      setZip({ kind: 'idle' });
-      track({ name: 'download', tool: TOOL_ID, kind: 'zip' });
-    } catch (error) {
-      const code = error instanceof ExportError ? error.code : 'zip-failed';
-      setZip({ kind: 'error', message: exportStrings.errors[code] });
-    }
-  };
+  const exportFiles = useMemo(() => parts.map(({ blob, name }) => ({ blob, name })), [parts]);
+  const zipName = `${(current?.name ?? 'document').replace(/\.pdf$/i, '')}${t.zipSuffix}`;
 
   // "Split. Ready to download", once per run.
   const toasted = useRef<string | null>(null);
@@ -197,33 +172,19 @@ export default function SplitPdfRoute() {
   }, [job]);
 
   const partCount = plan.ok ? plan.groups.length : 0;
-  const zipping = zip.kind === 'busy';
   let actions;
-  if (parts.length === 1) {
+  if (parts.length > 0) {
     actions = (
-      <Button variant="primary" size="lg" block onClick={() => downloadPart(0)}>
-        <Download aria-hidden="true" />
-        {t.downloadPdf}
-      </Button>
-    );
-  } else if (parts.length > 1) {
-    actions = (
-      <Button
-        variant="primary"
-        size="lg"
-        block
-        disabled={zipping}
-        onClick={() => void downloadAll()}
-      >
-        {zipping ? (
-          <LoaderCircle aria-hidden="true" className="animate-spin" />
-        ) : (
-          <FolderArchive aria-hidden="true" />
-        )}
-        {zipping
-          ? t.zipping(Math.round(zip.progress * 100))
-          : uiStrings.downloadAllCountZip(parts.length)}
-      </Button>
+      <ExportBar
+        // A new result starts with a fresh bar (no "ZIP ready" left from the last one).
+        key={job?.id}
+        variant="panel"
+        folder="wide"
+        files={exportFiles}
+        zipName={zipName}
+        singleLabel={t.downloadPdf}
+        onExport={(kind) => track({ name: 'download', tool: TOOL_ID, kind })}
+      />
     );
   } else if (working) {
     actions = (
@@ -304,7 +265,6 @@ export default function SplitPdfRoute() {
                 status={job?.status}
                 progress={job?.progress ?? 0}
                 error={job?.error}
-                zipError={zip.kind === 'error' ? zip.message : undefined}
               />
             }
             actions={actions}
@@ -328,7 +288,6 @@ function SplitSettingsPanel({
   status,
   progress,
   error,
-  zipError,
 }: {
   settings: SplitSettings;
   onChange: (patch: Partial<SplitSettings>) => void;
@@ -342,7 +301,6 @@ function SplitSettingsPanel({
   status: string | undefined;
   progress: number;
   error: string | undefined;
-  zipError: string | undefined;
 }) {
   const nId = useId();
   const rangesId = useId();
@@ -416,10 +374,10 @@ function SplitSettingsPanel({
           <Helper>{t.cancelled}</Helper>
         ) : null}
       </div>
-      {((status === 'failed' && error) || zipError) && (
+      {status === 'failed' && error && (
         <p role="alert" className="m-0 flex items-start gap-2 text-sm text-bad">
           <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          {status === 'failed' && error ? error : zipError}
+          {error}
         </p>
       )}
     </>

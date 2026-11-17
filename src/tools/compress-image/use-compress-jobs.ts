@@ -48,13 +48,22 @@ export function useCompressJobs(
   selectedId: string | null,
   options: JobOptions,
   key: string,
+  /**
+   * Called once per user-started run: when files get their first job, with how many. Re-runs for
+   * new settings, re-queues behind the selected file and retries are not new runs.
+   */
+  onRun?: (files: number) => void,
 ): CompressJobs {
   // The jobs this page added, in a small store of its own (written from effects, read in render).
   const [store] = useState(() => createStore<EntriesState>(() => ({ entries: [], seq: 0 })));
   const entries = useStore(store, (s) => s.entries);
   const optionsRef = useRef(options);
+  const onRunRef = useRef(onRun);
+  /** Files this page has queued at least once (a later job for them is a re-run). */
+  const seen = useRef(new Set<string>());
   useEffect(() => {
     optionsRef.current = options;
+    onRunRef.current = onRun;
   });
 
   const jobs = useQueue((s) => s.jobs);
@@ -104,6 +113,9 @@ export function useCompressJobs(
     }
     if (kept.length !== current.length || adding.length > 0) store.setState({ entries: kept, seq });
     if (adding.length > 0) queue.start();
+    const newFiles = adding.filter((f) => !seen.current.has(f.id));
+    for (const f of newFiles) seen.current.add(f.id);
+    if (newFiles.length > 0) onRunRef.current?.(newFiles.length);
   }, [store, files, selectedId, key, signature]);
 
   // Leaving the page: stop and drop this page's jobs (their results go with them).

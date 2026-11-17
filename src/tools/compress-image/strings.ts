@@ -48,14 +48,13 @@ export const compressStrings = {
   targetUnreachableFormat: (kb: number) =>
     `Can't reach ${kb} KB as a PNG. A smaller format or smaller dimensions get there.`,
   resizeTo: (px: number) => `Resize to ${px} px`,
+  checkingSize: 'Finding a size that fits…',
   switchTo: (format: string) => `Switch to ${format}`,
   formatFallback: (format: string) =>
     `Saved as ${format}: the original format can't be saved again in the browser.`,
   cantShowOriginal: "This browser can't show the original file, so both sides show the result.",
 
   // Downloads
-  downloadAllShort: 'All (ZIP)',
   zipName: 'snap-convert-compressed',
-  zipping: (percent: number) => `Creating ZIP… ${percent}%`,
   nameSuffix: '-compressed',
 } as const;
