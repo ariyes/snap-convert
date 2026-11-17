@@ -24,7 +24,7 @@ export const CACHE_WEEK = 'public, max-age=604800';
 /** Every header except the CSP, sent on every response (HTML, JS, wasm, workers, 404s). */
 export const SECURITY_HEADERS: ReadonlyArray<readonly [name: string, value: string]> = [
   ['Cross-Origin-Opener-Policy', 'same-origin'],
-  ['Cross-Origin-Embedder-Policy', 'credentialless'],
+  ['Cross-Origin-Embedder-Policy', 'require-corp'],
   ['X-Content-Type-Options', 'nosniff'],
   ['Referrer-Policy', 'strict-origin-when-cross-origin'],
   [

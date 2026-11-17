@@ -13,7 +13,7 @@ import { webManifest } from './src/pwa/manifest.ts';
 /** Needed for multi-threaded WebAssembly (SharedArrayBuffer). Production sets the same in nginx. */
 export const crossOriginIsolationHeaders = {
   'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Embedder-Policy': 'credentialless',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
 };
 
 /**

@@ -277,7 +277,7 @@ test.describe('URLs like nginx', () => {
       const response = await request.get(url);
       expect(response.status(), url).toBe(404);
       expect(response.headers()['cross-origin-opener-policy'], url).toBe('same-origin');
-      expect(response.headers()['cross-origin-embedder-policy'], url).toBe('credentialless');
+      expect(response.headers()['cross-origin-embedder-policy'], url).toBe('require-corp');
       expect(await response.text(), url).toBe(fallback);
     }
   });

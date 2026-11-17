@@ -183,7 +183,7 @@ void describe('nginx-snap-convert.conf', () => {
     assert.equal(out['Cache-Control'], CACHE_IMMUTABLE);
     assert.equal(out.etag, 'x');
     assert.equal(out['cache-control'], undefined);
-    assert.equal(out['Cross-Origin-Embedder-Policy'], 'credentialless');
+    assert.equal(out['Cross-Origin-Embedder-Policy'], 'require-corp');
   });
 });
 

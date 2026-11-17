@@ -85,7 +85,7 @@ Firefox e2e is opt-in locally because Playwright's Firefox build fails to launch
 dev machine (mozglue side-by-side error); CI (`.github/workflows/ci.yml`) runs all three browsers.
 
 The dev and preview servers send `Cross-Origin-Opener-Policy: same-origin` and
-`Cross-Origin-Embedder-Policy: credentialless`; production sends the same headers.
+`Cross-Origin-Embedder-Policy: require-corp`; production sends the same headers.
 
 ## Deploying
 

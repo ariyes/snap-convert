@@ -70,7 +70,7 @@ async function startHarness(): Promise<Harness> {
         res.writeHead(200, {
           'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream',
           'Cross-Origin-Opener-Policy': 'same-origin',
-          'Cross-Origin-Embedder-Policy': 'credentialless',
+          'Cross-Origin-Embedder-Policy': 'require-corp',
         });
         res.end(body);
       } catch {

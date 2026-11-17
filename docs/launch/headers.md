@@ -72,7 +72,7 @@ Notes:
 | Header | Value | Why |
 | --- | --- | --- |
 | `Cross-Origin-Opener-Policy` | `same-origin` | Cross-origin isolation for multi-threaded WebAssembly (docs/05) |
-| `Cross-Origin-Embedder-Policy` | `credentialless` | Same; `credentialless`, not `require-corp` (docs/05) |
+| `Cross-Origin-Embedder-Policy` | `require-corp` | Same; `require-corp` so Safari is isolated too (D43) |
 | `X-Content-Type-Options` | `nosniff` | Files are only used as their declared type |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Outbound links (GitHub, credits) never see page paths with anything after `?`/`#` |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()` | The app needs none of these. Choosing photos from the camera roll uses the file picker, not the camera permission |
