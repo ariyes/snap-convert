@@ -190,9 +190,9 @@ export const tools: readonly ToolMeta[] = [
     icon: 'images',
     phase: 2,
     accepts: PDFS,
-    title: 'PDF to JPG or PNG Images — Coming Soon | Snap Convert',
+    title: 'PDF to JPG or PNG — Save Pages as Images | Snap Convert',
     description:
-      'Coming soon: save every page of a PDF as a JPG or PNG image, right in your browser. Until then, Merge, Split and the other PDF tools are ready.',
+      'Save every page of a PDF, or just the pages you pick, as sharp JPG or PNG images at 72, 150 or 300 dpi. Free, private, nothing is uploaded.',
   },
 ];
 
@@ -298,7 +298,7 @@ export function isFormatPage(page: PageMeta): page is FormatPageMeta {
  * Phase 2+ tools that are live (D39). A tool ships by adding its id here, once its page,
  * engine and tests are merged; until then it shows the "Coming soon" page and stays out of search.
  */
-export const RELEASED_LATER: ReadonlySet<string> = new Set<string>([]);
+export const RELEASED_LATER: ReadonlySet<string> = new Set<string>(['pdf-to-images']);
 
 /** Tools available now: every phase 1 tool, plus later tools once released. */
 export function isAvailable(page: PageMeta): boolean {
