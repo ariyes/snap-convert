@@ -3,7 +3,7 @@
 // its own title and target.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Download, type Page } from '@playwright/test';
+import { expect, test, type Download, type Page } from './support/test';
 import { unzipSync } from 'fflate';
 import { formatPages } from '../src/tools/registry';
 

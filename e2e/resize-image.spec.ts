@@ -3,7 +3,7 @@
 // run of 30 mixed files downloaded as one ZIP with unique pattern names.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Download, type Page } from '@playwright/test';
+import { expect, test, type Download, type Page } from './support/test';
 import { unzipSync } from 'fflate';
 
 interface Upload {

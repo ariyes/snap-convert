@@ -4,7 +4,7 @@
 // (Windows build) can't run the image worker anyway (see compress-image.spec.ts).
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 
 const SAMPLE = readFileSync(path.resolve('public/samples/compress-sample.jpg'));
 
@@ -182,29 +182,33 @@ test('after one use, Compress works offline', async ({ page, context }) => {
   await context.setOffline(false);
 });
 
-test('a new version offers "Refresh", and Refresh switches to it', async ({ page }) => {
-  await openCompress(page);
-  await serviceWorkerReady(page);
-  expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toMatch(
-    /\/snap-convert\/sw\.js$/,
-  );
+test.describe(() => {
+  // The test registers sw.js?next itself to stand in for a new version.
+  test.use({ allowRequests: [/\/snap-convert\/sw\.js\?next$/] });
+  test('a new version offers "Refresh", and Refresh switches to it', async ({ page }) => {
+    await openCompress(page);
+    await serviceWorkerReady(page);
+    expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toMatch(
+      /\/snap-convert\/sw\.js$/,
+    );
 
-  // Stand-in for a new deploy, without touching the shared build: a service worker under a new
-  // script URL installs next to the running one and waits, exactly like a changed sw.js.
-  await page.evaluate(() =>
-    navigator.serviceWorker.register('/snap-convert/sw.js?next', { scope: '/snap-convert/' }),
-  );
-  const toast = page.getByText('New version available');
-  await expect(toast).toBeVisible({ timeout: 30_000 });
+    // Stand-in for a new deploy, without touching the shared build: a service worker under a new
+    // script URL installs next to the running one and waits, exactly like a changed sw.js.
+    await page.evaluate(() =>
+      navigator.serviceWorker.register('/snap-convert/sw.js?next', { scope: '/snap-convert/' }),
+    );
+    const toast = page.getByText('New version available');
+    await expect(toast).toBeVisible({ timeout: 30_000 });
 
-  // Refresh: the waiting version takes over and the page reloads under it.
-  const reloaded = page.waitForEvent('load');
-  await page.getByRole('button', { name: 'Refresh to use the new version' }).click();
-  await reloaded;
-  await expect(page.getByTestId('compress-drop')).toHaveAttribute('data-live', 'true');
-  expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toMatch(
-    /\/snap-convert\/sw\.js\?next$/,
-  );
+    // Refresh: the waiting version takes over and the page reloads under it.
+    const reloaded = page.waitForEvent('load');
+    await page.getByRole('button', { name: 'Refresh to use the new version' }).click();
+    await reloaded;
+    await expect(page.getByTestId('compress-drop')).toHaveAttribute('data-live', 'true');
+    expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toMatch(
+      /\/snap-convert\/sw\.js\?next$/,
+    );
+  });
 });
 
 test('offline, a tool never used here says to connect once', async ({ page, context }) => {

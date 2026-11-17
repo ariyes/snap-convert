@@ -15,7 +15,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 import { build } from 'vite';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -90,6 +90,9 @@ async function startHarness(): Promise<Harness> {
 }
 
 let harness: Harness | undefined;
+// The engine bundle is served by this spec's own local server (not the app): let the guard pass it.
+test.use({ allowRequests: [/^http:\/\/127\.0\.0\.1:\d+\//] });
+
 test.beforeAll(async () => {
   test.setTimeout(180_000);
   harness = await startHarness();

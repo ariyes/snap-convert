@@ -1,7 +1,7 @@
 // Credits, privacy page and cookie-free counting (P23), against the production build.
 // The e2e build has no VITE_UMAMI_* settings, so counting is off: no analytics request may be sent.
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 
 async function expectNoSeriousA11yIssues(page: Page) {
   const results = await new AxeBuilder({ page }).analyze();

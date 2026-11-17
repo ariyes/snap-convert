@@ -2,7 +2,7 @@
 // removed by default; other images are offered to Convert image.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 
 interface Upload {
   name: string;

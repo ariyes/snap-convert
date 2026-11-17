@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/test';
 
 test('home page renders and is cross-origin isolated', async ({ page }) => {
   const response = await page.goto('./');

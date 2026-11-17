@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 import { formatPages, getPage, isAvailable, tools } from '../src/tools/registry';
 import { expectDelivered, watchDeliveries } from './support/delivered';
 

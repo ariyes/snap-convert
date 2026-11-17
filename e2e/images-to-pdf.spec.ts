@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { inflateSync } from 'node:zlib';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './support/test';
 import type { PDFNumber } from 'pdf-lib';
 import {
   PDFArray,
