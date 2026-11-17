@@ -6,6 +6,7 @@ import { IDLE_TIMEOUT_MS, WorkerPool } from './pool';
 import { WorkerUnavailableError, type WorkerRegistry } from './registry';
 import { createQueueStore, type QueueStore } from './store';
 import { queueStrings } from './strings';
+import { timingLimit } from '../../../tests/support/timing';
 
 interface TrackedWorker {
   worker: Worker;
@@ -150,8 +151,8 @@ describe('job queue', () => {
     // if progress were written only at the end or throttled to whole seconds.
     const sorted = [...gaps].sort((a, b) => a - b);
     const p90 = sorted[Math.floor(sorted.length * 0.9)] ?? 0;
-    expect(p90).toBeLessThanOrEqual(250);
-    expect(Math.max(...gaps)).toBeLessThanOrEqual(1000);
+    expect(p90).toBeLessThanOrEqual(timingLimit(250, 1000));
+    expect(Math.max(...gaps)).toBeLessThanOrEqual(timingLimit(1000, 5000));
   });
 
   it('does nothing until start(), then picks up jobs added later', async () => {
@@ -539,7 +540,7 @@ describe('job queue', () => {
         return Math.abs(s.eta - real) / real;
       }),
     );
-    expect(worst).toBeLessThanOrEqual(0.3);
+    expect(worst).toBeLessThanOrEqual(timingLimit(0.3, 0.75));
     expect(queue.getState().stats.etaSeconds).toBeNull();
   });
 

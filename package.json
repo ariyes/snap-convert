@@ -19,6 +19,7 @@
     "test": "vitest run --project unit --project browser",
     "test:unit": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
+    "test:perf": "node scripts/test-perf.ts",
     "e2e": "playwright test",
     "e2e:all": "node scripts/e2e-all.ts",
     "quality": "vitest run --project quality --passWithNoTests"

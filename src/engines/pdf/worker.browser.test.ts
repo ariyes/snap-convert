@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { blobOf, fixture, runInWorker, startPdfWorker } from './ops/test-utils';
+import { timingLimit } from '../../../tests/support/timing';
 
 const { api, worker } = startPdfWorker();
 afterAll(() => worker.terminate());
@@ -31,7 +32,7 @@ describe('PDF worker: broken and protected files', () => {
     for (const [op, input] of ops(file)) {
       const { message, ms } = await failure(op, input);
       expect(message).toBe('This PDF is password-protected');
-      expect(ms).toBeLessThan(2000);
+      expect(ms).toBeLessThan(timingLimit(2000, 10_000));
     }
   });
 
@@ -40,7 +41,7 @@ describe('PDF worker: broken and protected files', () => {
     for (const [op, input] of ops(file)) {
       const { message, ms } = await failure(op, input);
       expect(message).toBe('This PDF looks damaged');
-      expect(ms).toBeLessThan(2000);
+      expect(ms).toBeLessThan(timingLimit(2000, 10_000));
     }
   });
 
