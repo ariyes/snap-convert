@@ -19,6 +19,17 @@ export {
 } from './presets';
 export { presetNames, pipelineStrings } from './strings';
 export {
+  cutSample,
+  GUARD_SAMPLE,
+  guardFromPrediction,
+  predictGuardQuality,
+  sampleGrid,
+  usesGuardSample,
+  type GuardPrediction,
+  type GuardSampleMode,
+  type TileGrid,
+} from './sample';
+export {
   findQualityForTarget,
   sizeForTarget,
   TARGET_SEARCH,

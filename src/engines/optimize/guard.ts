@@ -25,6 +25,12 @@ export interface GuardPlan {
   step: number;
   /** Most extra encodes, last-resort steps included. */
   maxSteps: number;
+  /**
+   * Highest quality the guard raises to for 0.97 (default 92). The sampled guard on huge images
+   * passes the start quality when the sample already showed 0.97 is out of reach, so only the
+   * 0.95 floor can raise it further (P24b).
+   */
+  targetLimit?: number;
 }
 
 /**
@@ -82,7 +88,7 @@ export async function guardQuality(
     }
   };
 
-  await next(GUARD.maxQuality, GUARD.targetSsim);
+  await next(plan.targetLimit ?? GUARD.maxQuality, GUARD.targetSsim);
   if (best.ssim < GUARD.floorSsim) await next(100, GUARD.floorSsim);
 
   return {

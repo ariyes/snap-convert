@@ -27,6 +27,7 @@ const IMAGES = [
   'sky-gradient.png',
   'text-screenshot.png',
   'line-art-logo.png',
+  'logo-soft-shadow.png',
 ] as const;
 
 /** Target-size extremes: far too small (must stop at the floor, not smear) and generous. */
