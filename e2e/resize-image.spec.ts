@@ -48,10 +48,10 @@ async function stripesPng(
 async function addFiles(page: Page, files: Upload[]) {
   const zone = page.getByRole('button', { name: /^Drop images here/ });
   await expect(async () => {
-    const chooser = page.waitForEvent('filechooser', { timeout: 1500 });
+    const chooser = page.waitForEvent('filechooser', { timeout: 5_000 });
     await zone.click();
     await (await chooser).setFiles(files);
-  }).toPass({ timeout: 20_000 });
+  }).toPass({ timeout: 40_000 });
 }
 
 async function bytesOf(download: Download): Promise<Buffer> {

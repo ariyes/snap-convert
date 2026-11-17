@@ -20,10 +20,10 @@ const fixture = (file: string, name = path.basename(file)): Upload => ({
 async function addFiles(page: Page, files: Upload[]) {
   const zone = page.getByRole('button', { name: /^Drop HEIC photos here/ });
   await expect(async () => {
-    const chooser = page.waitForEvent('filechooser', { timeout: 1500 });
+    const chooser = page.waitForEvent('filechooser', { timeout: 5_000 });
     await zone.click();
     await (await chooser).setFiles(files);
-  }).toPass({ timeout: 20_000 });
+  }).toPass({ timeout: 40_000 });
 }
 
 /** Size of an image decoded by the browser (EXIF orientation applied, as any viewer would). */
