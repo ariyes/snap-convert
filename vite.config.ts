@@ -127,7 +127,7 @@ const pwa = [
     injectRegister: false,
     manifestFilename: MANIFEST_FILENAME,
     manifest: webManifest,
-    includeAssets: [ICONS.apple],
+    includeAssets: [ICONS.apple, ICONS.faviconSvg, ICONS.favicon32],
     integration: pwaBuild.integration,
     workbox: {
       globPatterns: ['**/*.html', 'assets/**/*.{js,css,woff2}', ENGINE_GRAPH_FILE],

@@ -148,6 +148,7 @@ async function httpChecks(base: string, live: boolean, cspName: string): Promise
     ['.wasm', wasm && `${base}assets/${wasm}`, /^application\/wasm$/, CACHE_IMMUTABLE],
     ['.mjs (pdf.js worker)', mjs && `${base}assets/${mjs}`, /javascript/, CACHE_IMMUTABLE],
     ['icon', `${base}icons/icon-192.png`, /^image\/png/, CACHE_WEEK],
+    ['favicon', `${base}icons/favicon.svg`, /^image\/svg\+xml/, CACHE_WEEK],
     ['sw.js', `${base}sw.js`, /javascript/, CACHE_NO_CACHE],
     ['manifest', `${base}manifest.webmanifest`, /^application\/manifest\+json/, CACHE_NO_CACHE],
     ['sitemap.xml', `${base}sitemap.xml`, /xml/, CACHE_NO_CACHE],

@@ -36,9 +36,15 @@ const outputs: Array<{ file: string; size: number; markup: string }> = [
   { file: ICONS.any512, size: 512, markup: anyIcon },
   { file: ICONS.maskable512, size: 512, markup: maskableIcon },
   { file: ICONS.apple, size: 180, markup: appleIcon },
+  { file: ICONS.favicon32, size: 32, markup: anyIcon },
 ];
 
 const publicDir = path.resolve(import.meta.dirname, '../../../public');
+
+// The SVG favicon is the Logo mark itself, so it stays sharp at every tab size and screen density.
+const faviconSvg = anyIcon.replace(' width="SIZE" height="SIZE" style="display:block"', '');
+writeFileSync(path.join(publicDir, ICONS.faviconSvg), `${faviconSvg}\n`);
+console.warn(`wrote public/${ICONS.faviconSvg}`);
 const browser = await chromium.launch();
 try {
   for (const { file, size, markup } of outputs) {

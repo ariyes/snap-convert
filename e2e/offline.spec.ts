@@ -91,6 +91,17 @@ test('the app is installable: manifest, icons, theme colour and service worker',
     'href',
     '/snap-convert/icons/apple-touch-icon.png',
   );
+  await expect(page.locator('head link[rel="icon"][type="image/png"]')).toHaveAttribute(
+    'href',
+    '/snap-convert/icons/favicon-32.png',
+  );
+  await expect(page.locator('head link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute(
+    'href',
+    '/snap-convert/icons/favicon.svg',
+  );
+  const favicon = await page.request.get('icons/favicon.svg');
+  expect(favicon.status()).toBe(200);
+  expect(favicon.headers()['content-type']).toMatch(/^image\/svg\+xml/);
   await serviceWorkerReady(page);
 
   // The same checks Chrome (and Lighthouse) use to offer installation.

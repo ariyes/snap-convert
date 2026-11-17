@@ -1,5 +1,5 @@
 // Mounted once in the root layout (src/app/root.tsx). Kept tiny: it is part of every page's startup
-// code. It renders the manifest / icon / theme-colour tags (React puts them in <head>) and the
+// code. It renders the manifest / favicon / icon / theme-colour tags (React puts them in <head>) and the
 // install-prompt catcher, then loads the service worker controller after hydration.
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
@@ -34,6 +34,8 @@ export function PwaUpdater() {
   return (
     <>
       <link rel="manifest" href={`${BASE}${MANIFEST_FILENAME}`} />
+      <link rel="icon" href={`${BASE}${ICONS.favicon32}`} sizes="32x32" type="image/png" />
+      <link rel="icon" href={`${BASE}${ICONS.faviconSvg}`} type="image/svg+xml" />
       <link rel="apple-touch-icon" href={`${BASE}${ICONS.apple}`} />
       <meta name="theme-color" content={THEME_COLOR} />
       <script dangerouslySetInnerHTML={{ __html: INSTALL_CAPTURE_SCRIPT }} />

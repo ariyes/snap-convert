@@ -19,4 +19,7 @@ export const ICONS = {
   any512: 'icons/icon-512.png',
   maskable512: 'icons/maskable-512.png',
   apple: 'icons/apple-touch-icon.png',
+  /** Browser tab icon: SVG where supported (sharp at any size), 32 px PNG for the rest. */
+  faviconSvg: 'icons/favicon.svg',
+  favicon32: 'icons/favicon-32.png',
 } as const;
