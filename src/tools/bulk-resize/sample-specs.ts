@@ -42,9 +42,31 @@ export interface SampleFile {
 }
 
 export type SampleResponse =
-  { type: 'done'; files: SampleFile[] } | { type: 'error'; message: string };
+  | { type: 'done'; files: SampleFile[] }
+  | { type: 'error'; message: string }
+  /** The worker has no OffscreenCanvas: the page draws the files itself. */
+  | { type: 'no-canvas' };
 
-/** Makes the sample files in a worker. Rejects if the browser can't (no OffscreenCanvas). */
+const toFiles = (files: readonly SampleFile[]): File[] => {
+  const now = Date.now();
+  return files.map((f, i) => new File([f.blob], f.name, { type: f.type, lastModified: now - i }));
+};
+
+/**
+ * Draws the files on the page, one per task so the page stays responsive (only for browsers
+ * whose workers can't draw). The drawing is a few shapes; encoding happens in the browser.
+ */
+async function makeOnPage(): Promise<File[]> {
+  const { makeSampleOnPage } = await import('./sample-draw');
+  const files: SampleFile[] = [];
+  for (const spec of SAMPLE_SPECS) {
+    files.push(await makeSampleOnPage(spec));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  return toFiles(files);
+}
+
+/** Makes the sample files in a worker (or on the page when the worker can't draw). */
 export function makeSampleFiles(): Promise<File[]> {
   return new Promise((resolve, reject) => {
     let worker: Worker;
@@ -57,19 +79,12 @@ export function makeSampleFiles(): Promise<File[]> {
       reject(error instanceof Error ? error : new Error(String(error)));
       return;
     }
-    const now = Date.now();
     worker.onmessage = (event: MessageEvent<SampleResponse>) => {
       worker.terminate();
       const message = event.data;
-      if (message.type === 'error') {
-        reject(new Error(message.message));
-        return;
-      }
-      resolve(
-        message.files.map(
-          (f, i) => new File([f.blob], f.name, { type: f.type, lastModified: now - i }),
-        ),
-      );
+      if (message.type === 'error') reject(new Error(message.message));
+      else if (message.type === 'no-canvas') makeOnPage().then(resolve, reject);
+      else resolve(toFiles(message.files));
     };
     worker.onerror = (event) => {
       event.preventDefault();

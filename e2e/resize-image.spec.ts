@@ -106,15 +106,7 @@ async function setNumber(page: Page, label: string, value: number) {
   await field.press('Enter');
 }
 
-// GOVERNOR: Playwright's WebKit build for Windows has no OffscreenCanvas in workers ("Can't find
-// variable: OffscreenCanvas"), so the image engine (src/engines/image/decode) can't decode there and
-// every job fails. Safari has it (16.4+). Remove once the engine has a fallback or WebKit runs on CI.
-const noEngineHere = (browserName: string) =>
-  browserName === 'webkit' && process.platform === 'win32';
-const NO_ENGINE = 'Playwright WebKit on Windows: no OffscreenCanvas in workers (image engine)';
-
-test.beforeEach(async ({ page, browserName }) => {
-  test.fixme(noEngineHere(browserName), NO_ENGINE);
+test.beforeEach(async ({ page }) => {
   await page.goto('resize-image');
 });
 

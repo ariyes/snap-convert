@@ -51,23 +51,8 @@ function jpegSize(bytes: Uint8Array): { width: number; height: number } {
 const contains = (bytes: Uint8Array, text: string) =>
   Buffer.from(bytes).includes(text, 0, 'latin1');
 
-/**
- * GOVERNOR: Playwright's WebKit (Windows build) has no OffscreenCanvas in workers, so the image
- * worker fails every job with "Can't find variable: OffscreenCanvas" (src/engines/image decode and
- * pipeline use it; Safari has it since 16.4). Out of P14's scope — reported to the governor. The
- * page shows that error on the file with "Try again"; result tests are fixme on WebKit until then.
- */
-const WEBKIT_WORKER =
-  'Image worker needs OffscreenCanvas, missing in Playwright WebKit (P14 report)';
-
-test.beforeEach(({ browserName }, testInfo) => {
-  // Real encodes in the production worker; each waits up to a minute for its result.
-  testInfo.setTimeout(90_000);
-  const runsOnWebKit = ['phones get', 'a broken photo', 'images dropped'].some((t) =>
-    testInfo.title.startsWith(t),
-  );
-  test.fixme(browserName === 'webkit' && !runsOnWebKit, WEBKIT_WORKER);
-});
+// Real encodes in the production worker; each waits up to a minute for its result.
+test.describe.configure({ timeout: 90_000 });
 
 async function open(page: Page) {
   await page.goto('compress-image');
@@ -249,7 +234,7 @@ test('20 photos download as a ZIP of 20 correctly named files', async ({ page, i
   }
 });
 
-test('phones get a fixed Download bar', async ({ page, isMobile, browserName }) => {
+test('phones get a fixed Download bar', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'Phone layout');
   await open(page);
   await upload(page, [
@@ -263,8 +248,6 @@ test('phones get a fixed Download bar', async ({ page, isMobile, browserName }) 
   expect(box && viewport && Math.round(box.y + box.height)).toBe(viewport?.height);
   await expect(downloadButton(page)).toBeInViewport();
   await expect(bar.getByText('All (ZIP)')).toBeVisible();
-  // The layout is checked on WebKit too; the results need the image worker (see WEBKIT_WORKER).
-  if (browserName === 'webkit') return;
   await expect(fresh(page)).toBeVisible({ timeout: 60_000 });
   await expect(bar.getByRole('button', { name: 'Download all 2 as ZIP' })).toBeEnabled({
     timeout: 60_000,

@@ -43,18 +43,9 @@ async function details(jpeg: Buffer): Promise<Record<string, unknown>> {
   return typeof tags === 'object' && tags !== null ? (tags as Record<string, unknown>) : {};
 }
 
-// GOVERNOR: Playwright's WebKit build for Windows has no OffscreenCanvas in workers ("Can't find
-// variable: OffscreenCanvas"), so the image engine (src/engines/image/decode) can't decode there and
-// every job fails. Safari has it (16.4+). Remove once the engine has a fallback or WebKit runs on CI.
-const noEngineHere = (browserName: string) =>
-  browserName === 'webkit' && process.platform === 'win32';
-const NO_ENGINE = 'Playwright WebKit on Windows: no OffscreenCanvas in workers (image engine)';
-
 test('an iPhone HEIC photo becomes an upright, full-size JPG without its location', async ({
   page,
-  browserName,
 }) => {
-  test.fixme(noEngineHere(browserName), NO_ENGINE);
   test.setTimeout(120_000);
   await page.goto('heic-to-jpg');
   await expect(page.getByText(/iPhones save photos as HEIC/)).toBeVisible();
@@ -89,7 +80,7 @@ test('an iPhone HEIC photo becomes an upright, full-size JPG without its locatio
   await page.keyboard.press('Escape');
 });
 
-test('other images are offered to Convert image', async ({ page, browserName }) => {
+test('other images are offered to Convert image', async ({ page }) => {
   await page.goto('heic-to-jpg');
   await addFiles(page, [fixture('images/alpha.png'), fixture('images/no-exif.jpg')]);
 
@@ -104,6 +95,5 @@ test('other images are offered to Convert image', async ({ page, browserName }) 
     name: /\.(png|jpg)$/,
   });
   await expect(thumbs).toHaveCount(2);
-  if (noEngineHere(browserName)) return;
   await expect(page.getByText('2 of 2 ready')).toBeVisible({ timeout: 30_000 });
 });

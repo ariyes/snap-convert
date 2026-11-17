@@ -72,18 +72,9 @@ async function chooseFormat(page: Page, label: string) {
   await expect(saveAs(page)).toHaveText(label);
 }
 
-// GOVERNOR: Playwright's WebKit build for Windows has no OffscreenCanvas in workers ("Can't find
-// variable: OffscreenCanvas"), so the image engine (src/engines/image/decode) can't decode there and
-// every job fails. Safari has it (16.4+). Remove once the engine has a fallback or WebKit runs on CI.
-const noEngineHere = (browserName: string) =>
-  browserName === 'webkit' && process.platform === 'win32';
-const NO_ENGINE = 'Playwright WebKit on Windows: no OffscreenCanvas in workers (image engine)';
-
 test('transparent PNG → JPG uses the chosen background; → WebP keeps the transparency', async ({
   page,
-  browserName,
 }) => {
-  test.fixme(noEngineHere(browserName), NO_ENGINE);
   await page.goto('convert-image');
   // alpha.png, 90×60: transparent left third, 50 % blue middle, opaque orange right.
   await addFiles(page, [fixture('images/alpha.png')]);
@@ -123,12 +114,8 @@ test('transparent PNG → JPG uses the chosen background; → WebP keeps the tra
   expect(alpha.pixels[2]![3], 'right third stays opaque').toBe(255);
 });
 
-test('every input format converts to every output format', async ({
-  page,
-  browserName,
-}, testInfo) => {
+test('every input format converts to every output format', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.endsWith('phone'), 'Format matrix: once per engine is enough');
-  test.fixme(noEngineHere(browserName), NO_ENGINE);
   test.setTimeout(240_000);
   await page.goto('convert-image');
   const inputs = [
@@ -182,16 +169,11 @@ test.describe('format pages', () => {
   });
 
   for (const meta of formatPages) {
-    test(`${meta.name} starts with ${LABEL[meta.to]} as the target`, async ({
-      page,
-      browserName,
-    }) => {
+    test(`${meta.name} starts with ${LABEL[meta.to]} as the target`, async ({ page }) => {
       await page.goto(meta.id);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(meta.name);
       await addFiles(page, [inputFor[meta.from]]);
       await expect(saveAs(page)).toHaveText(LABEL[meta.to]);
-      // The pre-set target is checked everywhere; the conversion needs the image engine.
-      if (noEngineHere(browserName)) return;
       await expect(download(page)).toBeEnabled({ timeout: 30_000 });
       const [file] = await Promise.all([page.waitForEvent('download'), download(page).click()]);
       expect(file.suggestedFilename()).toBe(`card.${EXT[meta.to]}`);

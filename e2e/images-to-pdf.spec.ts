@@ -171,19 +171,9 @@ function expectNotStretched(img: DrawnImage) {
 
 test.describe.configure({ timeout: 180_000 });
 
-/**
- * GOVERNOR: Playwright's WebKit build on Windows has no OffscreenCanvas, which the image pipeline
- * (P12, image worker) needs, so every image job fails there with "Can't find variable:
- * OffscreenCanvas". Real Safari has had it since 16.4. Tests that convert images are skipped on
- * WebKit until the pipeline has a fallback or the CI WebKit has OffscreenCanvas.
- */
-const NO_IMAGE_WORKER_ON_WEBKIT = 'Playwright WebKit has no OffscreenCanvas for the image worker';
-
 test('ten mixed images become a ten-page PDF in the chosen order, never stretched', async ({
   page,
-  browserName,
 }) => {
-  test.fixme(browserName === 'webkit', NO_IMAGE_WORKER_ON_WEBKIT);
   await open(page);
   const tallJpg = await drawn(page, 'tall.jpg', 60, 100, 'image/jpeg');
   const tallPng = await drawn(page, 'tall.png', 50, 120, 'image/png');
@@ -375,11 +365,7 @@ test('location data never ends up in the PDF, and pages stay upright', async ({ 
   expect(doc.getPage(1).getSize()).toEqual({ width: 612, height: 792 });
 });
 
-test('"Smaller file" makes a smaller PDF that still looks the same', async ({
-  page,
-  browserName,
-}) => {
-  test.fixme(browserName === 'webkit', NO_IMAGE_WORKER_ON_WEBKIT);
+test('"Smaller file" makes a smaller PDF that still looks the same', async ({ page }) => {
   await open(page);
   const photo = fixture('quality/photo-fine-detail.jpg'); // 4032 × 2268
   await pick(page, [photo]);
