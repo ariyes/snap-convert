@@ -1,4 +1,5 @@
 /** SEO fields (P22): every page has them, within search-result limits; sitemap and structured data. */
+import type { MetaDescriptor } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { sitemapUrls, sitemapXml } from '../../scripts/sitemap';
 import { contentIdFromPath } from '../app/components/tool-content';
@@ -8,6 +9,7 @@ import {
   formatPages,
   homeStructuredData,
   isAvailable,
+  OG_IMAGE_SIZE,
   ogImageUrl,
   SITE_URL,
   tools,
@@ -155,5 +157,18 @@ describe('social images and structured data', () => {
     expect(homeStructuredData).not.toHaveProperty('aggregateRating');
     expect(homeStructuredData).not.toHaveProperty('review');
     expect(JSON.parse(JSON.stringify(homeStructuredData))).toEqual(homeStructuredData);
+  });
+
+  it('fits the <head> hooks the governor adds (React Router meta descriptors)', () => {
+    // Type-checked: home.tsx's meta can return this tag as it is.
+    const jsonLd: MetaDescriptor = { 'script:ld+json': homeStructuredData };
+    const og: MetaDescriptor[] = [
+      { property: 'og:image', content: ogImageUrl() },
+      { property: 'og:image:width', content: String(OG_IMAGE_SIZE.width) },
+      { property: 'og:image:height', content: String(OG_IMAGE_SIZE.height) },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ];
+    expect(jsonLd).toHaveProperty('script:ld+json.@type', 'SoftwareApplication');
+    expect(og).toHaveLength(4);
   });
 });
