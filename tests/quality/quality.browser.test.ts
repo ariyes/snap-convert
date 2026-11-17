@@ -4,12 +4,15 @@
 // a default or preset result scores below 0.97, or anything at all below 0.95.
 //
 // Run with `pnpm quality` (add `--silent=false` in a non-interactive shell to see the table).
+// `VITE_IMAGE_NO_CANVAS=1 pnpm quality` runs the same report without OffscreenCanvas in the
+// worker, as in older Safari (P12b).
 import { afterAll, describe, expect, it } from 'vitest';
 import { QUALITY_FLOOR } from '@/core/contracts/image';
 import type { ImageJobInput, ImageJobResult } from '@/core/contracts/image';
 import { PRESET_IDS, presetJob } from '@/engines/optimize';
 import {
   fixture,
+  noCanvasMode,
   runJob,
   startImageWorker,
   twelveMegapixelJpeg,
@@ -234,6 +237,9 @@ function formatTable(all: Row[]): string {
   return [
     '',
     'Quality report (SSIM vs the resized pixels; Guard = extra encodes by the quality guard)',
+    noCanvasMode
+      ? 'Mode: canvas-free (VITE_IMAGE_NO_CANVAS=1, worker without OffscreenCanvas, as older Safari)'
+      : 'Mode: canvas (browser decoders)',
     fmt(header),
     fmt(widths.map((w) => '-'.repeat(w))),
     ...lines.map(fmt),
