@@ -34,6 +34,7 @@ export const singleImageStrings = {
   result: 'New file',
   change: 'Change',
   sizeUnknown: '—',
+  byteUnits: ['B', 'KB', 'MB', 'GB'],
   smaller: (percent: number) => `−${percent}%`,
   larger: (percent: number) => `+${percent}%`,
   same: 'Same',

@@ -1,10 +1,11 @@
 // Small display helpers for the single-image screen: file sizes and size change.
+import { singleImageStrings as strings } from './strings';
 
-const UNITS = ['B', 'KB', 'MB', 'GB'] as const;
+const UNITS = strings.byteUnits;
 
 /** "830 B", "4.2 KB", "38 KB", "3.4 MB" (1 KB = 1024 bytes, as file managers show it). */
 export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '—';
+  if (!Number.isFinite(bytes) || bytes < 0) return strings.sizeUnknown;
   let value = bytes;
   let unit = 0;
   while (value >= 1024 && unit < UNITS.length - 1) {
