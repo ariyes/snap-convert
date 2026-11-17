@@ -96,11 +96,7 @@ describe('SEO fields', () => {
   });
 
   it('"coming soon" tools say so and carry no how-to or FAQ', () => {
-    expect(comingSoon.map((p) => p.id)).toEqual([
-      'remove-background',
-      'raw-to-jpg',
-      'pdf-to-images',
-    ]);
+    expect(comingSoon.map((p) => p.id)).toEqual(['remove-background', 'raw-to-jpg']);
     for (const p of comingSoon) {
       expect(p.title).toMatch(/Coming Soon/);
       expect(p.description).toMatch(/^Coming soon:/);
