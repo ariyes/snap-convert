@@ -5,10 +5,18 @@ import { Container } from './container';
 
 const footerLink = 'rounded-sm no-underline hover:text-fg';
 
-/** Prototype `footer`: licence notice and links. Bottom padding leaves room for the phone action bar. */
+/**
+ * Bottom padding under 880 px: the prototype's 96 px, or more when a tool's fixed action bar
+ * (P13 `Workspace`, which sets `--action-bar-height` on <html>) is taller, so it never covers the footer.
+ */
+const phonePadding = 'max-[880px]:pb-[max(96px,calc(var(--action-bar-height,0px)_+_24px))]';
+
+/** Prototype `footer`: licence notice and links. */
 export function SiteFooter() {
   return (
-    <footer className="mt-auto border-t border-line pt-6 pb-24 text-ui text-muted">
+    <footer
+      className={`mt-auto border-t border-line pt-6 pb-24 text-ui text-muted ${phonePadding}`}
+    >
       <Container className="flex flex-wrap justify-between gap-x-5 gap-y-2">
         <p className="m-0">{appStrings.footerNotice}</p>
         <nav aria-label={appStrings.footerNav} className="flex flex-wrap gap-x-4 gap-y-1.5">
