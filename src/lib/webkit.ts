@@ -2,9 +2,8 @@
  * Safari and every iOS browser (all use WebKit). Works in pages and workers.
  *
  * Why it matters: since D43 Safari is cross-origin isolated, so multi-threaded WebAssembly is
- * allowed there. In WebKit tests the threaded AVIF encoder hung (2 of 7 images never finished)
- * when the machine was busy. Until it is proven on real Safari, WebKit encodes and develops RAW
- * on one thread, as it did before D43.
+ * allowed there, but it hasn't been tried on a real iPhone or Mac yet. As a precaution (D45),
+ * WebKit encodes and develops RAW on one thread, as it did before D43, until that check.
  */
 export function isWebKit(userAgent = globalThis.navigator?.userAgent ?? ''): boolean {
   if (/\b(iPhone|iPad|iPod)\b/.test(userAgent)) return true;
