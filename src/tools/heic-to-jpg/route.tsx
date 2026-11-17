@@ -10,8 +10,14 @@ import { FormatSelect, MetadataSelect, QualitySlider } from '@/features/image-se
 import { useToolSettings } from '@/features/settings';
 import { PanelDivider } from '@/features/tool-layout';
 import { Button, Helper, IconButton, Note } from '@/ui';
-import { SingleImageTool } from '@/tools/_shared';
-import { HEIC_DEFAULTS, HEIC_FORMATS, heicJobOptions, heicSettingsSchema } from './settings';
+import { SingleImageTool, withQualityFlag } from '@/tools/_shared';
+import {
+  HEIC_DEFAULTS,
+  HEIC_FORMATS,
+  heicJobOptions,
+  heicSettingsSchema,
+  type HeicToolSettings,
+} from './settings';
 import { heicStrings as strings } from './strings';
 
 /** The drop zone takes other images too, so they can be sent on to Convert image. */
@@ -20,11 +26,9 @@ const DROP_ACCEPT: readonly FileKind[] = ['heic', 'image'];
 export default function HeicToJpgRoute() {
   const page = useToolPage();
   const navigate = useNavigate();
-  const [settings, update, reset] = useToolSettings(
-    'heic-to-jpg',
-    HEIC_DEFAULTS,
-    heicSettingsSchema,
-  );
+  const [settings, save, reset] = useToolSettings('heic-to-jpg', HEIC_DEFAULTS, heicSettingsSchema);
+  // Moving the quality slider switches the quality guard off (D28/D29).
+  const update = (patch: Partial<HeicToolSettings>) => save(withQualityFlag(patch));
   const jobOptions = useMemo(() => heicJobOptions(settings), [settings]);
   const [others, setOthers] = useState<File[]>([]);
 

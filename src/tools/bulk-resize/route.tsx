@@ -40,6 +40,7 @@ import { PanelDivider, ToolEmptyState, ToolPage, Workspace } from '@/features/to
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { Button, Card, ProgressBar, toast } from '@/ui';
+import { withQualityFlag } from '@/tools/_shared';
 import { FileRow, type BulkJob } from './file-row';
 import { LeaveGuard } from './leave-guard';
 import { makeSampleFiles } from './sample-specs';
@@ -51,6 +52,7 @@ import {
   outputNames,
   plannedFormat,
   settingsSignature,
+  type BulkSettings,
   TOOL_ID,
 } from './settings';
 import { formatBytes, formatTimeLeft, bulkStrings as t } from './strings';
@@ -74,10 +76,15 @@ export default function BulkResizeRoute() {
   const page = useToolPage();
   const accepts = page.accepts;
   const { files, add, remove, clear } = useFileList(TOOL_ID);
-  const [settings, update, resetSettings] = useToolSettings(
+  const [settings, save, resetSettings] = useToolSettings<BulkSettings>(
     TOOL_ID,
     BULK_DEFAULTS,
     imageSettingsSchema,
+  );
+  // Moving the quality slider switches the quality guard off (D28/D29).
+  const update = useCallback(
+    (patch: Partial<BulkSettings>) => save(withQualityFlag(patch)),
+    [save],
   );
 
   // ---------- Jobs ----------

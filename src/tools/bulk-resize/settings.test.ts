@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withQualityFlag } from '@/tools/_shared';
 import {
   baseName,
   BULK_DEFAULTS,
@@ -39,8 +40,17 @@ describe('jobOptions', () => {
     });
   });
 
-  it('switches the quality guard off once the user picks a quality (D28/D29)', () => {
-    expect(jobOptions({ ...BULK_DEFAULTS, quality: 65 }).qualityGuard).toBe(false);
+  it('switches the quality guard off once the user moves the quality slider (D28/D29)', () => {
+    const moved = { ...BULK_DEFAULTS, ...withQualityFlag({ quality: 65 }) };
+    expect(jobOptions(moved).qualityGuard).toBe(false);
+    // Back at 80 by hand: still the user's choice, not inferred from "equals the default".
+    const back = { ...moved, ...withQualityFlag({ quality: BULK_DEFAULTS.quality }) };
+    expect(jobOptions(back).qualityGuard).toBe(false);
+    // Other controls leave the flag alone; Reset brings the guard back.
+    expect(withQualityFlag({ resizeSize: 1200 })).toEqual({ resizeSize: 1200 });
+    expect(jobOptions(BULK_DEFAULTS).qualityGuard).toBe(true);
+    // A changed flag makes earlier results stale.
+    expect(settingsSignature(back)).not.toBe(settingsSignature(BULK_DEFAULTS));
   });
 
   it('never uses a target size (Bulk has quality only)', () => {

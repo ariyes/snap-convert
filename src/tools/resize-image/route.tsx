@@ -13,7 +13,13 @@ import {
 } from '@/features/image-settings';
 import { useToolSettings } from '@/features/settings';
 import { PanelDivider } from '@/features/tool-layout';
-import { baseName, EXTENSIONS, SingleImageTool, type SingleImageContext } from '@/tools/_shared';
+import {
+  baseName,
+  EXTENSIONS,
+  SingleImageTool,
+  withQualityFlag,
+  type SingleImageContext,
+} from '@/tools/_shared';
 import { AnchorPicker } from './anchor-picker';
 import {
   RESIZE_DEFAULTS,
@@ -26,11 +32,13 @@ import { resizeStrings as strings } from './strings';
 
 export default function ResizeImageRoute() {
   const page = useToolPage();
-  const [settings, update, reset] = useToolSettings(
+  const [settings, save, reset] = useToolSettings(
     'resize-image',
     RESIZE_DEFAULTS,
     resizeSettingsSchema,
   );
+  // Moving the quality slider switches the quality guard off (D28/D29).
+  const update = (patch: Partial<ResizeToolSettings>) => save(withQualityFlag(patch));
   const jobOptions = useMemo(() => resizeJobOptions(settings), [settings]);
 
   return (

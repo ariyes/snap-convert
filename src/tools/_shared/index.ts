@@ -4,6 +4,12 @@ export { planJobs, type JobEntry, type JobPlan } from './job-plan';
 export { baseName, EXTENSIONS, outputFileName, outputFileNames, type NamedResult } from './names';
 export { resultNotes, type ResultNote, type ResultNoteSource } from './notes';
 export {
+  QUALITY_FLAG_DEFAULT,
+  qualityGuardFor,
+  withQualityFlag,
+  type QualityFlag,
+} from './quality-guard';
+export {
   SingleImageTool,
   type SingleImageContext,
   type SingleImageToolProps,

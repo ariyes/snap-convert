@@ -11,6 +11,10 @@ import {
   type ImageSettingsValues,
 } from '@/features/image-settings';
 import type { SettingsSchema } from '@/features/settings';
+import { QUALITY_FLAG_DEFAULT, qualityGuardFor, type QualityFlag } from '@/tools/_shared';
+
+// The shared quality-guard rule (D28/D29): a manual quality change switches the guard off.
+export { withQualityFlag } from '@/tools/_shared';
 
 export const TOOL_ID = 'compress-image';
 
@@ -23,19 +27,17 @@ export const PREVIEW_DEBOUNCE_MS = 250;
 /** The sample photo (CC0, public/samples/compress-sample.jpg). */
 export const SAMPLE = { path: 'samples/compress-sample.jpg', name: 'sample-photo.jpg' } as const;
 
-export interface CompressSettings extends ImageSettingsValues {
-  /**
-   * The user moved the quality slider. Until then (defaults and presets) the quality guard may
-   * raise quality to keep the photo crisp; afterwards their own quality is used as-is (D28, D29).
-   */
-  qualitySet: boolean;
-}
+/**
+ * `qualitySet`: the user moved the quality slider. Until then (defaults and presets) the quality
+ * guard may raise quality to keep the photo crisp; afterwards their own quality is used as-is.
+ */
+export type CompressSettings = ImageSettingsValues & QualityFlag;
 
 /** IMG-04 defaults: quality 80, same format, no resizing, location and camera details removed. */
 export const COMPRESS_DEFAULTS: Readonly<CompressSettings> = {
   ...IMAGE_SETTINGS_DEFAULTS,
+  ...QUALITY_FLAG_DEFAULT,
   resizeEnabled: false,
-  qualitySet: false,
 };
 
 export const compressSchema: SettingsSchema<CompressSettings> = { ...imageSettingsSchema };
@@ -48,11 +50,6 @@ export function presetPatch(preset: WebPreset): Partial<CompressSettings> {
   return { ...applyPreset(preset), qualitySet: false };
 }
 
-/** A manual quality change switches the guard off (the user's quality is never overridden). */
-export function withQualityFlag(patch: Partial<CompressSettings>): Partial<CompressSettings> {
-  return 'quality' in patch ? { ...patch, qualitySet: true } : patch;
-}
-
 /** Smallest sharp longest side for the selected preset's use, if any. */
 export function recommendedSide(settings: Pick<CompressSettings, 'preset'>): number | undefined {
   return settings.preset ? minRecommendedSide(settings.preset) : undefined;
@@ -62,7 +59,10 @@ export type JobOptions = Omit<ImageJobInput, 'file' | 'name' | 'width' | 'height
 
 /** Pipeline options for every file (resizing is optional on this page). */
 export function jobOptions(settings: CompressSettings): JobOptions {
-  return { ...toJobOptions(settings, { optional: true }), qualityGuard: !settings.qualitySet };
+  return {
+    ...toJobOptions(settings, { optional: true }),
+    qualityGuard: qualityGuardFor(settings),
+  };
 }
 
 /**

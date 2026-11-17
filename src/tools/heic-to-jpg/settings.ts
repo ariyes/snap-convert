@@ -7,15 +7,21 @@ import {
   type ImageSettingsValues,
 } from '@/features/image-settings';
 import { oneOf, type SettingsSchema } from '@/features/settings';
-import type { ImageJobOptions } from '@/tools/_shared';
+import {
+  QUALITY_FLAG_DEFAULT,
+  qualityGuardFor,
+  type ImageJobOptions,
+  type QualityFlag,
+} from '@/tools/_shared';
 
 export const HEIC_FORMATS: readonly ImageFormat[] = ['jpeg', 'png'];
 
-export interface HeicToolSettings extends Omit<ImageSettingsValues, 'format'> {
+export interface HeicToolSettings extends Omit<ImageSettingsValues, 'format'>, QualityFlag {
   format: ImageFormat;
 }
 
 export const HEIC_DEFAULTS: Readonly<HeicToolSettings> = {
+  ...QUALITY_FLAG_DEFAULT,
   ...IMAGE_SETTINGS_DEFAULTS,
   format: 'jpeg',
   quality: 90,
@@ -31,13 +37,13 @@ export const heicSettingsSchema: SettingsSchema<HeicToolSettings> = {
 /**
  * Job settings for every photo: full size (the decoder applies the photo's rotation, so it stays
  * upright), the chosen format and quality, and the metadata policy. The quality guard runs while
- * quality is the default (D28, D29).
+ * the user sets the quality (D28, D29).
  */
 export function heicJobOptions(settings: HeicToolSettings): ImageJobOptions {
   return {
     ...toJobOptions({ ...settings, qualityMode: 'quality' }, { optional: true }),
     resize: undefined,
     exact: undefined,
-    qualityGuard: settings.quality === HEIC_DEFAULTS.quality,
+    qualityGuard: qualityGuardFor(settings),
   };
 }
