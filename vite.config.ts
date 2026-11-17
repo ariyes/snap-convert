@@ -4,6 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { reactRouter } from '@react-router/dev/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Connect, type Plugin } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
+import { APP_BASE, ICONS, MANIFEST_FILENAME } from './src/pwa/brand.ts';
+import { createPwaBuild } from './src/pwa/build-time/pwa-build.ts';
+import { ENGINE_CACHE, ENGINE_GRAPH_FILE, RUNTIME_PREFIXES } from './src/pwa/cache-names.ts';
+import { webManifest } from './src/pwa/manifest.ts';
 
 /** Needed for multi-threaded WebAssembly (SharedArrayBuffer). Production sets the same in nginx. */
 export const crossOriginIsolationHeaders = {
@@ -107,9 +112,51 @@ function previewLikeNginx(): Plugin {
  */
 export const wasmPackages = ['@jsquash/avif', '@jsquash/jpeg', '@jsquash/oxipng', '@jsquash/webp'];
 
+// PWA (P21): installable app + offline. The service worker precaches the shell (every page, its
+// scripts, styles, fonts, icons) and caches engine files (codecs, WebAssembly, pdf.js, pdf-lib,
+// libheif, lazy chunks) the first time a tool uses them. See src/pwa/build-time/pwa-build.ts.
+const pwaBuild = createPwaBuild({ outDir: 'build/client' });
+const pwa = [
+  ...VitePWA({
+    base: APP_BASE,
+    scope: APP_BASE,
+    outDir: 'build/client',
+    filename: 'sw.js',
+    registerType: 'prompt',
+    // Registered from src/pwa after hydration (lazy chunk), never by an injected script.
+    injectRegister: false,
+    manifestFilename: MANIFEST_FILENAME,
+    manifest: webManifest,
+    includeAssets: [ICONS.apple],
+    integration: pwaBuild.integration,
+    workbox: {
+      globPatterns: ['**/*.html', 'assets/**/*.{js,css,woff2}', ENGINE_GRAPH_FILE],
+      manifestTransforms: [pwaBuild.precacheTransform],
+      // Unknown URLs get React Router's SPA shell (its not-found page), as nginx does.
+      navigateFallback: '__spa-fallback.html',
+      navigateFallbackAllowlist: [new RegExp(`^${APP_BASE}`)],
+      // Direct links to files (samples, manifest, …) are not pages.
+      navigateFallbackDenylist: [/\/[^/?]+\.[^/?]+$/],
+      // Take control of the first visit at once, so a tool used then is cached for offline.
+      clientsClaim: true,
+      // Updates wait for the user's "Refresh" (never mid-job).
+      skipWaiting: false,
+      cleanupOutdatedCaches: true,
+      runtimeCaching: [
+        {
+          urlPattern: new RegExp(`${APP_BASE}(?:${RUNTIME_PREFIXES.join('|')})`),
+          handler: 'CacheFirst',
+          options: { cacheName: ENGINE_CACHE, cacheableResponse: { statuses: [200] } },
+        },
+      ],
+    },
+  }),
+  pwaBuild.finalize(),
+];
+
 export default defineConfig({
   base: '/snap-convert/',
-  plugins: [crossOriginIsolation(), previewLikeNginx(), tailwindcss(), reactRouter()],
+  plugins: [crossOriginIsolation(), previewLikeNginx(), tailwindcss(), reactRouter(), ...pwa],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
