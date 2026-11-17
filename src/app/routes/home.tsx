@@ -5,9 +5,10 @@
 import { Infinity as InfinityIcon, Lock, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router';
+import type { IntakeFile } from '@/core/contracts/intake';
 import { Container } from '../components/container';
-import { DropZoneSlot } from '../home/drop-zone-slot';
-import { filesForTool, type DroppedFile, type Suggestion } from '../home/suggest';
+import { HomeDropZone } from '../home/home-drop-zone';
+import { filesForTool, toDroppedFiles, type DroppedFile, type Suggestion } from '../home/suggest';
 import { SuggestionPanel } from '../home/suggestion-panel';
 import { ToolGroups } from '../home/tool-groups';
 import { pageMeta } from '../meta';
@@ -23,7 +24,8 @@ const trustIcons: LucideIcon[] = [ShieldCheck, InfinityIcon, Lock];
 export default function Home() {
   const navigate = useNavigate();
   const [dropped, setDropped] = useState<DroppedFile[]>([]);
-  const onFiles = useCallback((files: DroppedFile[]) => setDropped(files), []);
+  // Kinds come from each file's first bytes (P11), so renamed files are still sorted right.
+  const onFiles = useCallback((files: IntakeFile[]) => setDropped(toDroppedFiles(files)), []);
 
   const pick = (suggestion: Suggestion) => {
     if (!suggestion.soon)
@@ -44,7 +46,7 @@ export default function Home() {
           {appStrings.lede}
         </p>
 
-        <DropZoneSlot onFiles={onFiles} />
+        <HomeDropZone onFiles={onFiles} />
         <div aria-live="polite">
           {dropped.length > 0 && (
             <SuggestionPanel files={dropped} onPick={pick} onClear={() => setDropped([])} />
