@@ -70,6 +70,9 @@ const BUILD_TOOLS: ReadonlyArray<{ chain: string[]; why: string }> = [
   { chain: ['vite'], why: 'module preload helper' },
   { chain: ['vite', 'rolldown'], why: 'bundler runtime helpers' },
   { chain: ['tailwindcss'], why: 'base styles in our stylesheet' },
+  { chain: ['vite-plugin-pwa', 'workbox-build', 'workbox-precaching'], why: 'service worker (offline use)' },
+  { chain: ['vite-plugin-pwa', 'workbox-build', 'workbox-routing'], why: 'service worker (offline use)' },
+  { chain: ['vite-plugin-pwa', 'workbox-build', 'workbox-strategies'], why: 'service worker (offline use)' },
 ];
 
 interface ComponentSpec {

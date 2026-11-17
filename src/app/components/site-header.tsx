@@ -4,6 +4,12 @@ import { Logo, strings, ThemeToggle } from '@/ui';
 import { SOURCE_URL } from '../site';
 import { appStrings } from '../strings';
 import { Container } from './container';
+import { lazy, Suspense } from 'react';
+
+// Only shows when the browser offers installation, so it loads after the page is up (startup budget).
+const InstallAppButton = lazy(() =>
+  import('@/pwa/install-button').then((m) => ({ default: m.InstallAppButton })),
+);
 
 const topLink =
   'hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted no-underline hover:bg-sunk hover:text-fg sm:inline-flex';
@@ -31,6 +37,9 @@ export function SiteHeader() {
             <CodeXml aria-hidden="true" />
             {appStrings.source}
           </a>
+          <Suspense fallback={null}>
+            <InstallAppButton />
+          </Suspense>
           <ThemeToggle />
         </nav>
       </Container>

@@ -44,7 +44,7 @@ const text = {
     'Ads or ad trackers. Snap Convert has no ads and loads no third-party scripts.',
   ],
   storage:
-    'Your browser’s local storage keeps only your light or dark theme and the settings you chose in each tool, so they are there next time. They stay in your browser and are never sent anywhere.',
+    'Your browser’s local storage keeps only your light or dark theme and the settings you chose in each tool, so they are there next time. They stay in your browser and are never sent anywhere. If you use Snap Convert offline, your browser also keeps a copy of the app’s own code (not your files) so it can open without a connection.',
 
   blockTitle: 'How to stop counting',
   block:

@@ -93,7 +93,14 @@ describe('credits (scripts/credits.ts)', () => {
   });
 
   it('lists build tools whose code ships', () => {
-    expect(data.buildTools.map((t) => t.name).sort()).toEqual(['rolldown', 'tailwindcss', 'vite']);
+    expect(data.buildTools.map((t) => t.name).sort()).toEqual([
+      'rolldown',
+      'tailwindcss',
+      'vite',
+      'workbox-precaching',
+      'workbox-routing',
+      'workbox-strategies',
+    ]);
   });
 
   it('writes every package and component into the plain-text license file', () => {
