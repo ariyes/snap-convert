@@ -10,11 +10,26 @@ export interface ImageWorker {
   stop: () => void;
 }
 
-/** Starts the app's image worker (the same file the queue's registry loads). */
-export function startImageWorker(): ImageWorker {
-  const worker = new Worker(new URL('../../src/engines/image/worker.ts', import.meta.url), {
-    type: 'module',
-  });
+/**
+ * VITE_IMAGE_NO_CANVAS=1 runs every job as older Safari would: the same image worker with
+ * OffscreenCanvas switched off, so the engine uses its canvas-free decoders (P12b).
+ */
+export const noCanvasMode = import.meta.env.VITE_IMAGE_NO_CANVAS === '1';
+
+/**
+ * Starts the app's image worker (the same file the queue's registry loads). `canvas: false` (or
+ * VITE_IMAGE_NO_CANVAS=1) starts it with OffscreenCanvas switched off.
+ */
+export function startImageWorker(options: { canvas?: boolean } = {}): ImageWorker {
+  const canvas = options.canvas ?? !noCanvasMode;
+  // Literal `new Worker(new URL(…))` in each branch, so Vite bundles both as workers.
+  const worker = canvas
+    ? new Worker(new URL('../../src/engines/image/worker.ts', import.meta.url), {
+        type: 'module',
+      })
+    : new Worker(new URL('../../src/engines/image/testing/no-canvas-worker.ts', import.meta.url), {
+        type: 'module',
+      });
   return { api: Comlink.wrap<WorkerApi>(worker), stop: () => worker.terminate() };
 }
 

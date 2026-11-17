@@ -1,9 +1,11 @@
 // M4 image decode (P05): any supported file → upright sRGB pixels + metadata.
 // Runs inside a Web Worker: only createImageBitmap, OffscreenCanvas and WebAssembly, no DOM.
+// Without OffscreenCanvas (older Safari) it uses the canvas-free decoders in fallback.ts (P12b).
 
 import type { DecodeImage, DecodedImage } from '@/core/contracts/image';
 import type { Size } from '@/core/contracts/sizing';
 import { fitSize } from '@/core/sizing';
+import { canvasAvailable } from './canvas';
 import { applyColorTransform, iccToSrgb, nclxToSrgb } from './color';
 import { readContainer, type ContainerInfo, type SniffedFormat } from './container';
 import { readMetadata } from './metadata';
@@ -13,6 +15,7 @@ import {
   orientPixels,
   swapsAxes,
 } from './orientation';
+import { clearTransparent, PixelDecodeError } from './raw';
 import { decodeStrings } from './strings';
 
 export type DecodeErrorCode = 'unsupported' | 'heic-unsupported' | 'too-large';
@@ -71,13 +74,21 @@ export async function decodeImageWith(
   // Their EXIF orientation only repeats it and must not be applied a second time.
   const orientation = usesExifOrientation(info.format) ? metadata.orientation : 1;
 
+  // The browser's decoders need a canvas to hand over pixels; workers without one (older Safari)
+  // decode everything with WebAssembly / TypeScript decoders instead, to the same pixels.
+  const browser = canvasAvailable();
   let decoded: { pixels: ImageData; reducedFrom?: Size } | undefined;
-  if (!(info.format === 'avif' && options.avifDecoder === 'wasm')) {
+  if (browser && !(info.format === 'avif' && options.avifDecoder === 'wasm')) {
     decoded = await decodeWithBrowser(file, info, orientation, hint, limits);
   }
   if (!decoded) {
-    const pixels = await decodeWithWasm(bytes, info);
+    const pixels =
+      info.format === 'heic' || info.format === 'avif' || browser
+        ? await decodeWithWasm(bytes, info)
+        : await decodeCanvasFree(bytes, info, orientation, limits);
     checkPixels(pixels.width * pixels.height, limits);
+    // A canvas reads fully transparent pixels back as transparent black; match it.
+    if (canHaveAlpha(info.format)) clearTransparent(pixels.data);
     decoded = { pixels };
   }
 
@@ -237,6 +248,26 @@ function bitmapPixels(bitmap: ImageBitmap): ImageData {
   } finally {
     canvas.width = 0;
     canvas.height = 0;
+  }
+}
+
+// ---------- Canvas-free decode (workers without OffscreenCanvas) ----------
+
+async function decodeCanvasFree(
+  bytes: Uint8Array,
+  info: ContainerInfo,
+  orientation: number,
+  limits: DecodeLimits,
+): Promise<ImageData> {
+  try {
+    const { decodeWithoutCanvas } = await import('./fallback');
+    return await decodeWithoutCanvas(bytes, info, orientation, limits.maxPixels);
+  } catch (error) {
+    if (error instanceof PixelDecodeError && error.tooLarge) {
+      throw new DecodeError('too-large', decodeStrings.tooLarge(Math.round(error.pixels / 1e6)));
+    }
+    if (error instanceof DecodeError) throw error;
+    throw new DecodeError('unsupported', decodeStrings.unsupported);
   }
 }
 

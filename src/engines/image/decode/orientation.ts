@@ -3,6 +3,7 @@
 // browsers and for some formats only), so pixels are rotated exactly once.
 
 import type { IsoTransform } from './container';
+import { crc32 } from './crc32';
 
 /** True for orientations that swap width and height (5–8). */
 export function swapsAxes(orientation: number): boolean {
@@ -174,21 +175,6 @@ function setU32LE(b: Uint8Array, at: number, v: number): void {
   b[at + 1] = (v >>> 8) & 0xff;
   b[at + 2] = (v >>> 16) & 0xff;
   b[at + 3] = (v >>> 24) & 0xff;
-}
-
-let crcTable: Uint32Array | undefined;
-function crc32(bytes: Uint8Array): number {
-  if (!crcTable) {
-    crcTable = new Uint32Array(256);
-    for (let n = 0; n < 256; n++) {
-      let c = n;
-      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-      crcTable[n] = c >>> 0;
-    }
-  }
-  let crc = 0xffffffff;
-  for (const byte of bytes) crc = (crcTable[(crc ^ byte) & 0xff] ?? 0) ^ (crc >>> 8);
-  return (crc ^ 0xffffffff) >>> 0;
 }
 
 function pngChunk(type: string, data: Uint8Array): Uint8Array {

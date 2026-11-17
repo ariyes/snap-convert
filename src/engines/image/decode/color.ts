@@ -190,6 +190,70 @@ export function nclxToSrgb(nclx: Nclx): ColorTransform | undefined {
   };
 }
 
+// ---------- PNG cHRM / gAMA ----------
+
+/** Bradford cone response matrix (chromatic adaptation between white points). */
+const BRADFORD: Mat3 = [
+  [0.8951, 0.2664, -0.1614],
+  [-0.7502, 1.7135, 0.0367],
+  [0.0389, -0.0685, 1.0296],
+];
+
+/** XYZ → XYZ matrix that maps white `from` onto white `to` (xy chromaticities). */
+function adapt(from: [number, number], to: [number, number]): Mat3 {
+  const xyz = ([x, y]: [number, number]): Vec3 => [x / y, 1, (1 - x - y) / y];
+  const a = mulVec(BRADFORD, xyz(from));
+  const b = mulVec(BRADFORD, xyz(to));
+  const scale: Mat3 = [
+    [b[0] / a[0], 0, 0],
+    [0, b[1] / a[1], 0],
+    [0, 0, b[2] / a[2]],
+  ];
+  return mul(invert(BRADFORD), mul(scale, BRADFORD));
+}
+
+/** xy chromaticities of a PNG cHRM chunk. */
+export interface Chromaticities {
+  white: [number, number];
+  red: [number, number];
+  green: [number, number];
+  blue: [number, number];
+}
+
+function validXy([x, y]: [number, number]): boolean {
+  return x > 0 && y > 0 && x + y <= 1;
+}
+
+/** libpng's PNG_GAMMA_THRESHOLD: a gAMA within 5 % of 1/2.2 counts as plain sRGB. */
+const GAMMA_THRESHOLD = 0.05;
+
+/**
+ * Colours of a PNG without an ICC profile or sRGB chunk, as Chromium reads them (checked pixel
+ * for pixel in fallback.browser.test.ts): gAMA gives a pure power curve; with a valid cHRM its
+ * primaries apply too. cHRM without gAMA is ignored, and a lone gAMA within 5 % of 1/2.2 means
+ * sRGB. `undefined` when nothing needs converting.
+ */
+export function pngChunksToSrgb(
+  gamma: number | undefined,
+  chrm: Chromaticities | undefined,
+): ColorTransform | undefined {
+  if (gamma === undefined || !(gamma > 0) || !Number.isFinite(1 / gamma)) return undefined;
+  const c = chrm && [chrm.white, chrm.red, chrm.green, chrm.blue].every(validXy) ? chrm : undefined;
+  if (!c && Math.abs(gamma * 2.2 - 1) < GAMMA_THRESHOLD) return undefined;
+  const curve: Curve = (x) => x ** (1 / gamma);
+  let matrix: Mat3 = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+  ];
+  if (c) {
+    const source = mul(adapt(c.white, D65), rgbToXyz(c.red, c.green, c.blue, c.white));
+    matrix = mul(invert(SRGB_D65), source);
+  }
+  const transform: ColorTransform = { curves: [curve, curve, curve], matrix };
+  return isIdentity(transform) ? undefined : transform;
+}
+
 function isIdentity(t: ColorTransform): boolean {
   const close = t.matrix.every((row, i) =>
     row.every((v, j) => Math.abs(v - (i === j ? 1 : 0)) < 0.002),

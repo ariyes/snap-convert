@@ -18,6 +18,7 @@ import type { Attempt } from '@/engines/optimize/attempt';
 import { guardMaxSteps, guardPlan, guardQuality } from '@/engines/optimize/guard';
 import { findQualityForTarget, sizeForTarget, TARGET_SEARCH } from '@/engines/optimize/target';
 import { decodeImage } from './decode';
+import { canvasAvailable } from './decode/canvas';
 import { clampQuality, MIME_TYPES, encodeImage, ImageEncodeError, parseBackground } from './encode';
 import { flattenOnto, hasTransparency } from './encode/background';
 import { loadCodec } from './encode/codecs';
@@ -577,8 +578,22 @@ function validTarget(bytes: number | undefined): number | undefined {
   return typeof bytes === 'number' && Number.isFinite(bytes) && bytes > 0 ? bytes : undefined;
 }
 
-/** Decodes an encoded result back to pixels to score it (no EXIF or ICC in it yet). */
+/**
+ * Decodes an encoded result back to pixels to score it (no EXIF or ICC in it yet). Without a
+ * canvas in this worker, the engine's canvas-free decoders do it (same pixels).
+ */
 async function decodeForScore(blob: Blob, like: Size): Promise<ImageData> {
+  let pixels: ImageData | undefined;
+  if (canvasAvailable()) pixels = await decodeWithCanvas(blob);
+  // No browser decoder for this format (e.g. AVIF in an older browser): the engine's own decoder.
+  pixels ??= (await decodeImage(blob)).pixels;
+  if (pixels.width !== like.width || pixels.height !== like.height) {
+    throw new RangeError('Encoded image came back at a different size');
+  }
+  return pixels;
+}
+
+async function decodeWithCanvas(blob: Blob): Promise<ImageData | undefined> {
   let pixels: ImageData | undefined;
   try {
     const bitmap = await createImageBitmap(blob, { premultiplyAlpha: 'none' });
@@ -596,11 +611,6 @@ async function decodeForScore(blob: Blob, like: Size): Promise<ImageData> {
     }
   } catch {
     pixels = undefined;
-  }
-  // No browser decoder for this format (e.g. AVIF in an older browser): the engine's own decoder.
-  pixels ??= (await decodeImage(blob)).pixels;
-  if (pixels.width !== like.width || pixels.height !== like.height) {
-    throw new RangeError('Encoded image came back at a different size');
   }
   return pixels;
 }
