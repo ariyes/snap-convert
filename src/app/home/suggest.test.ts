@@ -1,19 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import type { FileKind } from '@/core/contracts/intake';
-import { countKinds, describeCounts, filesForTool, guessKind, suggestTools } from './suggest';
+import { toIntakeFiles } from '@/features/intake';
+import { fixtureFile } from '@/features/intake/test-fixtures';
+import { countKinds, describeCounts, filesForTool, suggestTools, toDroppedFiles } from './suggest';
 
 const file = (name: string, type = '') => new File(['x'], name, { type });
 const labels = (kinds: FileKind[]) =>
   suggestTools(countKinds(kinds)).map((s) => `${s.label}${s.soon ? ' (soon)' : ''}`);
 
-describe('guessKind', () => {
-  it('sorts files by type and extension', () => {
-    expect(guessKind(file('a.jpg', 'image/jpeg'))).toBe('image');
-    expect(guessKind(file('a.webp'))).toBe('image');
-    expect(guessKind(file('IMG_1.HEIC'))).toBe('heic');
-    expect(guessKind(file('doc.pdf', 'application/pdf'))).toBe('pdf');
-    expect(guessKind(file('photo.CR3'))).toBe('raw');
-    expect(guessKind(file('notes.txt', 'text/plain'))).toBe('unknown');
+describe('toDroppedFiles', () => {
+  it('keeps the file and the kind the DropZone read from its bytes, not its name', async () => {
+    const files = [
+      fixtureFile('intake/jpeg-renamed.png'),
+      fixtureFile('intake/text-renamed.jpg'),
+      fixtureFile('intake/pdf-renamed.jpg'),
+      fixtureFile('intake/sample.cr3'),
+      fixtureFile('images/sample.webp'),
+    ];
+    const dropped = toDroppedFiles(await toIntakeFiles(files));
+    expect(dropped.map((d) => d.kind)).toEqual(['image', 'unknown', 'pdf', 'raw', 'image']);
+    expect(dropped.map((d) => d.file)).toEqual(files);
+    expect(Object.keys(dropped[0] ?? {}).sort()).toEqual(['file', 'kind']);
+    expect(describeCounts(countKinds(dropped.map((d) => d.kind)))).toBe(
+      '2 images, 1 PDF, 1 RAW photo and 1 other file',
+    );
   });
 });
 

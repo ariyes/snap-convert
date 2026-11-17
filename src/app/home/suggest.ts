@@ -2,31 +2,22 @@
  * Home page suggestion logic (D16): what to offer for the files someone dropped.
  * Pure functions, so they are easy to test and independent of the drop zone.
  */
-import type { FileKind } from '@/core/contracts/intake';
+import type { FileKind, IntakeFile } from '@/core/contracts/intake';
 import { getTool } from '@/tools/registry';
 import { appStrings } from '../strings';
 
-/** A dropped file with its kind. P11's IntakeFile has the same two fields. */
-export interface DroppedFile {
-  file: File;
-  kind: FileKind;
-}
-
-const RAW_EXT = /\.(cr2|cr3|nef|arw|dng|raf|orf|rw2|pef|srw)$/i;
-const HEIC_EXT = /\.(heic|heif)$/i;
-const IMAGE_EXT = /\.(jpe?g|png|webp|avif|gif|bmp)$/i;
-
 /**
- * Rough kind from the MIME type and extension, used only until P11's DropZone (which reads the
- * file's first bytes) is wired in. GOVERNOR: drop this once the home page uses P11's IntakeFile.kind.
+ * A dropped file with its kind, as P11's DropZone detected it from the file's first bytes
+ * (so a JPEG renamed .png is an image, and a text file renamed .jpg is 'unknown').
  */
-export function guessKind(file: File): FileKind {
-  const name = file.name;
-  if (RAW_EXT.test(name)) return 'raw';
-  if (HEIC_EXT.test(name) || /^image\/hei[cf]/.test(file.type)) return 'heic';
-  if (file.type === 'application/pdf' || /\.pdf$/i.test(name)) return 'pdf';
-  if (/^image\//.test(file.type) || IMAGE_EXT.test(name)) return 'image';
-  return 'unknown';
+export type DroppedFile = Pick<IntakeFile, 'file' | 'kind'>;
+
+/** Every kind, so the home drop box takes anything and the suggestions sort it out. */
+export const ALL_KINDS: readonly FileKind[] = ['image', 'heic', 'pdf', 'raw', 'unknown'];
+
+/** Keeps only what the suggestions need from the DropZone's IntakeFiles. */
+export function toDroppedFiles(files: readonly IntakeFile[]): DroppedFile[] {
+  return files.map(({ file, kind }) => ({ file, kind }));
 }
 
 export interface KindCounts {
