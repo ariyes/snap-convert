@@ -15,54 +15,19 @@ import type {
 import type { ExactOptions, Placement, Rect, ResizeOptions, Size } from '@/core/contracts/sizing';
 import { exactPlacement, fitSize } from '@/core/sizing';
 import type { Attempt } from '@/engines/optimize/attempt';
-import { GUARD, guardQuality } from '@/engines/optimize/guard';
+import { guardMaxSteps, guardPlan, guardQuality } from '@/engines/optimize/guard';
 import { findQualityForTarget, sizeForTarget, TARGET_SEARCH } from '@/engines/optimize/target';
 import { decodeImage } from './decode';
-import {
-  clampQuality,
-  DEFAULT_QUALITY,
-  encodeImage,
-  ImageEncodeError,
-  parseBackground,
-} from './encode';
+import { clampQuality, MIME_TYPES, encodeImage, ImageEncodeError, parseBackground } from './encode';
 import { flattenOnto, hasTransparency } from './encode/background';
 import { loadCodec } from './encode/codecs';
 import { pngOptions } from './encode/options';
-import { applyMetadataDetailed } from './metadata';
+import { applyMetadataDetailed, isSrgbProfile } from './metadata';
 import { isGraphic, ssim } from './quality';
 import type { Pixels } from './quality/pixels';
 import { resizePixels } from './resize';
 
 export type JobNote = ImageJobResult['notes'][number];
-
-/**
- * The job input, plus two optional settings the shared contract doesn't have yet (they travel
- * through the queue as extra fields of the same object).
- */
-export interface PipelineInput extends ImageJobInput {
-  /**
-   * Colour behind transparent pixels when saving as JPEG (IMG-01). Default: `exact.padColor`
-   * when that is a colour, else white.
-   */
-  background?: string;
-  /**
-   * Quality guard (D28): true for default and preset runs, false when the user set the quality
-   * themselves. When omitted it is on only if `quality` is the default (80). Never used with
-   * `targetBytes` (the target search has its own floor).
-   */
-  qualityGuard?: boolean;
-}
-
-export interface PipelineResult extends ImageJobResult {
-  /** Encodes made (1 unless the guard or the target search tried more qualities). */
-  encodes: number;
-  /** Set when the quality guard ran: extra encodes it made and whether it reached SSIM 0.97. */
-  guard?: { steps: number; reached: boolean };
-  /** With `target-unreachable`: estimated size (by the sizing rule) at which the target would fit. */
-  suggestedSize?: Size;
-  /** With `target-unreachable` for PNG: a lossy format that can reach the target. */
-  suggestedFormat?: ImageFormat;
-}
 
 export type ProgressCallback = (progress: number) => void;
 
@@ -86,29 +51,35 @@ const TRANSPARENT: Rgba = [0, 0, 0, 0];
 
 /** Runs one image job. Throws user-readable errors (DecodeError, ImageEncodeError). */
 export async function processImage(
-  input: PipelineInput,
+  input: ImageJobInput,
   onProgress?: ProgressCallback,
-): Promise<PipelineResult> {
+): Promise<ImageJobResult> {
   const report = progressReporter(onProgress);
   const notes = new Set<JobNote>();
   report(0);
 
   // 1–2. Decode, size (sizing rule only), resize, place on the exact canvas. The full-size
   // decoded pixels are dropped when this returns; only the output-size pixels are kept.
-  const { pixels, metadata, sourceFormat, graphic } = await decodeAndSize(input, notes, report);
+  const prepared = await decodeAndSize(input, notes, report);
+  const { pixels, metadata, sourceFormat, graphic } = prepared;
   const size: Size = { width: pixels.width, height: pixels.height };
 
   // 3. Encode (with the guard or the target search), apply metadata, score.
   const chosen = chooseFormat(input.format, sourceFormat);
   if (chosen.fallback) notes.add('format-fallback');
   const quality = clampQuality(input.quality);
-  const background = backgroundFor(input);
-  const encoder = new AttemptEncoder(pixels, graphic, background, metadata, input.metadata);
+  const encoder = new AttemptEncoder(pixels, graphic, input.background, metadata, input.metadata);
 
   const targetBytes = validTarget(input.targetBytes);
-  const guardOn = targetBytes === undefined && (input.qualityGuard ?? quality === DEFAULT_QUALITY);
+  // D28/D29: only default and preset runs say so; a quality the user set is never overridden.
+  const guardOn = targetBytes === undefined && input.qualityGuard === true;
+  const guardFormat = chosen.format;
   const budget =
-    targetBytes !== undefined ? TARGET_SEARCH.maxEncodes : guardOn ? guardBudget(quality) : 1;
+    targetBytes !== undefined
+      ? TARGET_SEARCH.maxEncodes
+      : guardOn
+        ? 1 + guardMaxSteps(guardFormat, quality)
+        : 1;
   // Never reaches the end of the encode span early (the guard's last-resort steps can exceed it).
   const encodeProgress = (done: number) =>
     report(
@@ -118,7 +89,7 @@ export async function processImage(
 
   const { format, attempt: first } = await encoder.firstAttempt(chosen.format, quality, notes);
   encodeProgress(1);
-  const extra: Pick<PipelineResult, 'guard' | 'suggestedSize' | 'suggestedFormat'> = {};
+  const extra: Pick<ImageJobResult, 'guard' | 'suggestedSize' | 'suggestedFormat'> = {};
   let best: Attempt = first;
 
   if (targetBytes !== undefined && format === 'png') {
@@ -140,16 +111,35 @@ export async function processImage(
     if (!target.reached) notes.add('target-unreachable');
     if (target.suggestedSize) extra.suggestedSize = target.suggestedSize;
   } else if (guardOn && format !== 'png') {
-    const guard = await guardQuality(first, encoder.memo(format, first), (step) =>
-      encodeProgress(step),
+    const guard = await guardQuality(
+      first,
+      encoder.memo(format, first),
+      (step) => encodeProgress(step),
+      guardPlan(format, quality),
     );
     best = guard.best;
     extra.guard = { steps: guard.steps, reached: guard.reached };
+    if (!guard.reached) notes.add('guard-short');
+  }
+
+  // D30: never make a file bigger at the same size and format — keep the original bytes.
+  const original = await keepOriginal(input, prepared, format, best, quality);
+  if (original) {
+    best = original;
+    notes.add('kept-original');
+    notes.delete('guard-short'); // the original's pixels are untouched
+    delete extra.guard;
+    if (targetBytes !== undefined && original.bytes <= targetBytes) {
+      notes.delete('target-unreachable');
+      delete extra.suggestedSize;
+      delete extra.suggestedFormat;
+    }
   }
   report(PROGRESS.encoded);
 
-  if (encoder.jpegOnly(format)) notes.add('metadata-jpeg-only');
-  const result: PipelineResult = {
+  // Kept originals that aren't JPEG keep their own details (only allowed when nothing had to go).
+  if (encoder.jpegOnly(format) && !original) notes.add('metadata-jpeg-only');
+  const result: ImageJobResult = {
     blob: best.blob,
     name: outputName(input.name, format),
     width: size.width,
@@ -175,10 +165,12 @@ interface Prepared {
   metadata: ImageMetadata;
   sourceFormat: DecodedImage['sourceFormat'];
   graphic: boolean;
+  /** The output pixels are exactly the file's own: decoded in full, not resized, cropped or padded. */
+  untouched: boolean;
 }
 
 async function decodeAndSize(
-  input: PipelineInput,
+  input: ImageJobInput,
   notes: Set<JobNote>,
   report: ProgressCallback,
 ): Promise<Prepared> {
@@ -194,13 +186,76 @@ async function decodeAndSize(
 
   const pixels = await sizePixels(decoded, input, notes);
   report(PROGRESS.resized);
-  return { pixels, metadata: decoded.metadata, sourceFormat: decoded.sourceFormat, graphic };
+  return {
+    pixels,
+    metadata: decoded.metadata,
+    sourceFormat: decoded.sourceFormat,
+    graphic,
+    untouched: pixels === decoded.pixels && !decoded.reducedFrom,
+  };
+}
+
+// ---------- D30: never bigger ----------
+
+/**
+ * Whether the original file may be returned instead of the re-encode (D30): its pixels are exactly
+ * what would be encoded (no resize, crop or padding), it is already in the output format, it
+ * doesn't rely on EXIF rotation (stripping would turn it sideways), and it carries no non-sRGB
+ * colour profile (decoding converted those colours). Non-JPEG files can't have metadata removed
+ * without re-encoding, so they qualify only when the policy has nothing to remove — judged from
+ * what decoding found (EXIF, ICC profile, GPS).
+ */
+export function canKeepOriginal(
+  prepared: Pick<Prepared, 'untouched' | 'sourceFormat' | 'metadata'>,
+  format: ImageFormat,
+  policy: MetadataPolicy,
+): boolean {
+  const { metadata: m } = prepared;
+  if (!prepared.untouched || prepared.sourceFormat !== format) return false;
+  if (m.orientation !== 1) return false;
+  if (m.iccProfile && !isSrgbProfile(m.iccProfile)) return false;
+  if (format === 'jpeg') return true;
+  switch (policy) {
+    case 'keep-all':
+      return true;
+    case 'strip-location':
+      return !m.hasLocation;
+    case 'strip-all':
+      return !m.exif && !m.iccProfile && !m.hasLocation;
+  }
+}
+
+/**
+ * The original file (metadata policy applied for JPEG), when the encoded result is no smaller and
+ * {@link canKeepOriginal} allows it. Quality is reported as requested (the source's is unknown);
+ * SSIM is 1 because the pixels are untouched.
+ */
+async function keepOriginal(
+  input: ImageJobInput,
+  prepared: Prepared,
+  format: ImageFormat,
+  best: Attempt,
+  quality: number,
+): Promise<Attempt | undefined> {
+  if (best.bytes < input.file.size || !canKeepOriginal(prepared, format, input.metadata)) {
+    return undefined;
+  }
+  let blob = new Blob([input.file], { type: MIME_TYPES[format] });
+  if (format === 'jpeg') {
+    try {
+      blob = (await applyMetadataDetailed(blob, prepared.metadata, input.metadata)).blob;
+    } catch {
+      return undefined; // a JPEG our segment parser can't rewrite: keep the re-encode
+    }
+  }
+  if (blob.size > best.bytes) return undefined;
+  return { quality, blob, bytes: blob.size, ssim: 1 };
 }
 
 /** Works out the output size with the sizing rule and produces those pixels. */
 async function sizePixels(
   decoded: DecodedImage,
-  input: PipelineInput,
+  input: ImageJobInput,
   notes: Set<JobNote>,
 ): Promise<ImageData> {
   const here: Size = { width: decoded.width, height: decoded.height };
@@ -368,12 +423,6 @@ export function padColour(css: string | undefined): Rgba {
   return [r, g, b, 255];
 }
 
-function backgroundFor(input: PipelineInput): string | undefined {
-  if (input.background) return input.background;
-  const pad = input.exact?.padColor;
-  return pad && pad.trim().toLowerCase() !== 'transparent' ? pad : undefined;
-}
-
 // ---------- format ----------
 
 const ENCODABLE: readonly ImageFormat[] = ['jpeg', 'png', 'webp', 'avif'];
@@ -524,10 +573,6 @@ class AttemptEncoder {
   }
 }
 
-function guardBudget(quality: number): number {
-  return 1 + Math.max(0, Math.ceil((GUARD.maxQuality - quality) / GUARD.step));
-}
-
 function validTarget(bytes: number | undefined): number | undefined {
   return typeof bytes === 'number' && Number.isFinite(bytes) && bytes > 0 ? bytes : undefined;
 }
@@ -586,7 +631,7 @@ function progressReporter(onProgress: ProgressCallback | undefined): ProgressCal
 const FORMATS: readonly OutputFormat[] = ['jpeg', 'png', 'webp', 'avif', 'keep'];
 const POLICIES: readonly MetadataPolicy[] = ['strip-all', 'keep-all', 'strip-location'];
 
-export function isPipelineInput(x: unknown): x is PipelineInput {
+export function isImageJobInput(x: unknown): x is ImageJobInput {
   if (typeof x !== 'object' || x === null) return false;
   const i = x as Record<string, unknown>;
   return (

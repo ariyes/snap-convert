@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Attempt } from './attempt';
-import { guardQuality } from './guard';
+import { guardMaxSteps, guardPlan, guardQuality } from './guard';
 
 function attempt(quality: number, ssim: number): Attempt {
   return { quality, blob: new Blob([]), bytes: quality * 1000, ssim };
@@ -49,6 +49,25 @@ describe('guardQuality', () => {
     expect(calls).toEqual([84, 88, 92, 96]);
     expect(r.best.quality).toBe(96);
     expect(r.best.ssim).toBeGreaterThanOrEqual(0.95);
+  });
+
+  it('AVIF (D31): at most 2 extra encodes, 80 → 86 → 92', async () => {
+    expect(guardPlan('avif', 80)).toEqual({ step: 6, maxSteps: 2 });
+    expect(guardMaxSteps('avif', 80)).toBe(2);
+    expect(guardMaxSteps('jpeg', 80)).toBe(3);
+    const { encodeAt, calls } = encoder(() => 0.93);
+    const r = await guardQuality(attempt(80, 0.92), encodeAt, undefined, guardPlan('avif', 80));
+    expect(calls).toEqual([86, 92]); // no last-resort steps past the cap
+    expect(r).toMatchObject({ steps: 2, reached: false });
+    const crisp = encoder((q) => (q >= 86 ? 0.975 : 0.96));
+    const ok = await guardQuality(
+      attempt(80, 0.96),
+      crisp.encodeAt,
+      undefined,
+      guardPlan('avif', 80),
+    );
+    expect(crisp.calls).toEqual([86]);
+    expect(ok.best.quality).toBe(86);
   });
 
   it('starting above 92 makes no extra encodes unless below 0.95', async () => {

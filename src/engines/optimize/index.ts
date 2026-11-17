@@ -1,7 +1,14 @@
 // M5 optimizer (P12): web presets, the quality guard and the target-size search.
 // Light code only (no codecs): safe to import from the UI for presets and warnings.
 export type { Attempt, EncodeAt } from './attempt';
-export { GUARD, guardQuality, type GuardResult } from './guard';
+export {
+  GUARD,
+  guardMaxSteps,
+  guardPlan,
+  guardQuality,
+  type GuardPlan,
+  type GuardResult,
+} from './guard';
 export {
   getPreset,
   minRecommendedSide,

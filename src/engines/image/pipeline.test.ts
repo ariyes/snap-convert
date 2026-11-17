@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ImageJobInput } from '@/core/contracts/image';
-import { chooseFormat, decodeHint, isPipelineInput, outputName, padColour } from './pipeline';
+import {
+  canKeepOriginal,
+  chooseFormat,
+  decodeHint,
+  isImageJobInput,
+  outputName,
+  padColour,
+} from './pipeline';
 
 const base: ImageJobInput = {
   file: new Blob([]),
@@ -77,15 +84,46 @@ describe('padColour', () => {
   });
 });
 
-describe('isPipelineInput', () => {
+describe('canKeepOriginal (D30)', () => {
+  const clean = { orientation: 1, hasLocation: false };
+  const ready = { untouched: true, sourceFormat: 'jpeg' as const, metadata: clean };
+
+  it('JPEG with untouched pixels in the same format qualifies under any policy', () => {
+    for (const policy of ['strip-all', 'keep-all', 'strip-location'] as const) {
+      expect(canKeepOriginal(ready, 'jpeg', policy)).toBe(true);
+    }
+  });
+
+  it('not when resized, converted, rotated by EXIF, or in a non-sRGB colour profile', () => {
+    expect(canKeepOriginal({ ...ready, untouched: false }, 'jpeg', 'strip-all')).toBe(false);
+    expect(canKeepOriginal(ready, 'webp', 'strip-all')).toBe(false);
+    const rotated = { ...ready, metadata: { ...clean, orientation: 6 } };
+    expect(canKeepOriginal(rotated, 'jpeg', 'strip-all')).toBe(false);
+    const p3 = { ...ready, metadata: { ...clean, iccProfile: new ArrayBuffer(200) } };
+    expect(canKeepOriginal(p3, 'jpeg', 'keep-all')).toBe(false);
+  });
+
+  it('other formats only when the policy has nothing to remove', () => {
+    const png = { ...ready, sourceFormat: 'png' as const };
+    expect(canKeepOriginal(png, 'png', 'strip-all')).toBe(true);
+    const withExif = { ...png, metadata: { ...clean, exif: new ArrayBuffer(8) } };
+    expect(canKeepOriginal(withExif, 'png', 'strip-all')).toBe(false);
+    expect(canKeepOriginal(withExif, 'png', 'keep-all')).toBe(true);
+    const withGps = { ...png, metadata: { ...clean, exif: new ArrayBuffer(8), hasLocation: true } };
+    expect(canKeepOriginal(withGps, 'png', 'strip-location')).toBe(false);
+    expect(canKeepOriginal(withExif, 'png', 'strip-location')).toBe(true);
+  });
+});
+
+describe('isImageJobInput', () => {
   it('accepts a valid job and rejects broken ones', () => {
-    expect(isPipelineInput(base)).toBe(true);
-    expect(isPipelineInput({ ...base, resize: { mode: 'longest', value: 10 } })).toBe(true);
-    expect(isPipelineInput({ ...base, qualityGuard: true, background: '#000' })).toBe(true);
-    expect(isPipelineInput(null)).toBe(false);
-    expect(isPipelineInput({ ...base, file: 'nope' })).toBe(false);
-    expect(isPipelineInput({ ...base, format: 'gif' })).toBe(false);
-    expect(isPipelineInput({ ...base, metadata: 'all' })).toBe(false);
-    expect(isPipelineInput({ ...base, exact: { width: 1 } })).toBe(false);
+    expect(isImageJobInput(base)).toBe(true);
+    expect(isImageJobInput({ ...base, resize: { mode: 'longest', value: 10 } })).toBe(true);
+    expect(isImageJobInput({ ...base, qualityGuard: true, background: '#000' })).toBe(true);
+    expect(isImageJobInput(null)).toBe(false);
+    expect(isImageJobInput({ ...base, file: 'nope' })).toBe(false);
+    expect(isImageJobInput({ ...base, format: 'gif' })).toBe(false);
+    expect(isImageJobInput({ ...base, metadata: 'all' })).toBe(false);
+    expect(isImageJobInput({ ...base, exact: { width: 1 } })).toBe(false);
   });
 });

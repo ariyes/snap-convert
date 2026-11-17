@@ -9,14 +9,14 @@ import {
   startImageWorker,
   twelveMegapixelJpeg,
 } from '../../../tests/quality/image-worker';
-import type { PipelineInput } from './pipeline';
+import type { ImageJobInput } from '@/core/contracts/image';
 import { presetJob } from '@/engines/optimize';
 import { colourDistance, corners, pixelAt } from './decode/test-utils';
 
 const worker = startImageWorker();
 afterAll(() => worker.stop());
 
-const job = (file: Blob, patch: Partial<PipelineInput> = {}): PipelineInput => ({
+const job = (file: Blob, patch: Partial<ImageJobInput> = {}): ImageJobInput => ({
   file,
   name: 'test.jpg',
   format: 'jpeg',
@@ -114,16 +114,27 @@ describe('transparency', () => {
     expect(colourDistance(pixelAt(px, 80, 30), [255, 64, 0])).toBeLessThan(24);
   });
 
-  it('PNG → JPEG defaults to white; exact padColor doubles as the background', async () => {
+  it('PNG → JPEG defaults to white; padColor is only for Fit padding, background for alpha', async () => {
     const png = await fixture('images/alpha.png');
     const white = await pixelsOf((await runJob(worker, job(png))).result.blob);
     expect(colourDistance(pixelAt(white, 10, 30), [255, 255, 255])).toBeLessThan(12);
+    // 90×60 fitted into 90×90: black padding above and below; transparent pixels on blue.
     const padded = await runJob(
       worker,
-      job(png, { exact: { width: 90, height: 60, fit: 'fit', padColor: '#000000' } }),
+      job(png, {
+        exact: { width: 90, height: 90, fit: 'fit', padColor: '#000000' },
+        background: '#0000ff',
+      }),
     );
-    const black = await pixelsOf(padded.result.blob);
-    expect(colourDistance(pixelAt(black, 10, 30), [0, 0, 0])).toBeLessThan(12);
+    const px = await pixelsOf(padded.result.blob);
+    expect(colourDistance(pixelAt(px, 45, 5), [0, 0, 0])).toBeLessThan(12);
+    expect(colourDistance(pixelAt(px, 10, 45), [0, 0, 255])).toBeLessThan(12);
+    const noBackground = await runJob(
+      worker,
+      job(png, { exact: { width: 90, height: 90, fit: 'fit', padColor: '#000000' } }),
+    );
+    const px2 = await pixelsOf(noBackground.result.blob);
+    expect(colourDistance(pixelAt(px2, 10, 45), [255, 255, 255])).toBeLessThan(12);
   });
 
   it('PNG → WebP keeps alpha', async () => {
@@ -240,6 +251,41 @@ describe('formats, metadata and notes', () => {
       job(await fixture('images/alpha.png'), { format: 'png', targetBytes: 10 }),
     );
     expect(alpha.result.suggestedFormat).toBe('webp'); // keeps transparency
+  }, 60_000);
+
+  it('D30: never bigger — the fine-detail photo at defaults keeps its original bytes', async () => {
+    const file = await fixture('quality/photo-fine-detail.jpg');
+    const { result } = await runJob(worker, job(file, { qualityGuard: true }));
+    expect(result.notes).toContain('kept-original');
+    expect(result.bytes).toBeLessThanOrEqual(file.size);
+    expect(result).toMatchObject({
+      format: 'jpeg',
+      quality: 80,
+      ssim: 1,
+      width: 4032,
+      height: 2268,
+    });
+    expect(result.guard).toBeUndefined();
+    // strip-all still applies: no EXIF block left in the kept file.
+    const bytes = new Uint8Array(await result.blob.arrayBuffer());
+    expect(new TextDecoder('latin1').decode(bytes.subarray(0, 65536))).not.toContain('Exif\0\0');
+    const px = await pixelsOf(result.blob);
+    expect([px.width, px.height]).toEqual([4032, 2268]);
+  }, 60_000);
+
+  it('D30 does not apply when resizing or converting', async () => {
+    const file = await fixture('quality/photo-fine-detail.jpg');
+    const webp = await runJob(worker, job(file, { format: 'webp', qualityGuard: true }));
+    expect(webp.result.notes).not.toContain('kept-original');
+    expect(webp.result.format).toBe('webp');
+  }, 60_000);
+
+  it('a guard that runs out of steps says so (guard-short)', async () => {
+    const night = await fixture('quality/photo-night-noise.jpg');
+    const { result } = await runJob(worker, presetJob('email', night, 'night.jpg'));
+    expect(result.guard).toEqual({ steps: 3, reached: false });
+    expect(result.notes).toContain('guard-short');
+    expect(result.ssim).toBeGreaterThanOrEqual(0.95);
   }, 60_000);
 
   it('a user-chosen quality is never overridden by the guard', async () => {

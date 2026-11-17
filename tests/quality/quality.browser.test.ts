@@ -6,7 +6,7 @@
 // Run with `pnpm quality` (add `--silent=false` in a non-interactive shell to see the table).
 import { afterAll, describe, expect, it } from 'vitest';
 import { QUALITY_FLOOR } from '@/core/contracts/image';
-import type { PipelineInput, PipelineResult } from '@/engines/image/pipeline';
+import type { ImageJobInput, ImageJobResult } from '@/core/contracts/image';
 import { PRESET_IDS, presetJob } from '@/engines/optimize';
 import {
   fixture,
@@ -35,10 +35,10 @@ type Kind = 'default' | 'preset' | 'target';
 interface Run {
   label: string;
   kind: Kind;
-  input: (file: Blob, name: string) => PipelineInput;
+  input: (file: Blob, name: string) => ImageJobInput;
 }
 
-const base = (file: Blob, name: string): PipelineInput => ({
+const base = (file: Blob, name: string): ImageJobInput => ({
   file,
   name,
   format: 'jpeg',
@@ -52,6 +52,11 @@ const RUNS: Run[] = [
     kind: 'default',
     input: (file, name) => ({ ...base(file, name), format, qualityGuard: true }),
   })),
+  {
+    label: 'default keep format',
+    kind: 'default',
+    input: (file, name) => ({ ...base(file, name), format: 'keep', qualityGuard: true }),
+  },
   ...PRESET_IDS.map((id): Run => ({
     label: `preset ${id}`,
     kind: 'preset',
@@ -74,7 +79,7 @@ interface Row {
   run: string;
   kind: Kind;
   inBytes: number;
-  result: PipelineResult;
+  result: ImageJobResult;
   ms: number;
   extra?: string;
 }
@@ -108,14 +113,24 @@ function check(row: Row): void {
   const what = `${row.image} · ${row.run}: SSIM ${result.ssim.toFixed(4)} at q${result.quality}`;
   // Nothing anywhere below 0.95.
   expect(result.ssim, what).toBeGreaterThanOrEqual(QUALITY_FLOOR.minSsim);
-  // Default settings: ≥ 0.97 on every reference image (D24).
-  if (kind === 'default')
-    expect(result.ssim, what).toBeGreaterThanOrEqual(QUALITY_FLOOR.defaultSsim);
-  // Presets run the guard too: if it can't reach 0.97 by quality 92 it must say so.
-  if (kind === 'preset' && result.ssim < QUALITY_FLOOR.defaultSsim) {
-    expect(result.guard?.reached, what).toBe(false);
-    expect(result.quality, what).toBeGreaterThanOrEqual(92);
+  // D30: a kept original is the untouched file, never bigger than the input.
+  if (result.notes.includes('kept-original')) {
+    expect(result.bytes, what).toBeLessThanOrEqual(row.inBytes);
+    expect(result.ssim, what).toBe(1);
+    return;
   }
+  // Defaults and presets run the guard: ≥ 0.97 when it reached it (D24, D28); otherwise it
+  // stopped at its cap and must say so.
+  if (kind === 'default' || kind === 'preset') {
+    if (result.guard?.reached) {
+      expect(result.ssim, what).toBeGreaterThanOrEqual(QUALITY_FLOOR.defaultSsim);
+    } else if (result.guard) {
+      expect(result.notes, what).toContain('guard-short');
+    }
+  }
+  // Lossless PNG has no guard; it must score ≈ 1 anyway.
+  if (kind === 'default' && !result.guard)
+    expect(result.ssim, what).toBeGreaterThanOrEqual(QUALITY_FLOOR.defaultSsim);
   if (kind === 'target')
     expect(result.quality, what).toBeGreaterThanOrEqual(QUALITY_FLOOR.minQuality);
 }
@@ -161,7 +176,7 @@ describe('quality report: reference images through the image worker', () => {
     const name = 'iphone-7 (12 MP JPEG)';
     // Warm-up so the timing below doesn't include loading codecs.
     await runJob(w!, presetJob('thumbnail', big, name));
-    const runs: Array<[string, Kind, PipelineInput]> = [
+    const runs: Array<[string, Kind, ImageJobInput]> = [
       ['preset web (timed)', 'preset', presetJob('web', big, name)],
       ['target 200 KB, full size', 'target', { ...base(big, name), targetBytes: 200_000 }],
       [
@@ -191,8 +206,10 @@ function kb(bytes: number): string {
 }
 
 function formatTable(all: Row[]): string {
+  const kept = all.filter((r) => r.result.notes.includes('kept-original'));
+  const scored = all.filter((r) => !r.result.notes.includes('kept-original'));
   const header = ['Image', 'Run', 'Output', 'Size', 'Saved', 'Q', 'SSIM', 'Guard', 'ms', 'Notes'];
-  const lines = all.map((r) => {
+  const lines = scored.map((r) => {
     const res = r.result;
     const saved = 1 - res.bytes / r.inBytes;
     const guard = res.guard ? `${res.guard.steps}${res.guard.reached ? '' : ' (short)'}` : '–';
@@ -220,6 +237,13 @@ function formatTable(all: Row[]): string {
     fmt(header),
     fmt(widths.map((w) => '-'.repeat(w))),
     ...lines.map(fmt),
+    '',
+    'Kept original (D30: re-encoding was no smaller, so the original file was kept, metadata policy applied):',
+    ...kept.map(
+      (r) =>
+        `- ${r.image} · ${r.run}: ${r.result.format} ${r.result.width}×${r.result.height}, ` +
+        `${kb(r.result.bytes)} (input ${kb(r.inBytes)}), ${r.result.encodes ?? 0} encodes, ${Math.round(r.ms)} ms`,
+    ),
     '',
   ].join('\n');
 }

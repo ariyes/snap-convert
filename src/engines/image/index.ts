@@ -4,14 +4,13 @@
 export {
   chooseFormat,
   decodeHint,
-  isPipelineInput,
+  canKeepOriginal,
+  isImageJobInput,
   outputName,
   padColour,
   placePixels,
   processImage,
   type JobNote,
-  type PipelineInput,
-  type PipelineResult,
   type ProgressCallback,
 } from './pipeline';
 export { decodeImage, DecodeError } from './decode';

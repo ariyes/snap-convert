@@ -3,7 +3,7 @@
 import * as Comlink from 'comlink';
 import { commands } from 'vitest/browser';
 import type { WorkerApi } from '@/core/contracts';
-import type { PipelineInput, PipelineResult } from '@/engines/image/pipeline';
+import type { ImageJobInput, ImageJobResult } from '@/core/contracts/image';
 
 export interface ImageWorker {
   api: Comlink.Remote<WorkerApi>;
@@ -19,13 +19,13 @@ export function startImageWorker(): ImageWorker {
 }
 
 export interface JobRun {
-  result: PipelineResult;
+  result: ImageJobResult;
   progress: number[];
   ms: number;
 }
 
 /** Runs one `process` job; also returns every progress value and how long it took. */
-export async function runJob(worker: ImageWorker, input: PipelineInput): Promise<JobRun> {
+export async function runJob(worker: ImageWorker, input: ImageJobInput): Promise<JobRun> {
   const progress: number[] = [];
   const start = performance.now();
   const result = (await worker.api.run(
@@ -34,7 +34,7 @@ export async function runJob(worker: ImageWorker, input: PipelineInput): Promise
     Comlink.proxy((p: number) => {
       progress.push(p);
     }),
-  )) as PipelineResult;
+  )) as ImageJobResult;
   const ms = performance.now() - start;
   // Progress calls travel on their own message channel and can land just after the result.
   await new Promise((resolve) => setTimeout(resolve, 20));
