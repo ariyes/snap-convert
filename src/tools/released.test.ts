@@ -6,20 +6,24 @@ import { getTool, isAvailable, ogImageUrl, RELEASED_LATER } from './registry';
 const released = RELEASED_LATER as Set<string>;
 
 describe('releasing a phase 2 tool (D39)', () => {
-  afterEach(() => released.delete('pdf-to-images'));
+  afterEach(() => released.delete('raw-to-jpg'));
 
   it('phase 1 tools are available and unreleased phase 2 tools are not', () => {
     expect(isAvailable(getTool('compress-image')!)).toBe(true);
-    expect(isAvailable(getTool('pdf-to-images')!)).toBe(false);
+    expect(isAvailable(getTool('raw-to-jpg')!)).toBe(false);
+  });
+
+  it('released phase 2 tools are available', () => {
+    expect(isAvailable(getTool('pdf-to-images')!)).toBe(true);
   });
 
   it('adding the id makes the tool available, with a real preview image and no "soon" chip', () => {
-    const tool = getTool('pdf-to-images')!;
+    const tool = getTool('raw-to-jpg')!;
     expect(ogImageUrl(tool)).toMatch(/og\/home\.png$/);
-    released.add('pdf-to-images');
+    released.add('raw-to-jpg');
     expect(isAvailable(tool)).toBe(true);
     expect(ogImageUrl(tool)).toMatch(/og\/images\.png$/);
-    const chip = suggestTools(countKinds(['pdf'])).find((s) => s.toolId === 'pdf-to-images');
+    const chip = suggestTools(countKinds(['raw'])).find((s) => s.toolId === 'raw-to-jpg');
     if (chip) expect(chip.soon).toBe(false);
   });
 });

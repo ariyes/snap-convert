@@ -43,6 +43,11 @@ describe('engineFor', () => {
     expect(engineFor('images-to-pdf')).toBe('pdf');
   });
 
+  it('maps released phase 2 tools to the worker they run on', () => {
+    // Pages are drawn with pdf.js on the page and encoded in the image worker.
+    expect(engineFor('pdf-to-images')).toBe('image');
+  });
+
   it('is null for the home page, other pages and coming-soon tools', () => {
     expect(engineFor(undefined)).toBeNull();
     expect(engineFor('privacy')).toBeNull();

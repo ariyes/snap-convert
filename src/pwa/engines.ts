@@ -24,6 +24,9 @@ export function engineFor(pageId: string | undefined): JobKind | null {
   const page = getPage(pageId);
   if (!page || !isAvailable(page)) return null;
   if (isFormatPage(page)) return 'image';
+  // PDF to images reads and draws pages with pdf.js (cached on first use like every engine file)
+  // and encodes them in the image worker.
+  if (page.id === 'pdf-to-images') return 'image';
   if (page.id === 'images-to-pdf' || page.accepts.includes('pdf')) return 'pdf';
   return 'image';
 }
