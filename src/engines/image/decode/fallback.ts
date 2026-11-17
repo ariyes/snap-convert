@@ -1,8 +1,9 @@
 // Decoding without OffscreenCanvas (older Safari workers): JPEG and WebP with jSquash's
 // WebAssembly decoders, PNG, GIF and BMP with our own TypeScript decoders. Loaded only in workers
-// that need it. Results match the canvas path: EXIF orientation applied, colours converted to sRGB
-// from the embedded ICC profile (or PNG's cHRM + gAMA), fully transparent pixels read back as
-// (0, 0, 0, 0) like a canvas returns them.
+// that need it. Results match the canvas path (fallback.browser.test.ts): EXIF orientation
+// applied, colours converted to sRGB from the embedded ICC profile (or PNG's gAMA / cHRM, read as
+// Chromium reads them). decodeImage then clears fully transparent pixels to (0, 0, 0, 0), as a
+// canvas returns them.
 
 import { applyColorTransform, iccToSrgb, pngChunksToSrgb, type ColorTransform } from './color';
 import type { ContainerInfo } from './container';

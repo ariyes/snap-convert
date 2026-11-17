@@ -77,7 +77,10 @@ afterAll(() => {
 });
 
 /** Largest difference over all pixels (alpha exact; colour straight when opaque, premultiplied otherwise). */
-function compare(a: Uint8ClampedArray, b: Uint8ClampedArray): { maxDiff: number; differing: number } {
+function compare(
+  a: Uint8ClampedArray,
+  b: Uint8ClampedArray,
+): { maxDiff: number; differing: number } {
   let maxDiff = 0;
   let differing = 0;
   for (let i = 0; i < a.length; i += 4) {
@@ -165,9 +168,13 @@ describe('fixtures decode to the same pixels without a canvas', () => {
     'sky-gradient.png',
     'text-screenshot.png',
     'line-art-logo.png',
-  ])('quality/%s', async (name) => {
-    await expectSame(`quality/${name}`, await fixture(`quality/${name}`));
-  }, 60_000);
+  ])(
+    'quality/%s',
+    async (name) => {
+      await expectSame(`quality/${name}`, await fixture(`quality/${name}`));
+    },
+    60_000,
+  );
 });
 
 // ---------- PNG: every colour type, bit depth, tRNS and Adam7 ----------
@@ -281,7 +288,10 @@ describe('colour profiles and PNG colour chunks match the browser', () => {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = (y * width + x) * 4;
-        img.data.set([(x * 255) / (width - 1), (y * 255) / (height - 1), 255 - (x * 2) % 256, 255], i);
+        img.data.set(
+          [(x * 255) / (width - 1), (y * 255) / (height - 1), 255 - ((x * 2) % 256), 255],
+          i,
+        );
       }
     }
     return img;
@@ -292,12 +302,19 @@ describe('colour profiles and PNG colour chunks match the browser', () => {
   it('JPEG with a Display P3 profile', async () => {
     const icc = await p3Profile();
     const jpeg = await encodeWithCanvas(colourCard(64, 48), 'image/jpeg', 0.95);
-    const payload = concat([new TextEncoder().encode('ICC_PROFILE\0'), new Uint8Array([1, 1]), icc]);
+    const payload = concat([
+      new TextEncoder().encode('ICC_PROFILE\0'),
+      new Uint8Array([1, 1]),
+      icc,
+    ]);
     const app2 = concat([
       new Uint8Array([0xff, 0xe2, (payload.length + 2) >> 8, (payload.length + 2) & 0xff]),
       payload,
     ]);
-    await expectSame('JPEG + Display P3 ICC', blob(concat([jpeg.subarray(0, 2), app2, jpeg.subarray(2)])));
+    await expectSame(
+      'JPEG + Display P3 ICC',
+      blob(concat([jpeg.subarray(0, 2), app2, jpeg.subarray(2)])),
+    );
   });
 
   it('PNG with a Display P3 iCCP profile', async () => {
@@ -457,8 +474,14 @@ describe('generated BMPs decode to the same pixels without a canvas', () => {
     return ((a << 24) | rgb) >>> 0;
   };
   const cases: Array<[string, BmpSpec]> = [
-    ['1-bit palette', { width: 29, height: 13, bpp: 1, pixel: px(1), palette: GIF_PALETTE.slice(0, 2) }],
-    ['4-bit palette', { width: 29, height: 13, bpp: 4, pixel: px(4), palette: GIF_PALETTE.slice(0, 16) }],
+    [
+      '1-bit palette',
+      { width: 29, height: 13, bpp: 1, pixel: px(1), palette: GIF_PALETTE.slice(0, 2) },
+    ],
+    [
+      '4-bit palette',
+      { width: 29, height: 13, bpp: 4, pixel: px(4), palette: GIF_PALETTE.slice(0, 16) },
+    ],
     ['8-bit palette', { width: 29, height: 13, bpp: 8, pixel: px(8), palette: GIF_PALETTE }],
     [
       '8-bit palette, OS/2 core header',
@@ -492,7 +515,13 @@ describe('generated BMPs decode to the same pixels without a canvas', () => {
     ],
     [
       '32-bit bit fields 10-10-10',
-      { width: 29, height: 13, bpp: 32, pixel: px(30), masks: [0x3ff00000, 0x000ffc00, 0x000003ff] },
+      {
+        width: 29,
+        height: 13,
+        bpp: 32,
+        pixel: px(30),
+        masks: [0x3ff00000, 0x000ffc00, 0x000003ff],
+      },
     ],
     [
       '32-bit v5 bit fields with alpha',

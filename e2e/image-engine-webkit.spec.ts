@@ -56,7 +56,10 @@ async function startHarness(): Promise<Harness> {
   await writeFile(path.join(outDir, 'index.html'), '<!doctype html><title>image engine</title>');
   const server: Server = createServer((req, res) => {
     void (async () => {
-      const rel = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname).replace(/^\/+/, '');
+      const rel = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname).replace(
+        /^\/+/,
+        '',
+      );
       const file = path.resolve(outDir, rel || 'index.html');
       if (!file.startsWith(outDir)) {
         res.writeHead(403).end();
@@ -122,7 +125,8 @@ async function runJob(
       try {
         const reply = await new Promise<{ type: string; name?: string; value: unknown }>(
           (resolve, reject) => {
-            worker.onmessage = (e) => resolve(e.data);
+            worker.onmessage = (e: MessageEvent<{ type: string; name?: string; value: unknown }>) =>
+              resolve(e.data);
             worker.onerror = (e) => reject(new Error(e.message));
             const job = { ...input, file: new Blob([bytes]), name };
             worker.postMessage({
@@ -295,7 +299,9 @@ test.describe('image engine in this browser', () => {
       const worker = new Worker('./image-worker.js', { type: 'module' });
       const reply = await new Promise<{ name?: string; value: { value?: { message?: string } } }>(
         (resolve) => {
-          worker.onmessage = (e) => resolve(e.data);
+          worker.onmessage = (
+            e: MessageEvent<{ name?: string; value: { value?: { message?: string } } }>,
+          ) => resolve(e.data);
           worker.postMessage({
             id: 'job',
             type: 'APPLY',
@@ -320,6 +326,9 @@ test.describe('image engine in this browser', () => {
       worker.terminate();
       return { name: reply.name, message: reply.value.value?.message };
     });
-    expect(broken).toEqual({ name: 'throw', message: "This file isn't an image Snap Convert can read" });
+    expect(broken).toEqual({
+      name: 'throw',
+      message: "This file isn't an image Snap Convert can read",
+    });
   });
 });

@@ -20,7 +20,7 @@ self.onmessage = async (event: MessageEvent<Blob>) => {
   const canvas = canvasAvailable();
   try {
     const img = await decodeImage(event.data);
-    const data = img.pixels.data as Uint8ClampedArray<ArrayBuffer>;
+    const data = img.pixels.data;
     const reply: PixelsReply = {
       ok: true,
       canvas,
@@ -31,7 +31,7 @@ self.onmessage = async (event: MessageEvent<Blob>) => {
       orientation: img.metadata.orientation,
       sourceFormat: img.sourceFormat,
     };
-    self.postMessage(reply, [data.buffer]);
+    self.postMessage(reply, { transfer: [data.buffer] });
   } catch (error: unknown) {
     const reply: PixelsReply = {
       ok: false,

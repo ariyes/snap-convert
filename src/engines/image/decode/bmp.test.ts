@@ -6,7 +6,11 @@ import { corrupt, random } from './testing/fuzz';
 import { writeBmp, type BmpSpec } from './testing/writers';
 
 const MAX = 16_000_000;
-const PALETTE = Array.from({ length: 256 }, (_, i): [number, number, number] => [i, 255 - i, (i * 7) & 255]);
+const PALETTE = Array.from({ length: 256 }, (_, i): [number, number, number] => [
+  i,
+  255 - i,
+  (i * 7) & 255,
+]);
 
 function values(seed: number, bits: number) {
   const rnd = random(seed);
@@ -27,7 +31,14 @@ describe('decodeBmp', () => {
   it.each([1, 4, 8] as const)('%i-bit palette, bottom-up and top-down', (bpp) => {
     for (const topDown of [false, true]) {
       const pixel = values(bpp, bpp);
-      const spec: BmpSpec = { width: 13, height: 7, bpp, pixel, palette: PALETTE.slice(0, 1 << bpp), topDown };
+      const spec: BmpSpec = {
+        width: 13,
+        height: 7,
+        bpp,
+        pixel,
+        palette: PALETTE.slice(0, 1 << bpp),
+        topDown,
+      };
       const img = decodeBmp(writeBmp(spec), MAX);
       expect([img.width, img.height]).toEqual([13, 7]);
       for (let y = 0; y < 7; y++) {
@@ -41,7 +52,10 @@ describe('decodeBmp', () => {
 
   it('8-bit palette with an OS/2 core header (3-byte palette entries)', () => {
     const pixel = values(9, 8);
-    const img = decodeBmp(writeBmp({ width: 5, height: 3, bpp: 8, pixel, palette: PALETTE, header: 12 }), MAX);
+    const img = decodeBmp(
+      writeBmp({ width: 5, height: 3, bpp: 8, pixel, palette: PALETTE, header: 12 }),
+      MAX,
+    );
     expect(Array.from(img.data.subarray(0, 4))).toEqual([...PALETTE[pixel(0, 0)]!, 255]);
   });
 
@@ -57,7 +71,10 @@ describe('decodeBmp', () => {
       255,
     ]);
     const p565 = values(11, 16);
-    const b = decodeBmp(writeBmp({ width: 6, height: 4, bpp: 16, pixel: p565, masks: [0xf800, 0x07e0, 0x001f] }), MAX);
+    const b = decodeBmp(
+      writeBmp({ width: 6, height: 4, bpp: 16, pixel: p565, masks: [0xf800, 0x07e0, 0x001f] }),
+      MAX,
+    );
     const w = p565(5, 3);
     const j = (3 * 6 + 5) * 4;
     expect(Array.from(b.data.subarray(j, j + 4))).toEqual([
@@ -77,11 +94,21 @@ describe('decodeBmp', () => {
   it('32-bit: BI_RGB is opaque; bit-field alpha is kept unless it is zero everywhere', () => {
     const px = (x: number) => ((x * 60) << 24) | 0x102030;
     const rgb = decodeBmp(writeBmp({ width: 4, height: 1, bpp: 32, pixel: px }), MAX);
-    expect(Array.from(rgb.data)).toEqual([16, 32, 48, 255, 16, 32, 48, 255, 16, 32, 48, 255, 16, 32, 48, 255]);
+    expect(Array.from(rgb.data)).toEqual([
+      16, 32, 48, 255, 16, 32, 48, 255, 16, 32, 48, 255, 16, 32, 48, 255,
+    ]);
     const masks = [0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000];
-    const alpha = decodeBmp(writeBmp({ width: 4, height: 1, bpp: 32, pixel: px, header: 124, masks }), MAX);
-    expect([alpha.data[3], alpha.data[7], alpha.data[11], alpha.data[15]]).toEqual([0, 60, 120, 180]);
-    const zero = decodeBmp(writeBmp({ width: 2, height: 1, bpp: 32, pixel: () => 0x405060, header: 124, masks }), MAX);
+    const alpha = decodeBmp(
+      writeBmp({ width: 4, height: 1, bpp: 32, pixel: px, header: 124, masks }),
+      MAX,
+    );
+    expect([alpha.data[3], alpha.data[7], alpha.data[11], alpha.data[15]]).toEqual([
+      0, 60, 120, 180,
+    ]);
+    const zero = decodeBmp(
+      writeBmp({ width: 2, height: 1, bpp: 32, pixel: () => 0x405060, header: 124, masks }),
+      MAX,
+    );
     expect([zero.data[3], zero.data[7]]).toEqual([255, 255]);
   });
 
@@ -98,9 +125,28 @@ describe('decodeBmp', () => {
   it('survives 2,000 random corruptions: readable error or a valid image, never a crash or hang', () => {
     const seeds = [
       new Uint8Array(readFileSync('tests/fixtures/images/sample.bmp')),
-      writeBmp({ width: 11, height: 9, bpp: 4, pixel: values(1, 4), palette: PALETTE.slice(0, 16) }),
-      writeBmp({ width: 11, height: 9, bpp: 16, pixel: values(2, 16), masks: [0xf800, 0x07e0, 0x001f] }),
-      writeBmp({ width: 11, height: 9, bpp: 32, pixel: values(3, 32), header: 124, masks: [0xff0000, 0xff00, 0xff, 0xff000000] }),
+      writeBmp({
+        width: 11,
+        height: 9,
+        bpp: 4,
+        pixel: values(1, 4),
+        palette: PALETTE.slice(0, 16),
+      }),
+      writeBmp({
+        width: 11,
+        height: 9,
+        bpp: 16,
+        pixel: values(2, 16),
+        masks: [0xf800, 0x07e0, 0x001f],
+      }),
+      writeBmp({
+        width: 11,
+        height: 9,
+        bpp: 32,
+        pixel: values(3, 32),
+        header: 124,
+        masks: [0xff0000, 0xff00, 0xff, 0xff000000],
+      }),
     ];
     const rnd = random(99);
     let errors = 0;

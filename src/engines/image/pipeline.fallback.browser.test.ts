@@ -39,25 +39,53 @@ describe('image jobs without OffscreenCanvas match the canvas path', () => {
   // Every source decodes to identical pixels without a canvas (fallback.browser.test.ts), so
   // these jobs must produce byte-identical files with identical scores.
   it.each<[string, string, Partial<ImageJobInput>]>([
-    ['EXIF-rotated JPEG → WebP, resized', 'images/orientation-6.jpg', { format: 'webp', resize: { mode: 'longest', value: 48 } }],
-    ['transparent PNG → JPEG on an hsl() background', 'images/alpha.png', { format: 'jpeg', background: 'hsl(200 50% 50%)' }],
-    ['transparent PNG → PNG, exact Fit padded with a named colour', 'images/alpha.png', { format: 'png', exact: { width: 120, height: 120, fit: 'fit', padColor: 'teal' } }],
+    [
+      'EXIF-rotated JPEG → WebP, resized',
+      'images/orientation-6.jpg',
+      { format: 'webp', resize: { mode: 'longest', value: 48 } },
+    ],
+    [
+      'transparent PNG → JPEG on an hsl() background',
+      'images/alpha.png',
+      { format: 'jpeg', background: 'hsl(200 50% 50%)' },
+    ],
+    [
+      'transparent PNG → PNG, exact Fit padded with a named colour',
+      'images/alpha.png',
+      { format: 'png', exact: { width: 120, height: 120, fit: 'fit', padColor: 'teal' } },
+    ],
     ['GIF → keep (JPEG)', 'images/sample.gif', { format: 'keep' }],
     ['BMP → PNG', 'images/sample.bmp', { format: 'png' }],
-    ['WebP → JPEG, exact Fill', 'images/sample.webp', { exact: { width: 64, height: 64, fit: 'fill' } }],
-    ['portrait phone photo (EXIF 6) → JPEG with the guard', 'quality/photo-portrait-exif-rotated.jpg', { qualityGuard: true, resize: { mode: 'longest', value: 1200 } }],
-    ['text screenshot PNG → WebP with the guard', 'quality/text-screenshot.png', { format: 'webp', qualityGuard: true }],
-  ])('%s', async (_label, path, patch) => {
-    const file = await fixture(path);
-    const [c, f] = await both(job(file, path, patch));
-    expect(f.result.width).toBe(c.result.width);
-    expect(f.result.height).toBe(c.result.height);
-    expect(f.result.format).toBe(c.result.format);
-    expect(f.result.notes).toEqual(c.result.notes);
-    expect(f.result.quality).toBe(c.result.quality);
-    expect(f.result.ssim).toBe(c.result.ssim);
-    expect(await bytesOf(f)).toEqual(await bytesOf(c));
-  }, 120_000);
+    [
+      'WebP → JPEG, exact Fill',
+      'images/sample.webp',
+      { exact: { width: 64, height: 64, fit: 'fill' } },
+    ],
+    [
+      'portrait phone photo (EXIF 6) → JPEG with the guard',
+      'quality/photo-portrait-exif-rotated.jpg',
+      { qualityGuard: true, resize: { mode: 'longest', value: 1200 } },
+    ],
+    [
+      'text screenshot PNG → WebP with the guard',
+      'quality/text-screenshot.png',
+      { format: 'webp', qualityGuard: true },
+    ],
+  ])(
+    '%s',
+    async (_label, path, patch) => {
+      const file = await fixture(path);
+      const [c, f] = await both(job(file, path, patch));
+      expect(f.result.width).toBe(c.result.width);
+      expect(f.result.height).toBe(c.result.height);
+      expect(f.result.format).toBe(c.result.format);
+      expect(f.result.notes).toEqual(c.result.notes);
+      expect(f.result.quality).toBe(c.result.quality);
+      expect(f.result.ssim).toBe(c.result.ssim);
+      expect(await bytesOf(f)).toEqual(await bytesOf(c));
+    },
+    120_000,
+  );
 
   it('web preset on the product photo: same file, same score', async () => {
     const file = await fixture('quality/photo-product-on-white.jpg');
@@ -88,7 +116,10 @@ describe('image jobs without OffscreenCanvas match the canvas path', () => {
 
   it('JPEG → AVIF: the result is scored with the canvas-free AVIF decoder', async () => {
     const file = await fixture('quality/photo-product-on-white.jpg');
-    const input = job(file, 'product.jpg', { format: 'avif', resize: { mode: 'longest', value: 400 } });
+    const input = job(file, 'product.jpg', {
+      format: 'avif',
+      resize: { mode: 'longest', value: 400 },
+    });
     const [c, f] = await both(input);
     expect(f.result.format).toBe('avif');
     expect([f.result.width, f.result.height]).toEqual([c.result.width, c.result.height]);

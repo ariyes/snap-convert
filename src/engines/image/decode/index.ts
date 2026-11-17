@@ -264,15 +264,11 @@ async function decodeCanvasFree(
     return await decodeWithoutCanvas(bytes, info, orientation, limits.maxPixels);
   } catch (error) {
     if (error instanceof PixelDecodeError && error.tooLarge) {
-      throw new DecodeError('too-large', decodeStrings.tooLarge(tooLargeMegapixels(info)));
+      throw new DecodeError('too-large', decodeStrings.tooLarge(Math.round(error.pixels / 1e6)));
     }
     if (error instanceof DecodeError) throw error;
     throw new DecodeError('unsupported', decodeStrings.unsupported);
   }
-}
-
-function tooLargeMegapixels(info: ContainerInfo): number {
-  return Math.round(((info.width ?? 0) * (info.height ?? 0)) / 1_000_000);
 }
 
 // ---------- WebAssembly decode (HEIC everywhere but Safari; AVIF in browsers without AVIF) ----------

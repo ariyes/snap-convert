@@ -6,7 +6,11 @@ import { corrupt, random } from './testing/fuzz';
 import { writeGif, type GifSpec } from './testing/writers';
 
 const MAX = 16_000_000;
-const PALETTE = Array.from({ length: 256 }, (_, i): [number, number, number] => [i, (i * 3) & 255, 255 - i]);
+const PALETTE = Array.from({ length: 256 }, (_, i): [number, number, number] => [
+  i,
+  (i * 3) & 255,
+  255 - i,
+]);
 
 function noise(seed: number, colours: number) {
   const rnd = random(seed);
@@ -41,23 +45,59 @@ function expected(spec: GifSpec): Uint8ClampedArray {
 
 describe('decodeGif', () => {
   const cases: Array<[string, GifSpec]> = [
-    ['2 colours', { width: 9, height: 5, palette: PALETTE.slice(0, 2), frame: { width: 9, height: 5, index: noise(1, 2) } }],
-    ['16 colours', { width: 31, height: 17, palette: PALETTE.slice(0, 16), frame: { width: 31, height: 17, index: noise(2, 16) } }],
+    [
+      '2 colours',
+      {
+        width: 9,
+        height: 5,
+        palette: PALETTE.slice(0, 2),
+        frame: { width: 9, height: 5, index: noise(1, 2) },
+      },
+    ],
+    [
+      '16 colours',
+      {
+        width: 31,
+        height: 17,
+        palette: PALETTE.slice(0, 16),
+        frame: { width: 31, height: 17, index: noise(2, 16) },
+      },
+    ],
     [
       '256-colour noise (dictionary fills and clears)',
-      { width: 200, height: 150, palette: PALETTE, frame: { width: 200, height: 150, index: noise(3, 256) } },
+      {
+        width: 200,
+        height: 150,
+        palette: PALETTE,
+        frame: { width: 200, height: 150, index: noise(3, 256) },
+      },
     ],
     [
       'long runs (long dictionary chains)',
-      { width: 300, height: 40, palette: PALETTE.slice(0, 4), frame: { width: 300, height: 40, index: (x) => (x > 150 ? 1 : 0) } },
+      {
+        width: 300,
+        height: 40,
+        palette: PALETTE.slice(0, 4),
+        frame: { width: 300, height: 40, index: (x) => (x > 150 ? 1 : 0) },
+      },
     ],
     [
       'interlaced',
-      { width: 23, height: 19, palette: PALETTE.slice(0, 8), frame: { width: 23, height: 19, index: noise(4, 8), interlaced: true } },
+      {
+        width: 23,
+        height: 19,
+        palette: PALETTE.slice(0, 8),
+        frame: { width: 23, height: 19, index: noise(4, 8), interlaced: true },
+      },
     ],
     [
       'transparent index',
-      { width: 12, height: 12, palette: PALETTE.slice(0, 4), frame: { width: 12, height: 12, index: noise(5, 4), transparent: 2 } },
+      {
+        width: 12,
+        height: 12,
+        palette: PALETTE.slice(0, 4),
+        frame: { width: 12, height: 12, index: noise(5, 4), transparent: 2 },
+      },
     ],
     [
       'offset frame with a local palette, partly off-screen',
@@ -65,12 +105,25 @@ describe('decodeGif', () => {
         width: 20,
         height: 10,
         palette: PALETTE.slice(0, 2),
-        frame: { left: 15, top: 4, width: 10, height: 10, index: noise(6, 8), localPalette: PALETTE.slice(50, 58) },
+        frame: {
+          left: 15,
+          top: 4,
+          width: 10,
+          height: 10,
+          index: noise(6, 8),
+          localPalette: PALETTE.slice(50, 58),
+        },
       },
     ],
     [
       'second frame ignored',
-      { width: 8, height: 8, palette: PALETTE.slice(0, 4), frame: { width: 8, height: 8, index: noise(7, 4) }, secondFrame: true },
+      {
+        width: 8,
+        height: 8,
+        palette: PALETTE.slice(0, 4),
+        frame: { width: 8, height: 8, index: noise(7, 4) },
+        secondFrame: true,
+      },
     ],
   ];
 
@@ -87,7 +140,12 @@ describe('decodeGif', () => {
   });
 
   it('leaves the rest transparent when the data stops early', () => {
-    const spec: GifSpec = { width: 50, height: 50, palette: PALETTE.slice(0, 4), frame: { width: 50, height: 50, index: () => 1 } };
+    const spec: GifSpec = {
+      width: 50,
+      height: 50,
+      palette: PALETTE.slice(0, 4),
+      frame: { width: 50, height: 50, index: () => 1 },
+    };
     const bytes = writeGif(spec);
     const cut = bytes.slice(0, bytes.length - 6);
     const img = decodeGif(cut, MAX);
@@ -97,10 +155,21 @@ describe('decodeGif', () => {
 
   it('refuses broken files with PixelDecodeError', () => {
     expect(() => decodeGif(new TextEncoder().encode('GIF89a'), MAX)).toThrow(PixelDecodeError);
-    expect(() => decodeGif(new TextEncoder().encode('hello world, no gif'), MAX)).toThrow(PixelDecodeError);
-    const noTable = writeGif({ width: 4, height: 4, frame: { width: 4, height: 4, index: () => 0 } });
+    expect(() => decodeGif(new TextEncoder().encode('hello world, no gif'), MAX)).toThrow(
+      PixelDecodeError,
+    );
+    const noTable = writeGif({
+      width: 4,
+      height: 4,
+      frame: { width: 4, height: 4, index: () => 0 },
+    });
     expect(() => decodeGif(noTable, MAX)).toThrow(/colour table/);
-    const big = writeGif({ width: 4000, height: 4000, palette: PALETTE.slice(0, 2), frame: { width: 1, height: 1, index: () => 0 } });
+    const big = writeGif({
+      width: 4000,
+      height: 4000,
+      palette: PALETTE.slice(0, 2),
+      frame: { width: 1, height: 1, index: () => 0 },
+    });
     expect(() => decodeGif(big, 1_000_000)).toThrow(/too large/);
   });
 

@@ -34,7 +34,7 @@ describe('inflate', () => {
 
   it('throws on broken data, with and without DecompressionStream', async () => {
     const broken = compressed.slice(0, 100);
-    broken[50] ^= 0xff;
+    broken[50] = broken[50]! ^ 0xff;
     await expect(inflate(broken, data.length)).rejects.toThrow();
     vi.stubGlobal('DecompressionStream', undefined);
     await expect(inflate(new Uint8Array([1, 2, 3, 4]))).rejects.toThrow();

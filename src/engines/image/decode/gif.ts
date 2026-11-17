@@ -60,7 +60,7 @@ export function decodeGif(bytes: Uint8Array, maxPixels: number): RawImage {
         screenH = top + fh;
       }
       checkDimensions(screenW, screenH, maxPixels);
-      if (fw * fh > maxPixels) throw new PixelDecodeError('frame too large', true);
+      if (fw * fh > maxPixels) throw new PixelDecodeError('frame too large', true, fw * fh);
       const minCodeSize = bytes[at++];
       if (minCodeSize === undefined || minCodeSize < 1 || minCodeSize > 11) {
         throw new PixelDecodeError('bad LZW code size');
@@ -112,7 +112,11 @@ function collectSubBlocks(b: Uint8Array, from: number): Uint8Array {
  * LZW-decodes up to `count` palette indices. Stops at the end code, at the end of the data, or at
  * an invalid code; indices not reached are reported by `filled` (the rest of the array is unused).
  */
-function lzw(data: Uint8Array, minCodeSize: number, count: number): { out: Uint8Array; filled: number } {
+function lzw(
+  data: Uint8Array,
+  minCodeSize: number,
+  count: number,
+): { out: Uint8Array; filled: number } {
   const out = new Uint8Array(count);
   const prefix = new Uint16Array(MAX_CODE);
   const suffix = new Uint8Array(MAX_CODE);

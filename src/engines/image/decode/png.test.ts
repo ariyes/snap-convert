@@ -12,7 +12,8 @@ function expected(spec: PngSpec): Uint8ClampedArray {
   const { width, height, colorType, depth } = spec;
   const out = new Uint8ClampedArray(width * height * 4);
   const max = (1 << depth) - 1;
-  const to8 = (v: number) => (depth === 16 ? v >> 8 : depth === 8 ? v : Math.round((v * 255) / max));
+  const to8 = (v: number) =>
+    depth === 16 ? v >> 8 : depth === 8 ? v : Math.round((v * 255) / max);
   const key = (i: number) => (spec.trns ? (spec.trns[i * 2]! << 8) | spec.trns[i * 2 + 1]! : -1);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -41,14 +42,21 @@ function samplesFor(colorType: number, depth: number, seed: number): PngSpec['sa
   return (x, y) => {
     let v = cache.get(y * 10000 + x);
     if (!v) {
-      v = Array.from({ length: channels }, () => Math.floor(rnd() * (max + 1)) & ((1 << depth) - 1));
+      v = Array.from(
+        { length: channels },
+        () => Math.floor(rnd() * (max + 1)) & ((1 << depth) - 1),
+      );
       cache.set(y * 10000 + x, v);
     }
     return v;
   };
 }
 
-const PALETTE = Array.from({ length: 16 }, (_, i): [number, number, number] => [i * 16, 255 - i * 9, i * 5]);
+const PALETTE = Array.from({ length: 16 }, (_, i): [number, number, number] => [
+  i * 16,
+  255 - i * 9,
+  i * 5,
+]);
 
 const COMBOS: Array<[PngSpec['colorType'], PngSpec['depth']]> = [
   [0, 1],
@@ -97,8 +105,22 @@ describe('decodePng', () => {
 
   it('applies tRNS colour keys and palette alpha', async () => {
     const specs: PngSpec[] = [
-      { width: 9, height: 7, colorType: 0, depth: 4, samples: samplesFor(0, 4, 1), trns: new Uint8Array([0, 5]) },
-      { width: 9, height: 7, colorType: 0, depth: 16, samples: samplesFor(0, 16, 2), trns: new Uint8Array([0x80, 0]) },
+      {
+        width: 9,
+        height: 7,
+        colorType: 0,
+        depth: 4,
+        samples: samplesFor(0, 4, 1),
+        trns: new Uint8Array([0, 5]),
+      },
+      {
+        width: 9,
+        height: 7,
+        colorType: 0,
+        depth: 16,
+        samples: samplesFor(0, 16, 2),
+        trns: new Uint8Array([0x80, 0]),
+      },
       {
         width: 9,
         height: 7,
@@ -137,7 +159,10 @@ describe('decodePng', () => {
     expect(out.gamma).toBeCloseTo(0.55556, 5);
     expect(out.chromaticities?.red).toEqual([0.64, 0.33]);
     expect(out).toMatchObject({ srgb: false, iccp: false });
-    const srgb = await decodePng(writePng({ ...base, chunks: [{ type: 'sRGB', data: new Uint8Array([0]) }] }), MAX);
+    const srgb = await decodePng(
+      writePng({ ...base, chunks: [{ type: 'sRGB', data: new Uint8Array([0]) }] }),
+      MAX,
+    );
     expect(srgb.srgb).toBe(true);
   });
 
@@ -152,16 +177,22 @@ describe('decodePng', () => {
     });
     const text = findChunk(png, 'tEXt');
     const badText = png.slice();
-    badText[text + 9] ^= 0xff;
+    badText[text + 9] = badText[text + 9]! ^ 0xff;
     await expect(decodePng(badText, MAX)).resolves.toBeDefined();
     const idat = findChunk(png, 'IDAT');
     const badIdat = png.slice();
-    badIdat[idat + 9] ^= 0xff;
+    badIdat[idat + 9] = badIdat[idat + 9]! ^ 0xff;
     await expect(decodePng(badIdat, MAX)).rejects.toThrow(/bad CRC in IDAT/);
   });
 
   it('refuses broken files with PixelDecodeError', async () => {
-    const good = writePng({ width: 8, height: 8, colorType: 6, depth: 8, samples: () => [1, 2, 3, 4] });
+    const good = writePng({
+      width: 8,
+      height: 8,
+      colorType: 6,
+      depth: 8,
+      samples: () => [1, 2, 3, 4],
+    });
     await expect(decodePng(new Uint8Array([1, 2, 3]), MAX)).rejects.toThrow(PixelDecodeError);
     await expect(decodePng(good.slice(0, 40), MAX)).rejects.toThrow(PixelDecodeError);
     // Palette image without PLTE.
@@ -191,8 +222,22 @@ describe('decodePng', () => {
   it('survives 2,000 random corruptions: readable error or a valid image, never a crash or hang', async () => {
     const seeds: Uint8Array[] = [
       new Uint8Array(readFileSync('tests/fixtures/images/alpha.png')),
-      writePng({ width: 21, height: 13, colorType: 6, depth: 16, interlaced: true, samples: samplesFor(6, 16, 7) }),
-      writePng({ width: 30, height: 11, colorType: 3, depth: 2, samples: samplesFor(3, 2, 8), palette: PALETTE.slice(0, 4) }),
+      writePng({
+        width: 21,
+        height: 13,
+        colorType: 6,
+        depth: 16,
+        interlaced: true,
+        samples: samplesFor(6, 16, 7),
+      }),
+      writePng({
+        width: 30,
+        height: 11,
+        colorType: 3,
+        depth: 2,
+        samples: samplesFor(3, 2, 8),
+        palette: PALETTE.slice(0, 4),
+      }),
     ];
     const rnd = random(2024);
     let errors = 0;
@@ -229,7 +274,10 @@ function corruptChunk(png: Uint8Array, rnd: () => number): Uint8Array {
   let at = 8;
   while (at + 12 <= png.length) {
     const len = new DataView(png.buffer, png.byteOffset).getUint32(at);
-    chunks.push({ type: String.fromCharCode(...png.subarray(at + 4, at + 8)), data: png.subarray(at + 8, at + 8 + len) });
+    chunks.push({
+      type: String.fromCharCode(...png.subarray(at + 4, at + 8)),
+      data: png.subarray(at + 8, at + 8 + len),
+    });
     at += 12 + len;
   }
   const target = Math.floor(rnd() * chunks.length);

@@ -16,10 +16,13 @@ export interface RawImage {
  */
 export class PixelDecodeError extends Error {
   readonly tooLarge: boolean;
-  constructor(message: string, tooLarge = false) {
+  /** For `tooLarge`: the pixel count that was refused. */
+  readonly pixels: number;
+  constructor(message: string, tooLarge = false, pixels = 0) {
     super(message);
     this.name = 'PixelDecodeError';
     this.tooLarge = tooLarge;
+    this.pixels = pixels;
   }
 }
 
@@ -29,7 +32,7 @@ export function checkDimensions(width: number, height: number, maxPixels: number
     throw new PixelDecodeError(`bad image size ${width}×${height}`);
   }
   if (width * height > maxPixels) {
-    throw new PixelDecodeError(`image too large: ${width}×${height}`, true);
+    throw new PixelDecodeError(`image too large: ${width}×${height}`, true, width * height);
   }
 }
 
