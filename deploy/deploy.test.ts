@@ -28,6 +28,7 @@ import {
   allowedScriptHashes,
   CACHE_IMMUTABLE,
   CACHE_NO_CACHE,
+  CACHE_WEEK,
   contentSecurityPolicy,
   HASHES_PLACEHOLDER,
   inlineScripts,
@@ -147,6 +148,7 @@ void describe('nginx-snap-convert.conf', () => {
       cache(byMatch('~ ^/snap-convert/(?:icons|og)/')),
       pathRule('/snap-convert/og/a.png').cacheControl,
     );
+    assert.equal(pathRule('/snap-convert/icons/a.png').cacheControl, CACHE_WEEK);
     assert.equal(pathRule('/snap-convert/sw.js').cacheControl, CACHE_NO_CACHE);
     assert.equal(pathRule('/snap-convert/assets/a.wasm').cacheControl, CACHE_IMMUTABLE);
     for (const [match, file] of [

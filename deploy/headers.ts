@@ -18,6 +18,8 @@ export const HASHES_PLACEHOLDER = '__SCRIPT_HASHES__';
 
 export const CACHE_NO_CACHE = 'no-cache';
 export const CACHE_IMMUTABLE = 'public, max-age=31536000, immutable';
+/** Unhashed but rarely changed files (icons/, og/): one week. */
+export const CACHE_WEEK = 'public, max-age=604800';
 
 /** Every header except the CSP, sent on every response (HTML, JS, wasm, workers, 404s). */
 export const SECURITY_HEADERS: ReadonlyArray<readonly [name: string, value: string]> = [
@@ -134,7 +136,7 @@ export function pathRule(pathname: string): PathRule {
       return { cacheControl: CACHE_IMMUTABLE, contentType: 'text/javascript' };
     return { cacheControl: CACHE_IMMUTABLE };
   }
-  if (rel.startsWith('icons/') || rel.startsWith('og/')) return { cacheControl: CACHE_IMMUTABLE };
+  if (rel.startsWith('icons/') || rel.startsWith('og/')) return { cacheControl: CACHE_WEEK };
   if (rel === 'manifest.webmanifest') {
     return { cacheControl: CACHE_NO_CACHE, contentType: 'application/manifest+json' };
   }
