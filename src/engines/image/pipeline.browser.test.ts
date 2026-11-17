@@ -10,8 +10,10 @@ import {
   twelveMegapixelJpeg,
 } from '../../../tests/quality/image-worker';
 import type { ImageJobInput } from '@/core/contracts/image';
-import { presetJob } from '@/engines/optimize';
+import { GUARD_SAMPLE, presetJob } from '@/engines/optimize';
 import { colourDistance, corners, pixelAt } from './decode/test-utils';
+import { encodeImage } from './encode';
+import { flattenOnto } from './encode/background';
 
 const worker = startImageWorker();
 afterAll(() => worker.stop());
@@ -173,7 +175,72 @@ describe('graphics', () => {
     const product = await runJob(worker, job(await fixture('quality/photo-product-on-white.jpg')));
     expect(product.result.graphic).toBe(false);
   });
+
+  // P24b F1: a logo with soft shadows → JPG at defaults must not get colour fringes (4:2:0).
+  it('soft-shadow logo → JPG: a graphic, with no more edge colour error than 4:4:4', async () => {
+    const png = await fixture('quality/logo-soft-shadow.png');
+    const { result } = await runJob(worker, job(png, { qualityGuard: true }));
+    expect(result.graphic).toBe(true);
+    expect(result.format).toBe('jpeg');
+
+    const source = toImageData(flattenOnto(await pixelsOf(png), [255, 255, 255]));
+    const edges = colourEdges(source);
+    expect(edges.length).toBeGreaterThan(1000);
+    const error = async (blob: Blob) => edgeChromaError(source, await pixelsOf(blob), edges);
+    const at = (graphic: boolean) =>
+      encodeImage(source, { format: 'jpeg', quality: result.quality }, { graphic });
+    const ours = await error(result.blob);
+    const full = await error(await at(true)); // 4:4:4 reference
+    const subsampled = await error(await at(false)); // 4:2:0, as before the fix
+    const detail = `edge chroma error: ours ${ours.toFixed(2)}, 4:4:4 ${full.toFixed(2)}, 4:2:0 ${subsampled.toFixed(2)}`;
+    expect(ours, detail).toBeLessThanOrEqual(full * 1.05 + 0.05);
+    // The measure does see fringes: 4:2:0 is clearly worse on these edges.
+    expect(subsampled, detail).toBeGreaterThan(full * 1.5);
+  });
 });
+
+/** Pixels (index) where the colour (not just brightness) changes sharply to the next pixel. */
+function colourEdges(img: ImageData): number[] {
+  const out: number[] = [];
+  const { width, height } = img;
+  for (let y = 0; y + 1 < height; y++) {
+    for (let x = 0; x + 1 < width; x++) {
+      const i = y * width + x;
+      const [cb, cr] = chroma(img.data, i);
+      const [rb, rr] = chroma(img.data, i + 1);
+      const [db, dr] = chroma(img.data, i + width);
+      if (Math.max(Math.abs(cb - rb), Math.abs(cr - rr), Math.abs(cb - db), Math.abs(cr - dr)) > 16)
+        out.push(i);
+    }
+  }
+  return out;
+}
+
+/** Mean Cb/Cr distance (BT.601) between two images over the given pixels, both sides of each edge. */
+function edgeChromaError(a: ImageData, b: ImageData, edges: number[]): number {
+  let total = 0;
+  for (const i of edges) {
+    for (const j of [i, i + 1, i + a.width]) {
+      const [ab, ar] = chroma(a.data, j);
+      const [bb, br] = chroma(b.data, j);
+      total += Math.hypot(ab - bb, ar - br);
+    }
+  }
+  return total / (edges.length * 3);
+}
+
+function chroma(d: Uint8ClampedArray, i: number): [number, number] {
+  const r = d[i * 4]!;
+  const g = d[i * 4 + 1]!;
+  const b = d[i * 4 + 2]!;
+  return [-0.1687 * r - 0.3313 * g + 0.5 * b, 0.5 * r - 0.4187 * g - 0.0813 * b];
+}
+
+function toImageData(p: { width: number; height: number; data: Uint8ClampedArray }): ImageData {
+  return p instanceof ImageData
+    ? p
+    : new ImageData(new Uint8ClampedArray(p.data), p.width, p.height);
+}
 
 describe('formats, metadata and notes', () => {
   it('keep: GIF becomes JPEG with a format-fallback note; PNG stays PNG', async () => {
@@ -314,6 +381,23 @@ describe('12 MP photo (4032×3024 JPEG)', () => {
     expect(result.ssim).toBeGreaterThanOrEqual(0.97);
     expect(ms, `${Math.round(ms)} ms`).toBeLessThan(3000);
   });
+
+  // P24b F2: above 8 MP the guard finds its quality on a sample, then encodes the full image once.
+  it.each(['jpeg', 'webp'] as const)(
+    'defaults in %s at full size: guarded on a sample, few full-size encodes',
+    async (format) => {
+      const { result, progress } = await runJob(worker, job(big, { format, qualityGuard: true }));
+      const detail = JSON.stringify({ ...result, blob: undefined });
+      expect([result.width, result.height]).toEqual([4032, 3024]);
+      expect(result.guard, detail).toBeDefined();
+      expect(result.encodes, detail).toBeLessThanOrEqual(1 + GUARD_SAMPLE.maxFullSteps);
+      if (result.guard!.reached) expect(result.ssim).toBeGreaterThanOrEqual(0.97);
+      expect(result.ssim).toBeGreaterThanOrEqual(0.95);
+      expect(progress).toEqual([...progress].sort((a, b) => a - b));
+      expect(progress.at(-1)).toBe(1);
+    },
+    60_000,
+  );
 
   it('target 200 KB at full size is unreachable: floor result plus a resize suggestion', async () => {
     const { result } = await runJob(worker, job(big, { targetBytes: 200_000 }));

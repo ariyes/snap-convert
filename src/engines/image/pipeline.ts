@@ -16,6 +16,16 @@ import type { ExactOptions, Placement, Rect, ResizeOptions, Size } from '@/core/
 import { exactPlacement, fitSize } from '@/core/sizing';
 import type { Attempt } from '@/engines/optimize/attempt';
 import { guardMaxSteps, guardPlan, guardQuality } from '@/engines/optimize/guard';
+import {
+  cutSample,
+  GUARD_SAMPLE,
+  guardFromPrediction,
+  predictGuardQuality,
+  sampleGrid,
+  usesGuardSample,
+  type GuardPrediction,
+  type GuardSampleMode,
+} from '@/engines/optimize/sample';
 import { findQualityForTarget, sizeForTarget, TARGET_SEARCH } from '@/engines/optimize/target';
 import { decodeImage } from './decode';
 import { canvasAvailable } from './decode/canvas';
@@ -50,10 +60,19 @@ const TRANSPARENT: Rgba = [0, 0, 0, 0];
 
 // ---------- the job ----------
 
+export interface ProcessOptions {
+  /**
+   * The quality guard on huge images runs on a sample first (P24b). 'auto' (the app): JPEG/WebP
+   * above 8 MP. 'always' / 'never': tests comparing the two.
+   */
+  guardSample?: GuardSampleMode;
+}
+
 /** Runs one image job. Throws user-readable errors (DecodeError, ImageEncodeError). */
 export async function processImage(
   input: ImageJobInput,
   onProgress?: ProgressCallback,
+  options: ProcessOptions = {},
 ): Promise<ImageJobResult> {
   const report = progressReporter(onProgress);
   const notes = new Set<JobNote>();
@@ -75,12 +94,17 @@ export async function processImage(
   // D28/D29: only default and preset runs say so; a quality the user set is never overridden.
   const guardOn = targetBytes === undefined && input.qualityGuard === true;
   const guardFormat = chosen.format;
+  // P24b: on huge images the guard first finds its quality on a sample (one progress slot), then
+  // encodes the full image once at that quality, plus at most GUARD_SAMPLE.maxFullSteps more.
+  const sampled = guardOn && usesGuardSample(guardFormat, size, options.guardSample);
   const budget =
     targetBytes !== undefined
       ? TARGET_SEARCH.maxEncodes
-      : guardOn
-        ? 1 + guardMaxSteps(guardFormat, quality)
-        : 1;
+      : sampled
+        ? 2 + GUARD_SAMPLE.maxFullSteps
+        : guardOn
+          ? 1 + guardMaxSteps(guardFormat, quality)
+          : 1;
   // Never reaches the end of the encode span early (the guard's last-resort steps can exceed it).
   const encodeProgress = (done: number) =>
     report(
@@ -88,8 +112,12 @@ export async function processImage(
         ((PROGRESS.encoded - PROGRESS.resized) * Math.min(done, budget - 0.5)) / budget,
     );
 
-  const { format, attempt: first } = await encoder.firstAttempt(chosen.format, quality, notes);
-  encodeProgress(1);
+  const prediction = sampled ? await encoder.predictOnSample(guardFormat, quality) : undefined;
+  const done = prediction ? 1 : 0; // progress slots used before the first full-size encode
+  if (prediction) encodeProgress(done);
+  const start = prediction?.quality ?? quality;
+  const { format, attempt: first } = await encoder.firstAttempt(chosen.format, start, notes);
+  encodeProgress(done + 1);
   const extra: Pick<ImageJobResult, 'guard' | 'suggestedSize' | 'suggestedFormat'> = {};
   let best: Attempt = first;
 
@@ -112,12 +140,13 @@ export async function processImage(
     if (!target.reached) notes.add('target-unreachable');
     if (target.suggestedSize) extra.suggestedSize = target.suggestedSize;
   } else if (guardOn && format !== 'png') {
-    const guard = await guardQuality(
-      first,
-      encoder.memo(format, first),
-      (step) => encodeProgress(step),
-      guardPlan(format, quality),
-    );
+    const plan = guardPlan(format, quality);
+    const onStep = (step: number) => encodeProgress(done + step);
+    // A format fallback means the sample's prediction was for another codec: guard as usual.
+    const guard =
+      prediction && format === guardFormat
+        ? await guardFromPrediction(first, encoder.memo(format, first), prediction, plan, onStep)
+        : await guardQuality(first, encoder.memo(format, first), onStep, plan);
     best = guard.best;
     extra.guard = { steps: guard.steps, reached: guard.reached };
     if (!guard.reached) notes.add('guard-short');
@@ -470,7 +499,10 @@ export function outputName(name: string, format: ImageFormat): string {
 
 // ---------- encoding ----------
 
-/** Encodes the prepared pixels, applies metadata and scores each result. Counts encodes. */
+/**
+ * Encodes the prepared pixels, applies metadata and scores each result. Counts full-size encodes
+ * (trial encodes on the guard's sample aren't counted: they take a fraction of the time).
+ */
 class AttemptEncoder {
   encodes = 0;
   readonly hasAlpha: boolean;
@@ -496,6 +528,39 @@ class AttemptEncoder {
 
   jpegOnly(format: ImageFormat): boolean {
     return this.jpegOnlyByFormat.get(format) ?? false;
+  }
+
+  /**
+   * P24b: runs the quality guard on a sample of the pixels — full-resolution tiles from all over
+   * the image (see src/engines/optimize/sample.ts) — and returns the quality it stops at. Only the
+   * score is needed, so no metadata. Undefined when the codec can't be used: the full-size encode
+   * then falls back to another format as usual.
+   */
+  async predictOnSample(
+    format: ImageFormat,
+    quality: number,
+  ): Promise<GuardPrediction | undefined> {
+    const px = this.pixelsFor(format);
+    const sample = toImageData(cutSample(px, sampleGrid(px)));
+    const encodeAt = async (q: number): Promise<Attempt> => {
+      const blob = await encodeImage(
+        sample,
+        { format, quality: q, progressive: true, background: this.background },
+        { graphic: this.graphic },
+      );
+      const score = ssim(sample, await decodeForScore(blob, sample));
+      return { quality: q, blob, bytes: blob.size, ssim: score };
+    };
+    try {
+      return await predictGuardQuality(
+        await encodeAt(quality),
+        encodeAt,
+        guardPlan(format, quality),
+      );
+    } catch (error) {
+      if (canFallBack(error)) return undefined;
+      throw error;
+    }
   }
 
   async encode(format: ImageFormat, quality: number): Promise<Attempt> {
