@@ -181,6 +181,14 @@ const COMPONENTS: readonly ComponentSpec[] = [
     licenseUrl: 'https://github.com/strukturag/libde265/blob/master/COPYING',
   },
   {
+    name: 'LibRaw 0.22.1',
+    role: 'Camera RAW decoder (WebAssembly), used when FlashRaw can’t read a file',
+    license: 'LGPL-2.1-only OR CDDL-1.0',
+    url: 'https://www.libraw.org/',
+    includedIn: '@colorhythm/libraw-wasm',
+    files: ['LibRaw/COPYRIGHT', 'LibRaw/LICENSE.LGPL', 'LibRaw/LICENSE.CDDL'],
+  },
+  {
     name: 'Emscripten runtime',
     role: 'Glue code that starts the WebAssembly codecs',
     license: 'MIT OR NCSA',
