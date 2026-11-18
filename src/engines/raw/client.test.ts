@@ -1,40 +1,48 @@
 // The RAW client's start and failure handling, with a stand-in Worker: a worker that can't start is
-// "unavailable" (and is tried once more from a blob module), never "out of memory"; only a worker
-// dying during a develop is out of memory.
+// "unavailable" (inside a worker the engine then runs right there), never "out of memory"; only a
+// worker dying during a develop is out of memory.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   closeRawWorker,
   rawDevelop,
+  rawEngineMode,
   rawInfo,
-  rawWorkerStart,
   RawWorkerError,
-  resetRawWorkerStart,
+  resetRawEngineMode,
 } from './client';
 import { RawDecodeError, toDecodeError } from './index';
 import type { RawFileInfo, RawRequest } from './protocol';
 import { rawStrings } from './strings';
 
+const INFO = { width: 6000, height: 4000 } as RawFileInfo;
+const HERE = { width: 1, height: 1 } as RawFileInfo;
+
+// The engine as it runs in-process (the real one needs WebAssembly).
+const engine = vi.hoisted(() => ({ inspect: vi.fn() }));
+vi.mock('./engine', () => ({
+  inspect: engine.inspect,
+  preview: vi.fn(),
+  develop: vi.fn(),
+  RawEngineError: class extends Error {},
+}));
+
 /** What a stand-in worker does: never start, start and answer, or start and die on a request. */
 type Behaviour = 'fail-start' | 'answer' | 'die-on-request';
 
-const INFO = { width: 6000, height: 4000 } as RawFileInfo;
-
 class FakeWorker {
   static plan: Behaviour[] = [];
-  static started: Array<{ url: string; behaviour: Behaviour }> = [];
+  static started: Behaviour[] = [];
   private listeners: Record<string, Array<(event: unknown) => void>> = {};
   private readonly behaviour: Behaviour;
   terminated = false;
 
-  constructor(url: string | URL) {
+  constructor() {
     this.behaviour = FakeWorker.plan.shift() ?? 'answer';
-    FakeWorker.started.push({ url: String(url), behaviour: this.behaviour });
+    FakeWorker.started.push(this.behaviour);
     setTimeout(() => {
-      if (this.behaviour === 'fail-start') {
-        this.emit('error', { message: '', preventDefault: () => undefined });
-      } else {
-        this.emit('message', { data: { type: 'ready' } });
-      }
+      // A browser that can't fetch the script: an error event without a message.
+      if (this.behaviour === 'fail-start') this.emit('error', { preventDefault: () => undefined });
+      else this.emit('message', { data: { type: 'ready' } });
     }, 0);
   }
 
@@ -73,41 +81,40 @@ const develop = {
 beforeEach(() => {
   FakeWorker.plan = [];
   FakeWorker.started = [];
+  engine.inspect.mockReset().mockResolvedValue(HERE);
   vi.stubGlobal('Worker', FakeWorker);
 });
 
 afterEach(() => {
   closeRawWorker();
-  resetRawWorkerStart();
+  resetRawEngineMode();
   vi.unstubAllGlobals();
 });
 
 describe('starting the RAW worker', () => {
-  it('starts from its URL when it can', async () => {
+  it('uses a RAW worker when one starts', async () => {
     await expect(rawInfo(file)).resolves.toEqual(INFO);
-    expect(FakeWorker.started).toHaveLength(1);
-    expect(FakeWorker.started[0]?.url).toMatch(/raw\.worker/);
-    expect(rawWorkerStart()).toBe('direct');
+    expect(FakeWorker.started).toEqual(['answer']);
+    expect(rawEngineMode()).toBe('worker');
+    expect(engine.inspect).not.toHaveBeenCalled();
   });
 
-  it('a worker whose script can’t be fetched is started from a blob module instead', async () => {
-    FakeWorker.plan = ['fail-start', 'answer'];
-    await expect(rawInfo(file)).resolves.toEqual(INFO);
-    expect(FakeWorker.started.map((s) => s.url.slice(0, 5))).toEqual([
-      expect.not.stringMatching(/^blob:/),
-      'blob:',
-    ]);
-    // Later workers here start that way straight away.
-    expect(rawWorkerStart()).toBe('blob');
+  it('inside a worker that can’t start one, the engine runs right there (from then on)', async () => {
+    vi.stubGlobal('document', undefined); // the image worker has no document
+    FakeWorker.plan = ['fail-start'];
+    await expect(rawInfo(file)).resolves.toEqual(HERE);
+    expect(rawEngineMode()).toBe('in-process');
+    await expect(rawInfo(file)).resolves.toEqual(HERE);
+    expect(FakeWorker.started).toHaveLength(1); // not tried again
+    expect(engine.inspect).toHaveBeenCalledTimes(2);
   });
 
-  it('if neither way starts, requests fail as unavailable, not out of memory', async () => {
-    FakeWorker.plan = ['fail-start', 'fail-start'];
+  it('on the page, it fails as unavailable — not out of memory — and the message says so', async () => {
+    FakeWorker.plan = ['fail-start'];
     const error = await rawDevelop(file, develop).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(RawWorkerError);
     expect((error as RawWorkerError).failure.kind).toBe('unavailable');
-    expect(FakeWorker.started).toHaveLength(2);
-    // Shown in plain words, and distinguishable from a file that's too big.
+    expect(engine.inspect).not.toHaveBeenCalled(); // never on the main thread
     const shown = toDecodeError(error);
     expect(shown).toBeInstanceOf(RawDecodeError);
     expect(shown).toMatchObject({ code: 'unavailable', message: rawStrings.unavailable });
@@ -117,12 +124,13 @@ describe('starting the RAW worker', () => {
 
 describe('a worker that dies after starting', () => {
   it('during a develop: out of memory ("Too large for this device")', async () => {
+    vi.stubGlobal('document', undefined);
     FakeWorker.plan = ['die-on-request'];
     const error = await rawDevelop(file, develop).catch((e: unknown) => e);
     expect((error as RawWorkerError).failure.kind).toBe('out-of-memory');
     expect(toDecodeError(error)).toMatchObject({ code: 'too-large', message: rawStrings.tooLarge });
-    // Not retried from a blob: it did start.
-    expect(FakeWorker.started).toHaveLength(1);
+    // It did start: no fallback to running here.
+    expect(rawEngineMode()).toBe('worker');
   });
 
   it('while only reading details: unavailable, not out of memory', async () => {

@@ -3,11 +3,13 @@
 // back. Develops are also queued across all of this page's workers with a Web Lock, so a batch of
 // RAW files never holds several full-size develops in memory at once.
 //
-// Starting: the worker says "ready" once its script runs. A worker that fails before that (its
-// script couldn't be fetched, as happens to nested workers in some browsers) is started once more
-// from a blob: module that imports the same script (worker-url.ts); if that fails too, requests
-// fail as `unavailable`, never as out of memory. A worker that dies after starting while a develop
-// runs is out of memory (the half-size retry in index.ts handles it).
+// Starting: the worker says "ready" once its script runs. A worker that fails before that didn't
+// start: some browsers can't load any worker started from inside a worker (the Claude desktop
+// app's Chromium 156 browser never even requests the script). Inside a worker (the image worker)
+// the RAW engine then runs right here instead, for the rest of this worker's life; on the page
+// itself it doesn't (heavy work stays off the main thread) and requests fail as `unavailable`.
+// `unavailable` is never treated as out of memory: only a worker dying during a develop is
+// (index.ts retries that at half size).
 
 import type {
   DevelopRequest,
@@ -18,8 +20,8 @@ import type {
   RawReady,
   RawRequest,
   RawResponse,
+  RawWorkerStatus,
 } from './protocol';
-import { bootstrapWorkerUrl } from './worker-url';
 
 /** A RAW worker request that failed; `failure.kind` says why. */
 export class RawWorkerError extends Error {
@@ -46,21 +48,8 @@ type Pending = {
   reject: (error: unknown) => void;
 };
 
-/** How the RAW worker is started: from its URL, or from a blob that imports it. */
-export type RawWorkerStart = 'direct' | 'blob';
-
-type WorkerConstructor = new (url: string | URL, options?: WorkerOptions) => Worker;
-
-/** Worker, but started from a blob: module that imports the script (see worker-url.ts). */
-function blobWorker(remember: (url: string) => void): WorkerConstructor {
-  return class extends Worker {
-    constructor(url: string | URL, options?: WorkerOptions) {
-      const boot = bootstrapWorkerUrl(url);
-      super(boot, options);
-      remember(boot);
-    }
-  };
-}
+/** Where RAW requests run: a RAW worker of their own, or (fallback) the calling worker itself. */
+export type RawEngineMode = 'worker' | 'in-process';
 
 function isReady(data: unknown): data is RawReady {
   return typeof data === 'object' && data !== null && (data as RawReady).type === 'ready';
@@ -74,13 +63,12 @@ class RawWorkerConnection {
   private waiting = 0;
   private readonly ready: Promise<void>;
   private startTimer: ReturnType<typeof setTimeout> | undefined;
-  private bootUrl: string | undefined;
   started = false;
   closed = false;
   /** Why the worker is closed, for calls made afterwards. */
   private closedWith: RawWorkerError | undefined;
 
-  constructor(readonly start: RawWorkerStart) {
+  constructor() {
     let markReady!: () => void;
     let failStart!: (error: unknown) => void;
     this.ready = new Promise<void>((resolve, reject) => {
@@ -89,21 +77,10 @@ class RawWorkerConnection {
     });
     this.ready.catch(() => undefined); // failures reach callers through call()
 
-    // The parameter shadows the global so the bundler still sees `new Worker(new URL(…))` and
-    // builds the worker; with 'blob' the same bundled URL is started through a blob module.
-    const spawn = (Worker: WorkerConstructor) =>
-      new Worker(new URL('./raw.worker.ts', import.meta.url), {
-        type: 'module',
-        name: 'snap-convert-raw',
-      });
-    this.worker =
-      start === 'blob'
-        ? spawn(
-            blobWorker((url) => {
-              this.bootUrl = url;
-            }),
-          )
-        : spawn(Worker);
+    this.worker = new Worker(new URL('./raw.worker.ts', import.meta.url), {
+      type: 'module',
+      name: 'snap-convert-raw',
+    });
 
     const startFailed = (detail: string) => {
       const error = new RawWorkerError({ kind: 'unavailable', detail });
@@ -131,19 +108,22 @@ class RawWorkerConnection {
     });
     const stopped = (detail: string) => {
       if (!this.started) {
-        startFailed(detail);
+        startFailed(detail || 'RAW worker failed to start');
         return;
       }
       // Died while working: during a develop that is memory running out (WebAssembly memory
       // can't grow further, or the browser killed the worker); otherwise it just stopped.
       const developing = [...this.pending.values()].some((p) => p.op === 'develop');
       this.close(
-        new RawWorkerError({ kind: developing ? 'out-of-memory' : 'unavailable', detail }),
+        new RawWorkerError({
+          kind: developing ? 'out-of-memory' : 'unavailable',
+          detail: detail || 'RAW worker stopped',
+        }),
       );
     };
     this.worker.addEventListener('error', (event) => {
       event.preventDefault();
-      stopped(event.message || 'RAW worker failed');
+      stopped(event.message);
     });
     this.worker.addEventListener('messageerror', () => stopped('RAW worker message failed'));
   }
@@ -151,8 +131,6 @@ class RawWorkerConnection {
   private clearStart(): void {
     if (this.startTimer !== undefined) clearTimeout(this.startTimer);
     this.startTimer = undefined;
-    if (this.bootUrl !== undefined) URL.revokeObjectURL(this.bootUrl);
-    this.bootUrl = undefined;
   }
 
   get busy(): boolean {
@@ -197,16 +175,21 @@ class RawWorkerConnection {
 
 let shared: RawWorkerConnection | undefined;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
-/** Switches to 'blob' for good once this context couldn't start the worker from its URL. */
-let startMode: RawWorkerStart = 'direct';
+/** Switches to 'in-process' for good once this worker couldn't start a RAW worker. */
+let mode: RawEngineMode = 'worker';
 
-/** How new RAW workers are started here (tests, diagnostics). */
-export const rawWorkerStart = (): RawWorkerStart => startMode;
+/** Where RAW requests run here (tests, diagnostics). */
+export const rawEngineMode = (): RawEngineMode => mode;
+
+/** In a worker (not on the page), where the engine may run in-process. */
+function inWorker(): boolean {
+  return typeof (globalThis as { document?: unknown }).document === 'undefined';
+}
 
 function connection(): RawWorkerConnection {
   if (idleTimer !== undefined) clearTimeout(idleTimer);
   idleTimer = undefined;
-  if (!shared || shared.closed) shared = new RawWorkerConnection(startMode);
+  if (!shared || shared.closed) shared = new RawWorkerConnection();
   return shared;
 }
 
@@ -226,20 +209,47 @@ function release(conn: RawWorkerConnection, closeNow: boolean): void {
   }, RAW_WORKER_IDLE_MS);
 }
 
-const startFailure = (error: unknown) =>
-  error instanceof RawWorkerError && error.failure.kind === 'unavailable';
+/**
+ * The RAW worker's work, done in this worker instead (same engine, same answers and failures).
+ * WebAssembly memory isn't given back here until this worker closes, so it is only the fallback.
+ */
+async function runHere<T>(request: RequestBody): Promise<T> {
+  const engine = await import('./engine');
+  try {
+    switch (request.op) {
+      case 'info':
+        return (await engine.inspect(request.file)) as T;
+      case 'preview':
+        return (await engine.preview(request.file, request.index)) as T;
+      case 'develop':
+        return (await engine.develop(request.file, request.options)) as T;
+      case 'status': {
+        const { flashRawLoadInfo } = await import('./flashraw');
+        const status: RawWorkerStatus = { ...flashRawLoadInfo(), inProcess: true };
+        return status as T;
+      }
+    }
+  } catch (error) {
+    if (error instanceof engine.RawEngineError) throw new RawWorkerError(error.failure);
+    throw new RawWorkerError({
+      kind: 'damaged',
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 async function run<T>(request: RequestBody, closeAfter: boolean): Promise<T> {
-  let conn = connection();
+  if (mode === 'in-process') return runHere<T>(request);
+  const conn = connection();
   try {
     return await conn.call<T>(request);
   } catch (error) {
-    // Couldn't start from its URL: once more from a blob that imports it.
-    if (conn.started || conn.start !== 'direct' || !startFailure(error)) throw error;
-    startMode = 'blob';
-    release(conn, true);
-    conn = connection();
-    return await conn.call<T>(request);
+    const didNotStart =
+      !conn.started && error instanceof RawWorkerError && error.failure.kind === 'unavailable';
+    if (!didNotStart || !inWorker()) throw error;
+    // This browser can't start a worker from here: run the engine in this worker from now on.
+    mode = 'in-process';
+    return runHere<T>(request);
   } finally {
     release(conn, closeAfter);
   }
@@ -264,6 +274,11 @@ export function rawDevelop(file: Blob, options: DevelopRequest): Promise<Develop
   return oneAtATime(() => run<DevelopResult>({ op: 'develop', file, options }, true));
 }
 
+/** How FlashRaw runs for this caller (tests, diagnostics). */
+export function rawStatus(): Promise<RawWorkerStatus> {
+  return run<RawWorkerStatus>({ op: 'status' }, false);
+}
+
 /** Closes the RAW worker now (tests; a page being torn down). */
 export function closeRawWorker(): void {
   if (idleTimer !== undefined) clearTimeout(idleTimer);
@@ -272,7 +287,7 @@ export function closeRawWorker(): void {
   shared = undefined;
 }
 
-/** Tests: start from the URL again, as on a fresh page. */
-export function resetRawWorkerStart(): void {
-  startMode = 'direct';
+/** Tests: use a RAW worker again, as in a fresh worker. */
+export function resetRawEngineMode(): void {
+  mode = 'worker';
 }

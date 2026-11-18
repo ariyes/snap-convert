@@ -58,10 +58,10 @@ export type RawRequest =
   /** Diagnostics: how FlashRaw was loaded in this worker (tests). */
   | { id: number; op: 'status' };
 
-/** Answer to `status`: FlashRaw's threads (0 = one thread) and how they were started. */
+/** Answer to `status`: FlashRaw's threads (0 = one thread), and whether it runs in the caller's worker. */
 export interface RawWorkerStatus {
   threads: number;
-  threadStart?: 'direct' | 'blob';
+  inProcess?: boolean;
 }
 
 /**
