@@ -168,7 +168,7 @@ test('a PDF renamed .jpg is a PDF, and RAW photos are recognised by their bytes'
     fixture('intake/sample.cr3'),
   ]);
   await expect(question(page)).toHaveText('What do you want to do with 1 PDF and 1 RAW photo?');
-  await expect(chips(page)).toHaveText([...PDF_CHIPS, 'RAW to JPGSoon']);
+  await expect(chips(page)).toHaveText([...PDF_CHIPS, 'RAW to JPG']);
 
   await chips(page).filter({ hasText: 'Split' }).click();
   await expect(page).toHaveURL(/\/split-pdf$/);
