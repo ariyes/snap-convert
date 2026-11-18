@@ -2,7 +2,9 @@
 // (public/samples/raw-sample.cr3) runs everywhere; the CC0 camera files (`pnpm fixtures:raw`,
 // tests/fixtures/raw/SOURCES.md) run in the @heavy tests, after the rest of the suite.
 import AxeBuilder from '@axe-core/playwright';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { expect, test, type Page } from './support/test';
@@ -53,11 +55,24 @@ function jpegSize(bytes: Uint8Array): [number, number] {
   throw new Error('No SOF segment');
 }
 
-async function addFiles(page: Page, files: string[] | Parameters<Page['setInputFiles']>[1]) {
-  const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: /^Drop RAW photos here/ }).click();
-  await (await chooser).setFiles(files);
+/** Adds files through a drop zone's picker (retried until the page has hydrated). */
+async function addFiles(
+  page: Page,
+  files: string[] | Parameters<Page['setInputFiles']>[1],
+  zone = /^Drop RAW photos here/,
+) {
+  await expect(async () => {
+    const chooser = page.waitForEvent('filechooser', { timeout: 5_000 });
+    await page.getByRole('button', { name: zone }).click();
+    await (await chooser).setFiles(files);
+  }).toPass({ timeout: 40_000 });
 }
+
+const SAMPLE = {
+  name: 'IMG_0001.CR3',
+  mimeType: '',
+  buffer: readFileSync('public/samples/raw-sample.cr3'),
+};
 
 async function trySample(page: Page) {
   await page.getByRole('button', { name: 'Try a sample RAW' }).click();
@@ -213,6 +228,158 @@ test('a damaged RAW says so on its own row and is left out of the run', async ({
     { timeout: 30_000 },
   );
   await expect(page.getByRole('button', { name: /^Convert 0 photos/ }).first()).toBeDisabled();
+});
+
+test('RAW works wherever photos do: Convert image and Bulk resize, in fast mode', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto('convert-image');
+  await addFiles(page, [SAMPLE], /^Drop images here/);
+  const download = page.getByRole('button', { name: 'Download', exact: true });
+  await expect(download.filter({ visible: true }).first()).toBeEnabled({ timeout: 60_000 });
+  const event = page.waitForEvent('download');
+  await download.filter({ visible: true }).first().click();
+  const file = await event;
+  expect(file.suggestedFilename()).toMatch(/^IMG_0001.*\.jpg$/);
+  const bytes = new Uint8Array(readFileSync(await file.path()));
+  expect(jpegSize(bytes)).toEqual([5088, 3392]);
+
+  await page.goto('bulk-resize');
+  await addFiles(page, [SAMPLE], /^Drop as many images as you like/);
+  await page
+    .getByRole('button', { name: /^Resize 1 image$/ })
+    .filter({ visible: true })
+    .first()
+    .click();
+  await expect(page.getByTestId('bulk-summary')).toContainText('1 done', { timeout: 60_000 });
+  // Bulk's default: longest side 1920 px, named {name}-{width}w from the result's width.
+  await expect(page.locator('[data-status="done"]')).toContainText('IMG_0001-1920w.jpg');
+});
+
+test.describe('a browser that can’t fetch worker scripts', () => {
+  // The Claude desktop app's Chromium 156 browser fails the script fetch of every worker started
+  // from inside a worker ("An unknown error occurred when fetching the script"); the sample then
+  // failed with "Too large for this device". Playwright can't intercept nested workers' script
+  // requests, so this serves the build from a server of its own that refuses every worker-script
+  // fetch of the RAW worker and FlashRaw's thread workers (Sec-Fetch-Dest: worker, mode same-origin),
+  // while module imports from inside a worker (the same destination, mode cors) still load.
+  test.use({ allowRequests: [/^http:\/\/127\.0\.0\.1:\d+\//], serviceWorkers: 'block' });
+
+  const BUILD = path.resolve('build/client');
+  const TYPES: Record<string, string> = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.wasm': 'application/wasm',
+    '.woff2': 'font/woff2',
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml',
+    '.webmanifest': 'application/manifest+json',
+  };
+  let server: Server | undefined;
+  let origin = '';
+  const refused: string[] = [];
+
+  test.beforeAll(async () => {
+    server = createServer((req, res) => {
+      const url = new URL(req.url ?? '/', 'http://x');
+      const rel = decodeURIComponent(url.pathname).replace(/^\/snap-convert\/?/, '');
+      if (
+        req.headers['sec-fetch-dest'] === 'worker' &&
+        req.headers['sec-fetch-mode'] === 'same-origin' &&
+        /(^|\/)(raw\.worker|thread-worker)[^/]*\.js$/.test(rel)
+      ) {
+        refused.push(rel);
+        res.writeHead(404).end();
+        return;
+      }
+      let file = path.resolve(BUILD, rel);
+      if (!file.startsWith(BUILD)) {
+        res.writeHead(403).end();
+        return;
+      }
+      if (existsSync(file) && statSync(file).isDirectory()) file = path.join(file, 'index.html');
+      if (!existsSync(file)) {
+        res.writeHead(404).end();
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream',
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cross-Origin-Resource-Policy': 'same-origin',
+      });
+      res.end(readFileSync(file));
+    });
+    await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
+    origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+  test.afterAll(async () => {
+    await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
+  });
+  test.beforeEach(async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Chromium: FlashRaw runs with threads there (D45)');
+    refused.length = 0;
+    await page.goto(`${origin}/snap-convert/raw-to-jpg`);
+    expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
+  });
+
+  test('the sample still converts, fast and full: the workers start from blob modules', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await trySample(page);
+    for (const mode of [/^Fast/, /^Full quality/]) {
+      await page.getByRole('radio', { name: mode }).click();
+      await runButton(page).click();
+      await expect(summary(page)).toContainText('1 done', { timeout: 120_000 });
+      await expect(page.locator('[data-status="failed"]')).toHaveCount(0);
+    }
+    await expect(rows(page).first()).toContainText('sample-canon-r5.jpg');
+    // Refused: the page's RAW reader, the image worker's RAW worker and FlashRaw's threads.
+    expect(refused.filter((u) => /raw\.worker/.test(u)).length).toBeGreaterThanOrEqual(2);
+    expect(refused.some((u) => /thread-worker/.test(u))).toBe(true);
+  });
+
+  test('FlashRaw still gets its threads, started from blob modules', async ({ page }) => {
+    test.setTimeout(120_000);
+    await trySample(page); // the page's RAW reader runs FlashRaw (and was refused once)
+    const rawWorker = refused.find((u) => /raw\.worker/.test(u));
+    expect(rawWorker).toBeDefined();
+    // A RAW worker started the way the client falls back to; ask how FlashRaw loaded there.
+    const status = await page.evaluate(
+      async (url) => {
+        const boot = URL.createObjectURL(
+          new Blob([`import ${JSON.stringify(url)};`], { type: 'text/javascript' }),
+        );
+        const worker = new Worker(boot, { type: 'module' });
+        const reply = (id: number) =>
+          new Promise<unknown>((resolve, reject) => {
+            worker.addEventListener(
+              'message',
+              (e: MessageEvent<{ id?: number; result?: unknown }>) => {
+                if (e.data.id === id) resolve(e.data.result);
+              },
+            );
+            worker.addEventListener('error', () => reject(new Error('RAW worker failed')));
+          });
+        const sample = await (await fetch('/snap-convert/samples/raw-sample.cr3')).blob();
+        const info = reply(1);
+        worker.postMessage({ id: 1, op: 'info', file: sample });
+        await info;
+        const answer = reply(2);
+        worker.postMessage({ id: 2, op: 'status' });
+        const result = await answer;
+        worker.terminate();
+        return { result, cores: navigator.hardwareConcurrency };
+      },
+      new URL(`/snap-convert/${rawWorker}`, origin).href,
+    );
+    test.skip(status.cores < 2, 'One core: FlashRaw uses one thread');
+    expect(status.result).toEqual({ threads: Math.min(status.cores, 4), threadStart: 'blob' });
+  });
 });
 
 test.describe('offline', () => {
