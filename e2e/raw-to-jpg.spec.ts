@@ -7,6 +7,9 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
+import { headersTemplate, parseHeaders, renderHeaders } from '../deploy/csp';
+import { buildScriptHashes } from '../deploy/headers';
+import { nginxResponseHeaders } from '../deploy/local-nginx';
 import { expect, test, type Page } from './support/test';
 
 const CACHE = path.resolve('tests/fixtures/raw/cache');
@@ -257,13 +260,13 @@ test('RAW works wherever photos do: Convert image and Bulk resize, in fast mode'
   await expect(page.locator('[data-status="done"]')).toContainText('IMG_0001-1920w.jpg');
 });
 
-test.describe('a browser that can’t fetch worker scripts', () => {
-  // The Claude desktop app's Chromium 156 browser fails the script fetch of every worker started
-  // from inside a worker ("An unknown error occurred when fetching the script"); the sample then
-  // failed with "Too large for this device". Playwright can't intercept nested workers' script
-  // requests, so this serves the build from a server of its own that refuses every worker-script
-  // fetch of the RAW worker and FlashRaw's thread workers (Sec-Fetch-Dest: worker, mode same-origin),
-  // while module imports from inside a worker (the same destination, mode cors) still load.
+test.describe('production headers (nginx and its CSP)', () => {
+  // The build served the way production nginx serves it: the security headers and the
+  // Content-Security-Policy generated for this build (deploy/csp.ts), so anything the policy
+  // blocks fails here. The second run also stands in for the Claude desktop app's Chromium 156
+  // browser, which can't load any worker started from inside a worker (the request never leaves
+  // the browser; the sample then failed with "Too large for this device"): this server refuses
+  // the script of every worker that a worker asks for.
   test.use({ allowRequests: [/^http:\/\/127\.0\.0\.1:\d+\//], serviceWorkers: 'block' });
 
   const BUILD = path.resolve('build/client');
@@ -280,16 +283,22 @@ test.describe('a browser that can’t fetch worker scripts', () => {
   };
   let server: Server | undefined;
   let origin = '';
+  let refuseNested = false;
   const refused: string[] = [];
 
   test.beforeAll(async () => {
+    const security = parseHeaders(renderHeaders(headersTemplate(), buildScriptHashes(BUILD)));
     server = createServer((req, res) => {
       const url = new URL(req.url ?? '/', 'http://x');
       const rel = decodeURIComponent(url.pathname).replace(/^\/snap-convert\/?/, '');
+      const fromWorker = /\/assets\/[^/]+\.js$/.test(
+        new URL(req.headers.referer ?? '/', 'http://x').pathname,
+      );
       if (
+        refuseNested &&
+        fromWorker &&
         req.headers['sec-fetch-dest'] === 'worker' &&
-        req.headers['sec-fetch-mode'] === 'same-origin' &&
-        /(^|\/)(raw\.worker|thread-worker)[^/]*\.js$/.test(rel)
+        req.headers['sec-fetch-mode'] === 'same-origin'
       ) {
         refused.push(rel);
         res.writeHead(404).end();
@@ -305,12 +314,11 @@ test.describe('a browser that can’t fetch worker scripts', () => {
         res.writeHead(404).end();
         return;
       }
-      res.writeHead(200, {
-        'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream',
-        'Cross-Origin-Opener-Policy': 'same-origin',
-        'Cross-Origin-Embedder-Policy': 'require-corp',
-        'Cross-Origin-Resource-Policy': 'same-origin',
-      });
+      const upstream = { 'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream' };
+      const headers = nginxResponseHeaders(url.pathname, upstream, security);
+      // Every worker's script must reach this server (not come from the browser's cache).
+      if (refuseNested) headers['Cache-Control'] = 'no-store';
+      res.writeHead(200, headers);
       res.end(readFileSync(file));
     });
     await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
@@ -319,67 +327,64 @@ test.describe('a browser that can’t fetch worker scripts', () => {
   test.afterAll(async () => {
     await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
   });
-  test.beforeEach(async ({ page, browserName }) => {
-    test.skip(browserName !== 'chromium', 'Chromium: FlashRaw runs with threads there (D45)');
-    refused.length = 0;
-    await page.goto(`${origin}/snap-convert/raw-to-jpg`);
-    expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
-  });
 
-  test('the sample still converts, fast and full: the workers start from blob modules', async ({
-    page,
-  }) => {
-    test.setTimeout(180_000);
-    await trySample(page);
-    for (const mode of [/^Fast/, /^Full quality/]) {
-      await page.getByRole('radio', { name: mode }).click();
-      await runButton(page).click();
-      await expect(summary(page)).toContainText('1 done', { timeout: 120_000 });
-      await expect(page.locator('[data-status="failed"]')).toHaveCount(0);
-    }
-    await expect(rows(page).first()).toContainText('sample-canon-r5.jpg');
-    // Refused: the page's RAW reader, the image worker's RAW worker and FlashRaw's threads.
-    expect(refused.filter((u) => /raw\.worker/.test(u)).length).toBeGreaterThanOrEqual(2);
-    expect(refused.some((u) => /thread-worker/.test(u))).toBe(true);
-  });
-
-  test('FlashRaw still gets its threads, started from blob modules', async ({ page }) => {
-    test.setTimeout(120_000);
-    await trySample(page); // the page's RAW reader runs FlashRaw (and was refused once)
-    const rawWorker = refused.find((u) => /raw\.worker/.test(u));
-    expect(rawWorker).toBeDefined();
-    // A RAW worker started the way the client falls back to; ask how FlashRaw loaded there.
-    const status = await page.evaluate(
-      async (url) => {
-        const boot = URL.createObjectURL(
-          new Blob([`import ${JSON.stringify(url)};`], { type: 'text/javascript' }),
-        );
-        const worker = new Worker(boot, { type: 'module' });
-        const reply = (id: number) =>
-          new Promise<unknown>((resolve, reject) => {
-            worker.addEventListener(
-              'message',
-              (e: MessageEvent<{ id?: number; result?: unknown }>) => {
-                if (e.data.id === id) resolve(e.data.result);
-              },
-            );
-            worker.addEventListener('error', () => reject(new Error('RAW worker failed')));
+  for (const nested of [false, true]) {
+    test(
+      nested
+        ? 'workers can’t start workers: the sample still converts, fast and full, with no CSP block'
+        : 'the sample converts, fast and full, with no CSP block',
+      async ({ page }) => {
+        test.setTimeout(180_000);
+        refuseNested = nested;
+        refused.length = 0;
+        const problems: string[] = [];
+        page.on('pageerror', (e) => problems.push(`page error: ${e.message}`));
+        page.on('console', (m) => {
+          if (m.type() === 'error' && !/Failed to load resource.*404/.test(m.text())) {
+            problems.push(`console: ${m.text()}`);
+          }
+        });
+        await page.addInitScript(() => {
+          document.addEventListener('securitypolicyviolation', (e) => {
+            const w = window as unknown as { __csp?: string[] };
+            (w.__csp ??= []).push(`${e.effectiveDirective} blocked ${e.blockedURI || 'inline'}`);
           });
-        const sample = await (await fetch('/snap-convert/samples/raw-sample.cr3')).blob();
-        const info = reply(1);
-        worker.postMessage({ id: 1, op: 'info', file: sample });
-        await info;
-        const answer = reply(2);
-        worker.postMessage({ id: 2, op: 'status' });
-        const result = await answer;
-        worker.terminate();
-        return { result, cores: navigator.hardwareConcurrency };
+        });
+        await page.goto(`${origin}/snap-convert/raw-to-jpg`);
+        expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
+        await trySample(page);
+        for (const mode of [/^Fast/, /^Full quality/]) {
+          await page.getByRole('radio', { name: mode }).click();
+          await runButton(page).click();
+          await expect(summary(page)).toContainText('1 done', { timeout: 120_000 });
+          await expect(page.locator('[data-status="failed"]')).toHaveCount(0);
+        }
+        await expect(rows(page).first()).toContainText('sample-canon-r5.jpg');
+        const csp = await page.evaluate(
+          () => (window as unknown as { __csp?: string[] }).__csp ?? [],
+        );
+        expect(csp, 'CSP violations').toEqual([]);
+        if (nested) {
+          // The image worker's RAW worker (and FlashRaw's threads) were refused; the engine ran
+          // in the image worker instead.
+          expect(refused.some((u) => /raw\.worker/.test(u))).toBe(true);
+          expect(
+            // The refused loads themselves are reported (Chromium: "unknown error … fetching the
+            // script"; WebKit: the 404 has no COEP-compatible headers). Nothing else may be.
+            problems.filter(
+              (p) =>
+                !/unknown error occurred when fetching the script|Worker load was blocked|raw\.worker|thread-worker/.test(
+                  p,
+                ),
+            ),
+          ).toEqual([]);
+        } else {
+          expect(refused).toEqual([]);
+          expect(problems).toEqual([]);
+        }
       },
-      new URL(`/snap-convert/${rawWorker}`, origin).href,
     );
-    test.skip(status.cores < 2, 'One core: FlashRaw uses one thread');
-    expect(status.result).toEqual({ threads: Math.min(status.cores, 4), threadStart: 'blob' });
-  });
+  }
 });
 
 test.describe('offline', () => {
