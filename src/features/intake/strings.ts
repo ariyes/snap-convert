@@ -32,7 +32,9 @@ export const intakeStrings = {
   /** Drop zone title when the tool doesn't pass its own. */
   dropTitle: (accept: readonly FileKind[]) => {
     const onlyPdf = accept.length > 0 && accept.every((k) => k === 'pdf');
-    const images = accept.length > 0 && accept.every((k) => k === 'image' || k === 'heic');
+    // Camera RAW files are photos too (Convert image and Bulk resize take them, P30).
+    const images =
+      accept.length > 0 && accept.every((k) => k === 'image' || k === 'heic' || k === 'raw');
     if (onlyPdf) return 'Drop PDF files here';
     if (images) return 'Drop images here';
     return 'Drop files here';
@@ -40,7 +42,9 @@ export const intakeStrings = {
   /** One file only (multiple = false). */
   dropTitleSingle: (accept: readonly FileKind[]) => {
     const onlyPdf = accept.length > 0 && accept.every((k) => k === 'pdf');
-    const images = accept.length > 0 && accept.every((k) => k === 'image' || k === 'heic');
+    // Camera RAW files are photos too (Convert image and Bulk resize take them, P30).
+    const images =
+      accept.length > 0 && accept.every((k) => k === 'image' || k === 'heic' || k === 'raw');
     if (onlyPdf) return 'Drop a PDF file here';
     if (images) return 'Drop an image here';
     return 'Drop a file here';
