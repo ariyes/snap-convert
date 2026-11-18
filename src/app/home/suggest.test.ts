@@ -62,8 +62,8 @@ describe('suggestTools', () => {
     expect(labels(['pdf'])).toEqual(['Merge', 'Split', 'Organize pages', 'Resize pages']);
   });
 
-  it('offers RAW to JPG (coming soon) for RAW photos', () => {
-    expect(labels(['raw'])).toEqual(['RAW to JPG (soon)']);
+  it('offers RAW to JPG for RAW photos', () => {
+    expect(labels(['raw'])).toEqual(['RAW to JPG']);
   });
 
   it('offers nothing for unknown files', () => {

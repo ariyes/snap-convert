@@ -227,7 +227,7 @@ test.describe('drop → suggestion → tool', () => {
     await expectDelivered(page, 'merge-pdf', ['a.pdf', 'b.pdf']);
   });
 
-  test('RAW files suggest RAW to JPG (coming soon); unknown files get a message; Clear hides the panel', async ({
+  test('RAW files suggest RAW to JPG; unknown files get a message; Clear hides the panel', async ({
     page,
   }) => {
     await page.goto('./');
@@ -241,7 +241,7 @@ test.describe('drop → suggestion → tool', () => {
     await expect(page.getByText('What do you want to do with 1 RAW photo?')).toBeVisible();
     await expect(
       page.getByRole('list', { name: 'Suggested tools' }).getByRole('button'),
-    ).toHaveText(['RAW to JPGSoon']);
+    ).toHaveText(['RAW to JPG']);
 
     await chooseFiles(page, [
       { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('Just some notes.') },
