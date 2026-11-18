@@ -22,12 +22,13 @@ export interface Codecs {
 
 const importers: { [F in ImageFormat]: () => Promise<Codecs[F]> } = {
   jpeg: async () => (await import('@jsquash/jpeg/encode.js')).default,
-  png: async () => (await import('@jsquash/oxipng/optimise.js')).default,
+  png: async () =>
+    wasmThreadsAllowed()
+      ? (await import('@jsquash/oxipng/optimise.js')).default
+      : singleThreadPng(),
   webp: async () => (await import('@jsquash/webp/encode.js')).default,
   avif: async () =>
-    wasmThreadsAllowed()
-      ? (await import('@jsquash/avif/encode.js')).default
-      : singleThreadAvif(),
+    wasmThreadsAllowed() ? (await import('@jsquash/avif/encode.js')).default : singleThreadAvif(),
 };
 
 /**
@@ -51,6 +52,42 @@ async function singleThreadAvif(): Promise<Codecs['avif']> {
     if (!output) throw new Error('Encoding error.');
     return output.buffer as ArrayBuffer;
   };
+}
+
+/**
+ * Same for oxipng: jSquash starts its wasm-bindgen-rayon thread pool whenever threads exist. In
+ * WebKit, once the page is cross-origin isolated (D43), that pool hung jobs under load (3 of 4
+ * parallel runs of the format matrix; 4 of 4 passed without isolation). WebKit uses the
+ * single-threaded build, called the way jSquash's optimise() does.
+ */
+async function singleThreadPng(): Promise<Codecs['png']> {
+  const [codec, meta] = (await Promise.all([
+    import('@jsquash/oxipng/codec/pkg/squoosh_oxipng.js'),
+    import('@jsquash/oxipng/meta.js'),
+  ])) as unknown as [OxipngCodecModule, OxipngMetaModule];
+  await codec.default();
+  return (img, options) => {
+    const o = { ...meta.defaultOptions, ...options };
+    return Promise.resolve(
+      codec.optimise_raw(img.data, img.width, img.height, o.level, o.interlace, o.optimiseAlpha)
+        .buffer as ArrayBuffer,
+    );
+  };
+}
+
+interface OxipngCodecModule {
+  default(): Promise<unknown>;
+  optimise_raw(
+    data: Uint8ClampedArray,
+    width: number,
+    height: number,
+    level: number,
+    interlace: boolean,
+    optimiseAlpha: boolean,
+  ): Uint8Array;
+}
+interface OxipngMetaModule {
+  defaultOptions: { level: number; interlace: boolean; optimiseAlpha: boolean };
 }
 
 /** The parts of jSquash's AVIF internals used above (its own files are plain JS to the linter). */

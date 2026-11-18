@@ -440,7 +440,8 @@ test.describe('camera RAW files', { tag: '@heavy' }, () => {
     await expect(rows(page)).toHaveCount(10);
     await expect(runButton(page)).toHaveText('Convert 10 photos to JPG');
     await runButton(page).click();
-    await expect(summary(page)).toContainText(/Processing \d at a time/);
+    // The page reads every file's details first ("Reading files…"); slow on WebKit (one thread, D45).
+    await expect(summary(page)).toContainText(/Processing \d at a time/, { timeout: 180_000 });
     await expect(summary(page)).toContainText('10 done', { timeout: 840_000 });
     await expect(page.locator('[data-status="failed"]')).toHaveCount(0);
     // Upright before and after: the portrait files list as portrait.

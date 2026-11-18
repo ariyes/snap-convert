@@ -118,7 +118,7 @@ test(
   'every input format converts to every output format',
   { tag: '@heavy' },
   async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name.endsWith('phone'), 'Format matrix: once per engine is enough');
+    test.skip(testInfo.project.name.includes('phone'), 'Format matrix: once per engine is enough');
     // 7 files × 4 formats: tagged @heavy, so it runs after the rest of the suite (playwright.config.ts).
     test.setTimeout(480_000);
     await page.goto('convert-image');

@@ -235,7 +235,7 @@ test('Exact 1080×1080 pads a panorama with Fit and crops it with Fill — never
 });
 
 test('30 mixed files → one ZIP with pattern names, all unique', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name.endsWith('phone'), 'Bulk run: once per engine is enough');
+  test.skip(testInfo.project.name.includes('phone'), 'Bulk run: once per engine is enough');
   test.setTimeout(120_000);
   const pool = [
     'images/no-exif.jpg',
