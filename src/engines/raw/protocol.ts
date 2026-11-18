@@ -54,9 +54,21 @@ export interface PreviewResult {
 export type RawRequest =
   | { id: number; op: 'info'; file: Blob }
   | { id: number; op: 'preview'; file: Blob; index?: number }
-  | { id: number; op: 'develop'; file: Blob; options: DevelopRequest };
+  | { id: number; op: 'develop'; file: Blob; options: DevelopRequest }
+  /** Diagnostics: how FlashRaw was loaded in this worker (tests). */
+  | { id: number; op: 'status' };
 
-export type RawErrorKind = 'unsupported' | 'damaged' | 'out-of-memory';
+/** Answer to `status`: FlashRaw's threads (0 = one thread) and how they were started. */
+export interface RawWorkerStatus {
+  threads: number;
+  threadStart?: 'direct' | 'blob';
+}
+
+/**
+ * Why a request failed. `unavailable`: the RAW worker couldn't start (its script didn't load, or it
+ * stopped while no develop was running); never treated as a memory problem.
+ */
+export type RawErrorKind = 'unsupported' | 'damaged' | 'out-of-memory' | 'unavailable';
 
 export interface RawFailure {
   kind: RawErrorKind;
@@ -65,6 +77,15 @@ export interface RawFailure {
   detail?: string;
 }
 
+/** Sent once by the RAW worker when its script has loaded, before any response. */
+export interface RawReady {
+  type: 'ready';
+}
+
 export type RawResponse =
-  | { id: number; ok: true; result: RawFileInfo | PreviewResult | DevelopResult | null }
+  | {
+      id: number;
+      ok: true;
+      result: RawFileInfo | PreviewResult | DevelopResult | RawWorkerStatus | null;
+    }
   | { id: number; ok: false; error: RawFailure };

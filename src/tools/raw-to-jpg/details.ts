@@ -68,6 +68,8 @@ export function detailsError(failure: RawFailure | undefined): RawDetailsError {
       };
     case 'out-of-memory':
       return { status: 'error', message: rawStrings.tooLarge };
+    case 'unavailable':
+      return { status: 'error', message: rawStrings.unavailable };
     default:
       return { status: 'error', message: rawStrings.damaged };
   }

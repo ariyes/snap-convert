@@ -23,7 +23,8 @@ export {
 export { closeRawWorker } from './client';
 
 export type RawNote = 'raw-preview' | 'raw-half-size';
-export type RawErrorCode = 'unsupported' | 'damaged' | 'too-large';
+/** `unavailable`: the RAW decoder couldn't start in this browser (not a problem with the file). */
+export type RawErrorCode = 'unsupported' | 'damaged' | 'too-large' | 'unavailable';
 
 /** A RAW file that can't be turned into pixels, with a message that can be shown as is. */
 export class RawDecodeError extends Error {
@@ -36,7 +37,8 @@ export class RawDecodeError extends Error {
   }
 }
 
-function toDecodeError(error: unknown): unknown {
+/** Plain-words error for a failed RAW worker request (others pass through). */
+export function toDecodeError(error: unknown): unknown {
   if (!(error instanceof RawWorkerError)) return error;
   const f = error.failure;
   switch (f.kind) {
@@ -47,6 +49,8 @@ function toDecodeError(error: unknown): unknown {
       );
     case 'out-of-memory':
       return new RawDecodeError('too-large', rawStrings.tooLarge);
+    case 'unavailable':
+      return new RawDecodeError('unavailable', rawStrings.unavailable);
     default:
       return new RawDecodeError('damaged', rawStrings.damaged);
   }
