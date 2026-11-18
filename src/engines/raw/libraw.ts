@@ -6,6 +6,7 @@ import type { LibRaw } from '@colorhythm/libraw-wasm';
 import wasmUrl from '@colorhythm/libraw-wasm/libraw.wasm?url';
 import type { DevelopRequest, DevelopResult, RawFileInfo } from './protocol';
 import { BASE_EXPOSURE, buildLinearLut, developPixels, toneWhite } from './tone';
+import { absoluteUrl } from './worker-url';
 
 type LibRawClass = typeof LibRaw;
 type LibRawInstance = InstanceType<LibRawClass>;
@@ -16,7 +17,7 @@ function loadLibRaw(): Promise<LibRawClass> {
   loaded ??= (async () => {
     const [{ LibRaw }, response] = await Promise.all([
       import('@colorhythm/libraw-wasm'),
-      fetch(wasmUrl),
+      fetch(absoluteUrl(wasmUrl)),
     ]);
     if (!response.ok) throw new Error(`libraw.wasm: HTTP ${response.status}`);
     await LibRaw.initialize(await response.arrayBuffer());
