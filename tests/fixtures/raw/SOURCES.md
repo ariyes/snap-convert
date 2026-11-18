@@ -33,3 +33,13 @@ only the EXIF Orientation tag of IFD0 (allowed by CC0; they stay CC0):
 | --------------------------- | ------------------ | ----------------------------------------------------------------------------------- |
 | `ricoh-gr-portrait.dng`     | `ricoh-gr.dng`     | 6 (rotate 90° clockwise): the full develop must come out 3264 × 4928                |
 | `pentax-k5iis-portrait.pef` | `pentax-k5iis.pef` | 8 (rotate 90° anticlockwise): the camera JPEG (fast mode) must come out upright too |
+
+## Served by the app
+
+Committed to the repository (not downloaded by the script), for "Try a sample RAW" on the RAW to
+JPG page (P30). SHA-256 `a5f4935e0331cc16003c0b1ab6c657272739e82175557aaae576e78a8262511b`, the
+checksum raw.pixls.us publishes.
+
+| File                            | Camera                                     | Why it's here                                                   | Source                                                                          | Licence |
+| ------------------------------- | ------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------- |
+| `public/samples/raw-sample.cr3` | Canon EOS R5, 17 MP (1.6× crop mode, CRAW) | Small (6.7 MB), a full-size camera JPEG, a colourful still life | <https://raw.pixls.us/getfile.php/4696/nice/Canon%20-%20EOS%20R5%20-%203:2.CR3> | CC0 1.0 |

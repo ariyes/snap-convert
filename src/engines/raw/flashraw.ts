@@ -1,4 +1,5 @@
-// FlashRaw (MIT/Apache-2.0, D40), the primary RAW decoder. Runs only inside the RAW worker.
+// FlashRaw (MIT/Apache-2.0, D40), the primary RAW decoder. Runs inside the RAW worker (or, in a
+// browser that can't start the RAW worker from the image worker, in the image worker: client.ts).
 // Its .wasm files are our own static assets (same origin, no user data sent), passed explicitly so
 // the dev server's dependency pre-bundling can't break FlashRaw's own `new URL(…)` lookups.
 // The multithreaded build is used only when the page is cross-origin isolated (D43), with at most
@@ -28,15 +29,23 @@ function threadCount(): number {
   return Math.max(0, Math.min(cores, MAX_THREADS));
 }
 
+/** How the last load went (tests and diagnostics): FlashRaw's threads, 0 for one thread. */
+export interface FlashRawLoadInfo {
+  threads: number;
+}
+let loadInfo: FlashRawLoadInfo = { threads: 0 };
+export const flashRawLoadInfo = (): FlashRawLoadInfo => ({ ...loadInfo });
+
 async function load(): Promise<FlashRawModule> {
   const fr = await import('flashraw');
   const threads = threadCount();
   if (threads > 1) {
     try {
       await fr.init({ threads, wasm: threadsWasm, jpegxlWasm: threadsJxlWasm, threadWorkerUrl });
+      loadInfo = { threads };
       return fr;
     } catch {
-      // Threads couldn't start (e.g. a browser without nested workers): one thread it is.
+      // Threads couldn't start (a browser that can't start workers from a worker): one thread.
     }
   }
   const simd = fr.simdSupported();
@@ -46,6 +55,7 @@ async function load(): Promise<FlashRawModule> {
     wasm: simd ? simdWasm : fallbackWasm,
     ...(simd ? { jpegxlWasm: simdJxlWasm } : {}),
   });
+  loadInfo = { threads: 0 };
   return fr;
 }
 

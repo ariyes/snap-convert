@@ -4,7 +4,8 @@
 // failure can't leave the image worker broken.
 
 import { develop, inspect, preview, RawEngineError } from './engine';
-import type { RawFailure, RawRequest, RawResponse } from './protocol';
+import { flashRawLoadInfo } from './flashraw';
+import type { RawFailure, RawReady, RawRequest, RawResponse } from './protocol';
 
 function failure(error: unknown): RawFailure {
   if (error instanceof RawEngineError) return error.failure;
@@ -27,6 +28,8 @@ async function handle(
         const result = await develop(request.file, request.options);
         return { response: { id, ok: true, result }, transfer: [result.pixels] };
       }
+      case 'status':
+        return { response: { id, ok: true, result: flashRawLoadInfo() }, transfer: [] };
     }
   } catch (error) {
     return { response: { id, ok: false, error: failure(error) }, transfer: [] };
@@ -38,3 +41,6 @@ self.addEventListener('message', (event: MessageEvent<RawRequest>) => {
     self.postMessage(response, { transfer });
   });
 });
+
+// Tells the caller this script loaded and runs (a worker that never says so failed to start).
+self.postMessage({ type: 'ready' } satisfies RawReady);

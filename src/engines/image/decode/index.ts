@@ -342,7 +342,11 @@ async function decodeRawFile(
     for (const note of notes) options.onNote?.(note);
     return image;
   } catch (error) {
-    if (error instanceof RawDecodeError) throw new DecodeError(error.code, error.message);
+    if (error instanceof RawDecodeError) {
+      // The decoder not starting is reported as unsupported here; its message says what happened.
+      const code = error.code === 'unavailable' ? 'unsupported' : error.code;
+      throw new DecodeError(code, error.message);
+    }
     throw error;
   }
 }

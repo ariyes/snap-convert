@@ -5,4 +5,5 @@ export const rawStrings = {
   unsupported: "This RAW format isn't supported yet",
   damaged: 'This file looks damaged',
   tooLarge: 'Too large for this device — try on a computer',
+  unavailable: "The RAW decoder couldn't start in this browser — try reloading, or another browser",
 } as const;

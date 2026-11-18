@@ -21,6 +21,8 @@ import type { ToolGroup, ToolMeta } from '../core/contracts/tools';
 /** Image kinds most image tools take (HEIC is decoded by the image engine). */
 const IMAGES: FileKind[] = ['image', 'heic'];
 const PDFS: FileKind[] = ['pdf'];
+/** Images plus camera RAW files (P30): RAW works wherever photos do, in fast mode. */
+const IMAGES_AND_RAW: FileKind[] = [...IMAGES, 'raw'];
 
 // ---------- Tools ----------
 
@@ -57,7 +59,7 @@ export const tools: readonly ToolMeta[] = [
     short: 'JPG, PNG, WebP, AVIF and HEIC.',
     icon: 'arrow-left-right',
     phase: 1,
-    accepts: IMAGES,
+    accepts: IMAGES_AND_RAW,
     title: 'Convert Images to JPG, PNG, WebP, AVIF — Free | Snap Convert',
     description:
       'Convert JPG, PNG, WebP, AVIF, HEIC, GIF and BMP images to JPG, PNG, WebP or AVIF in your browser. Free, no sign-up, and your images are never uploaded.',
@@ -81,7 +83,7 @@ export const tools: readonly ToolMeta[] = [
     short: 'Hundreds of images at once, downloaded as a ZIP.',
     icon: 'layers',
     phase: 1,
-    accepts: IMAGES,
+    accepts: IMAGES_AND_RAW,
     title: 'Bulk Resize and Compress Images — Free | Snap Convert',
     description:
       'Resize and compress hundreds of images at once with one set of settings, then download them as a ZIP. No limits, no upload, never stretched.',
@@ -178,9 +180,9 @@ export const tools: readonly ToolMeta[] = [
     icon: 'camera',
     phase: 2,
     accepts: ['raw'],
-    title: 'RAW to JPG Converter — Coming Soon | Snap Convert',
+    title: 'RAW to JPG Converter — Free, No Upload | Snap Convert',
     description:
-      'Coming soon: turn camera RAW photos (CR2, CR3, NEF, ARW, DNG and more) into JPGs in your browser. Until then, the image and PDF tools are ready.',
+      'Turn camera RAW photos (CR2, CR3, NEF, ARW, DNG and more) into sharp JPGs, fast or fully developed, in bulk. Free, and nothing is uploaded.',
   },
   {
     id: 'pdf-to-images',
@@ -298,7 +300,7 @@ export function isFormatPage(page: PageMeta): page is FormatPageMeta {
  * Phase 2+ tools that are live (D39). A tool ships by adding its id here, once its page,
  * engine and tests are merged; until then it shows the "Coming soon" page and stays out of search.
  */
-export const RELEASED_LATER: ReadonlySet<string> = new Set<string>(['pdf-to-images']);
+export const RELEASED_LATER: ReadonlySet<string> = new Set<string>(['pdf-to-images', 'raw-to-jpg']);
 
 /** Tools available now: every phase 1 tool, plus later tools once released. */
 export function isAvailable(page: PageMeta): boolean {
