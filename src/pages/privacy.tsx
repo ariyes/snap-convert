@@ -20,7 +20,7 @@ const text = {
   files: [
     'Every image, PDF and photo you add is opened, converted and saved by your own browser, using code that runs inside this page (Web Workers and WebAssembly). There is no server that receives your files.',
     'Your files, and anything about them (names, sizes, contents, dates, camera or location details), are never sent to us or to anyone else.',
-    'What your browser does download from our site is the app itself: pages, code, styles, fonts, the image and PDF codecs (loaded the first time a tool needs them) and, if you ask for it, the sample photo. All of it comes from our own site.',
+    'What your browser does download from our site is the app itself: pages, code, styles, fonts, the image, PDF and camera RAW decoders (loaded the first time a tool needs them) and, if you ask for them, the sample files. All of it comes from our own site.',
   ],
 
   countTitle: 'What we count',
