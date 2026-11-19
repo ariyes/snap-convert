@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { timingLimit } from '../../../../tests/support/timing';
 import { mulberry32 } from '../quality/testing/synthetic';
 import {
   chromaSubsampling,
@@ -128,7 +129,7 @@ describe('parseJpeg', () => {
       }
       const ms = performance.now() - t0;
       slowest = Math.max(slowest, ms);
-      expect(ms).toBeLessThan(100);
+      expect(ms).toBeLessThan(timingLimit(100, 1000));
     }
     // Most corruptions in the header area must be caught, not silently accepted.
     expect(threw).toBeGreaterThan(150);

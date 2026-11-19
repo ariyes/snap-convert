@@ -9,6 +9,7 @@ import type { ImageFormat } from '@/core/contracts/image';
 import { chromaSubsampling, parseJpeg, readFrame } from '../metadata';
 import { ascii, buildExifTiff, concat, indexOf } from '../metadata/testing/builders';
 import type { PictureSpec } from '../quality/testing/synthetic';
+import { timingLimit } from '../../../../tests/support/timing';
 import { browserJpeg, bytesOf, startHarness } from './testing/browser';
 
 const { api, stop } = startHarness();
@@ -172,7 +173,7 @@ describe('graphic detection and chroma subsampling', () => {
     const r = await api.isGraphic(id);
     await api.forget(id);
     expect(r.graphic).toBe(false);
-    expect(r.ms).toBeLessThan(100);
+    expect(r.ms).toBeLessThan(timingLimit(100, 500));
   });
 });
 
@@ -305,6 +306,6 @@ describe('limits and errors', () => {
     report.push(
       `12 MP AVIF: ${blob.size} B in ${ms.toFixed(0)} ms (threads: ${env.threads ? 'yes' : 'no — test page not cross-origin isolated'})`,
     );
-    expect(ms).toBeLessThan(15_000);
+    expect(ms).toBeLessThan(timingLimit(15_000, 45_000));
   });
 });

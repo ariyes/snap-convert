@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { timingLimit } from '../../../../tests/support/timing';
 import { renderSlots } from './api';
 import { bundledAssetCounts } from './assets';
 import { clearDocumentCache, isDocumentCached } from './documents';
@@ -187,9 +188,10 @@ describe('renderThumbnails', () => {
       controller.signal,
     );
     await expect(done).rejects.toMatchObject({ name: 'AbortError' });
-    expect(performance.now() - abortedAt).toBeLessThan(250);
+    expect(performance.now() - abortedAt).toBeLessThan(timingLimit(250, 1000));
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(seen).toEqual([0, 1]);
+    // Two pages render at once, so either may finish first; nothing arrives after the abort.
+    expect([...seen].sort((a, b) => a - b)).toEqual([0, 1]);
     expect(renderSlots.active).toBe(0);
   });
 

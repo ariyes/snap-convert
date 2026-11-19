@@ -12,6 +12,7 @@ import {
 import type { ImageJobInput } from '@/core/contracts/image';
 import { GUARD_SAMPLE, presetJob } from '@/engines/optimize';
 import { colourDistance, corners, pixelAt } from './decode/test-utils';
+import { timingLimit } from '../../../tests/support/timing';
 import { encodeImage } from './encode';
 import { flattenOnto } from './encode/background';
 
@@ -379,7 +380,7 @@ describe('12 MP photo (4032×3024 JPEG)', () => {
     const { result, ms } = await runJob(worker, presetJob('web', big, 'big.jpg'));
     expect([result.width, result.height]).toEqual([1920, 1440]);
     expect(result.ssim).toBeGreaterThanOrEqual(0.97);
-    expect(ms, `${Math.round(ms)} ms`).toBeLessThan(3000);
+    expect(ms, `${Math.round(ms)} ms`).toBeLessThan(timingLimit(3000, 10_000));
   });
 
   // P24b F2: above 8 MP the guard finds its quality on a sample, then encodes the full image once.

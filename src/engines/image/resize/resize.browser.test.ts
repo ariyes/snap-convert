@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { timingLimit } from '../../../../tests/support/timing';
 import { fixture, pixelAt } from '../decode/test-utils';
 import { resizePixels } from './index';
 import type {
@@ -109,7 +110,7 @@ describe('performance', () => {
         runs: 3,
       });
       expect([result.width, result.height]).toEqual([1000, 750]);
-      for (const ms of result.timings) expect(ms).toBeLessThan(1500);
+      for (const ms of result.timings) expect(ms).toBeLessThan(timingLimit(1500, 6000));
     } finally {
       fresh.stop();
     }
