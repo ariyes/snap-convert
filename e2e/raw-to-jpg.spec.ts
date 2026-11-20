@@ -337,6 +337,8 @@ test.describe('production headers (nginx and its CSP)', () => {
         test.setTimeout(180_000);
         refuseNested = nested;
         refused.length = 0;
+        // Leave the beforeEach page first: Firefox reports its unfinished imports as page errors.
+        await page.goto('about:blank');
         const problems: string[] = [];
         page.on('pageerror', (e) => problems.push(`page error: ${e.message}`));
         page.on('console', (m) => {
@@ -370,10 +372,12 @@ test.describe('production headers (nginx and its CSP)', () => {
           expect(refused.some((u) => /raw\.worker/.test(u))).toBe(true);
           expect(
             // The refused loads themselves are reported (Chromium: "unknown error … fetching the
-            // script"; WebKit: the 404 has no COEP-compatible headers). Nothing else may be.
+            // script"; WebKit: the 404 has no COEP-compatible headers; Firefox: FlashRaw's own
+            // "thread … failed to start: worker error" and the error object it logs with it).
+            // Nothing else may be.
             problems.filter(
               (p) =>
-                !/unknown error occurred when fetching the script|Worker load was blocked|raw\.worker|thread-worker/.test(
+                !/unknown error occurred when fetching the script|Worker load was blocked|raw\.worker|thread-worker|FlashRaw thread \d+ failed to start: worker error|^console: JSHandle@object$/.test(
                   p,
                 ),
             ),
