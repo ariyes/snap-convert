@@ -56,7 +56,7 @@ test.describe('home', () => {
     );
   });
 
-  test('has no serious accessibility issues', async ({ page }) => {
+  test('has no serious accessibility issues', { tag: '@firefox-ci-crash' }, async ({ page }) => {
     await page.goto('./');
     await chooseFiles(page, [jpg('a.jpg'), pdf('b.pdf')]);
     await expect(page.getByText(/What do you want to do with/)).toBeVisible();
@@ -69,38 +69,38 @@ test.describe('home', () => {
     ).toEqual([]);
   });
 
-  test('skip link jumps to the main content; focus order follows the page', async ({
-    page,
-    isMobile,
-    browserName,
-  }) => {
-    test.skip(isMobile, 'Keyboard navigation is checked on desktop');
-    // Playwright's WebKit, like Safari's default setting, skips links when tabbing.
-    test.skip(browserName === 'webkit', 'WebKit tabs to form fields only');
-    const tab = () => page.keyboard.press('Tab');
-    await page.goto('./');
-    await tab();
-    const skip = page.getByRole('link', { name: 'Skip to content' });
-    await expect(skip).toBeFocused();
-    await expect(skip).toBeInViewport();
-    await page.keyboard.press('Enter');
-    await expect(page.locator('main#main')).toBeFocused();
-
-    await page.goto('./');
-    const order = [
-      skip,
-      page.getByRole('link', { name: 'Snap Convert by crkayes' }),
-      page.getByRole('link', { name: 'All tools' }),
-      page.getByRole('link', { name: 'Source', exact: true }),
-      page.getByRole('button', { name: /^Theme:/ }),
-      page.getByRole('button', { name: /^Drop any files here/ }),
-      page.getByRole('link', { name: /^Compress image/ }),
-    ];
-    for (const target of order) {
+  test(
+    'skip link jumps to the main content; focus order follows the page',
+    { tag: '@firefox-ci-crash' },
+    async ({ page, isMobile, browserName }) => {
+      test.skip(isMobile, 'Keyboard navigation is checked on desktop');
+      // Playwright's WebKit, like Safari's default setting, skips links when tabbing.
+      test.skip(browserName === 'webkit', 'WebKit tabs to form fields only');
+      const tab = () => page.keyboard.press('Tab');
+      await page.goto('./');
       await tab();
-      await expect(target).toBeFocused();
-    }
-  });
+      const skip = page.getByRole('link', { name: 'Skip to content' });
+      await expect(skip).toBeFocused();
+      await expect(skip).toBeInViewport();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('main#main')).toBeFocused();
+
+      await page.goto('./');
+      const order = [
+        skip,
+        page.getByRole('link', { name: 'Snap Convert by crkayes' }),
+        page.getByRole('link', { name: 'All tools' }),
+        page.getByRole('link', { name: 'Source', exact: true }),
+        page.getByRole('button', { name: /^Theme:/ }),
+        page.getByRole('button', { name: /^Drop any files here/ }),
+        page.getByRole('link', { name: /^Compress image/ }),
+      ];
+      for (const target of order) {
+        await tab();
+        await expect(target).toBeFocused();
+      }
+    },
+  );
 });
 
 test.describe('theme', () => {

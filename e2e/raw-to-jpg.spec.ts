@@ -157,60 +157,61 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('RAW to JPG');
 });
 
-test('the sample RAW: camera, megapixels and thumbnail, then a fast run to <name>.jpg', async ({
-  page,
-  isMobile,
-}) => {
-  test.setTimeout(120_000);
-  await trySample(page);
-  const row = rows(page).first();
-  await expect(row).toContainText('17 MP');
-  await expect(row).toContainText('5088×3392');
-  await expect(row).toContainText('camera JPG');
-  // Thumbnail from the camera's JPEG, with the photo's shape.
-  const thumb = row.locator('img');
-  await expect(thumb).toBeVisible();
-  const natural = await thumb.evaluate((img: HTMLImageElement) => [
-    img.naturalWidth,
-    img.naturalHeight,
-  ]);
-  expect(natural).toEqual([120, 80]);
+test(
+  'the sample RAW: camera, megapixels and thumbnail, then a fast run to <name>.jpg',
+  { tag: '@firefox-ci-crash' },
+  async ({ page, isMobile }) => {
+    test.setTimeout(120_000);
+    await trySample(page);
+    const row = rows(page).first();
+    await expect(row).toContainText('17 MP');
+    await expect(row).toContainText('5088×3392');
+    await expect(row).toContainText('camera JPG');
+    // Thumbnail from the camera's JPEG, with the photo's shape.
+    const thumb = row.locator('img');
+    await expect(thumb).toBeVisible();
+    const natural = await thumb.evaluate((img: HTMLImageElement) => [
+      img.naturalWidth,
+      img.naturalHeight,
+    ]);
+    expect(natural).toEqual([120, 80]);
 
-  // Fast is the default; the develop controls only show in Full quality.
-  await expect(page.getByRole('radio', { name: /^Fast/ })).toBeChecked();
-  await expect(page.getByRole('slider', { name: 'Exposure' })).toHaveCount(0);
-  await page.getByRole('radio', { name: /^Full quality/ }).click();
-  await expect(page.getByRole('slider', { name: 'Exposure' })).toBeVisible();
-  await expect(page.getByRole('radiogroup', { name: 'White balance' })).toBeVisible();
-  await expect(page.getByRole('radiogroup', { name: 'Highlights' })).toBeVisible();
-  await page.getByRole('radio', { name: /^Fast/ }).click();
+    // Fast is the default; the develop controls only show in Full quality.
+    await expect(page.getByRole('radio', { name: /^Fast/ })).toBeChecked();
+    await expect(page.getByRole('slider', { name: 'Exposure' })).toHaveCount(0);
+    await page.getByRole('radio', { name: /^Full quality/ }).click();
+    await expect(page.getByRole('slider', { name: 'Exposure' })).toBeVisible();
+    await expect(page.getByRole('radiogroup', { name: 'White balance' })).toBeVisible();
+    await expect(page.getByRole('radiogroup', { name: 'Highlights' })).toBeVisible();
+    await page.getByRole('radio', { name: /^Fast/ }).click();
 
-  if (isMobile) {
-    // Phone layout: settings under the list, the action in the bar fixed to the bottom.
-    const bar = page.getByRole('group', { name: 'Actions' });
-    await expect(bar).toHaveCSS('position', 'fixed');
-    await expect(bar.getByRole('button', { name: 'Convert 1 photo to JPG' })).toBeVisible();
-    const list = await page.getByRole('list', { name: 'RAW photos', exact: true }).boundingBox();
-    const panel = await page.getByRole('complementary', { name: 'Settings' }).boundingBox();
-    expect(panel!.y).toBeGreaterThan(list!.y);
-  }
-  expect(await seriousViolations(page)).toEqual([]);
+    if (isMobile) {
+      // Phone layout: settings under the list, the action in the bar fixed to the bottom.
+      const bar = page.getByRole('group', { name: 'Actions' });
+      await expect(bar).toHaveCSS('position', 'fixed');
+      await expect(bar.getByRole('button', { name: 'Convert 1 photo to JPG' })).toBeVisible();
+      const list = await page.getByRole('list', { name: 'RAW photos', exact: true }).boundingBox();
+      const panel = await page.getByRole('complementary', { name: 'Settings' }).boundingBox();
+      expect(panel!.y).toBeGreaterThan(list!.y);
+    }
+    expect(await seriousViolations(page)).toEqual([]);
 
-  await runButton(page).click();
-  await expect(summary(page)).toContainText('1 done', { timeout: 90_000 });
-  await expect(row).toContainText('sample-canon-r5.jpg');
-  await expect(row).toContainText('Used your camera’s JPG');
-  await expect(row.getByTestId('row-bytes')).toContainText(
-    /6\.7 MB → New file size: [\d.]+ (KB|MB)/,
-  );
-  await expect(page.locator('[data-status="failed"]')).toHaveCount(0);
+    await runButton(page).click();
+    await expect(summary(page)).toContainText('1 done', { timeout: 90_000 });
+    await expect(row).toContainText('sample-canon-r5.jpg');
+    await expect(row).toContainText('Used your camera’s JPG');
+    await expect(row.getByTestId('row-bytes')).toContainText(
+      /6\.7 MB → New file size: [\d.]+ (KB|MB)/,
+    );
+    await expect(page.locator('[data-status="failed"]')).toHaveCount(0);
 
-  const file = await download(page, /^Download$/);
-  expect(file.name).toBe('sample-canon-r5.jpg');
-  expect([...file.bytes.subarray(0, 2)]).toEqual([0xff, 0xd8]);
-  expect(jpegSize(file.bytes)).toEqual([5088, 3392]);
-  expect(await seriousViolations(page)).toEqual([]);
-});
+    const file = await download(page, /^Download$/);
+    expect(file.name).toBe('sample-canon-r5.jpg');
+    expect([...file.bytes.subarray(0, 2)]).toEqual([0xff, 0xd8]);
+    expect(jpegSize(file.bytes)).toEqual([5088, 3392]);
+    expect(await seriousViolations(page)).toEqual([]);
+  },
+);
 
 test('both themes pass axe', async ({ page }) => {
   await trySample(page);

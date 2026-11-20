@@ -30,6 +30,13 @@ const browserProjects = [
 /** Tag for tests too heavy to share the machine with the rest of the suite. */
 const HEAVY = /@heavy/;
 
+/**
+ * Tests whose page process crashes (signal 11, no error from our code) in Playwright's Firefox
+ * build on GitHub's headless Linux runners. The same steps work in real Firefox (owner check,
+ * 2026-11-20; D46), so Firefox skips them; Chromium and WebKit still run them.
+ */
+const FIREFOX_CI_CRASH = /@firefox-ci-crash/;
+
 /** End-to-end tests run against the production build (pre-rendered pages), served by `vite preview`. */
 export default defineConfig({
   testDir: './e2e',
@@ -44,7 +51,10 @@ export default defineConfig({
     reducedMotion: 'reduce',
   },
   projects: [
-    ...browserProjects.map((p) => ({ ...p, grepInvert: HEAVY })),
+    ...browserProjects.map((p) => ({
+      ...p,
+      grepInvert: p.name.startsWith('firefox') ? [HEAVY, FIREFOX_CI_CRASH] : HEAVY,
+    })),
     // Tests tagged @heavy (61 MP RAW develops, the 7 × 4 format matrix) run last, once every
     // other project has finished, so they never fight the rest of the suite for CPU and memory.
     // To run only them in one browser: --project=webkit-desktop-heavy.

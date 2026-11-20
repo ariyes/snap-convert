@@ -232,15 +232,19 @@ test('custom size in inches', async ({ page }) => {
   for (const p of doc.getPages()) expectPlaced(p, { width: 360, height: 360 }, A4);
 });
 
-test('the workspace has no serious accessibility issues', async ({ page }) => {
-  await open(page, ['encrypted.pdf', 'a4-3-pages.pdf']);
-  await expect(page.getByTestId('preview-page')).toBeVisible();
-  const results = await new AxeBuilder({ page }).analyze();
-  // The DropZone naming issue was fixed in P11b, so nothing is filtered.
-  const serious = results.violations.filter(
-    (v) => v.impact === 'serious' || v.impact === 'critical',
-  );
-  expect(
-    serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
-  ).toEqual([]);
-});
+test(
+  'the workspace has no serious accessibility issues',
+  { tag: '@firefox-ci-crash' },
+  async ({ page }) => {
+    await open(page, ['encrypted.pdf', 'a4-3-pages.pdf']);
+    await expect(page.getByTestId('preview-page')).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    // The DropZone naming issue was fixed in P11b, so nothing is filtered.
+    const serious = results.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    );
+    expect(
+      serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
+    ).toEqual([]);
+  },
+);

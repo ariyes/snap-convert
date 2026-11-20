@@ -171,99 +171,101 @@ function expectNotStretched(img: DrawnImage) {
 
 test.describe.configure({ timeout: 180_000 });
 
-test('ten mixed images become a ten-page PDF in the chosen order, never stretched', async ({
-  page,
-}) => {
-  await open(page);
-  const tallJpg = await drawn(page, 'tall.jpg', 60, 100, 'image/jpeg');
-  const tallPng = await drawn(page, 'tall.png', 50, 120, 'image/png');
-  const files = [
-    tallJpg, // portrait JPEG
-    fixture('images/orientation-6.jpg'), // stored portrait, upright landscape (EXIF 6)
-    fixture('images/iphone-7.heic'), // HEIC, landscape
-    fixture('images/alpha.png'), // transparent PNG, landscape
-    fixture('quality/photo-portrait-exif-rotated.jpg'), // phone photo, portrait after EXIF 6
-    fixture('images/sample.webp'),
-    fixture('images/sample.avif'),
-    fixture('intake/webp-alpha.webp'), // transparent WebP
-    fixture('images/sample.gif'),
-    tallPng, // portrait PNG
-  ];
-  /** Upright (shown) size of each file, by name. */
-  const upright: Record<string, [number, number]> = {
-    'tall.jpg': [60, 100],
-    'orientation-6.jpg': [96, 64],
-    'iphone-7.heic': [4032, 3024],
-    'alpha.png': [90, 60],
-    'photo-portrait-exif-rotated.jpg': [2448, 3264],
-    'sample.webp': [80, 60],
-    'sample.avif': [80, 60],
-    'webp-alpha.webp': [72, 40],
-    'sample.gif': [40, 30],
-    'tall.png': [50, 120],
-  };
-  await pick(page, files);
+test(
+  'ten mixed images become a ten-page PDF in the chosen order, never stretched',
+  { tag: '@firefox-ci-crash' },
+  async ({ page }) => {
+    await open(page);
+    const tallJpg = await drawn(page, 'tall.jpg', 60, 100, 'image/jpeg');
+    const tallPng = await drawn(page, 'tall.png', 50, 120, 'image/png');
+    const files = [
+      tallJpg, // portrait JPEG
+      fixture('images/orientation-6.jpg'), // stored portrait, upright landscape (EXIF 6)
+      fixture('images/iphone-7.heic'), // HEIC, landscape
+      fixture('images/alpha.png'), // transparent PNG, landscape
+      fixture('quality/photo-portrait-exif-rotated.jpg'), // phone photo, portrait after EXIF 6
+      fixture('images/sample.webp'),
+      fixture('images/sample.avif'),
+      fixture('intake/webp-alpha.webp'), // transparent WebP
+      fixture('images/sample.gif'),
+      tallPng, // portrait PNG
+    ];
+    /** Upright (shown) size of each file, by name. */
+    const upright: Record<string, [number, number]> = {
+      'tall.jpg': [60, 100],
+      'orientation-6.jpg': [96, 64],
+      'iphone-7.heic': [4032, 3024],
+      'alpha.png': [90, 60],
+      'photo-portrait-exif-rotated.jpg': [2448, 3264],
+      'sample.webp': [80, 60],
+      'sample.avif': [80, 60],
+      'webp-alpha.webp': [72, 40],
+      'sample.gif': [40, 30],
+      'tall.png': [50, 120],
+    };
+    await pick(page, files);
 
-  // The HEIC card gets its preview from the image worker.
-  const heicCard = cards(page).filter({ hasText: 'iphone-7.heic' });
-  await expect(heicCard.locator('img')).toBeVisible({ timeout: 90_000 });
+    // The HEIC card gets its preview from the image worker.
+    const heicCard = cards(page).filter({ hasText: 'iphone-7.heic' });
+    await expect(heicCard.locator('img')).toBeVisible({ timeout: 90_000 });
 
-  // Reorder by keyboard: tall.png to the front, then alpha.png one later.
-  const earlier = page.getByRole('button', { name: 'Move tall.png earlier' });
-  await earlier.focus();
-  for (let i = 0; i < 9; i++) await page.keyboard.press('Enter');
-  await expect(
-    page.getByRole('status').filter({ hasText: 'tall.png moved to page 1 of 10' }),
-  ).toBeAttached();
-  await expect(page.getByRole('button', { name: 'Move tall.png later' })).toBeFocused();
-  await page.getByRole('button', { name: 'Move alpha.png later' }).click();
+    // Reorder by keyboard: tall.png to the front, then alpha.png one later.
+    const earlier = page.getByRole('button', { name: 'Move tall.png earlier' });
+    await earlier.focus();
+    for (let i = 0; i < 9; i++) await page.keyboard.press('Enter');
+    await expect(
+      page.getByRole('status').filter({ hasText: 'tall.png moved to page 1 of 10' }),
+    ).toBeAttached();
+    await expect(page.getByRole('button', { name: 'Move tall.png later' })).toBeFocused();
+    await page.getByRole('button', { name: 'Move alpha.png later' }).click();
 
-  const order = [
-    'tall.png',
-    'tall.jpg',
-    'orientation-6.jpg',
-    'iphone-7.heic',
-    'photo-portrait-exif-rotated.jpg',
-    'alpha.png',
-    'sample.webp',
-    'sample.avif',
-    'webp-alpha.webp',
-    'sample.gif',
-  ];
-  expect(await cardNames(page)).toEqual(order);
+    const order = [
+      'tall.png',
+      'tall.jpg',
+      'orientation-6.jpg',
+      'iphone-7.heic',
+      'photo-portrait-exif-rotated.jpg',
+      'alpha.png',
+      'sample.webp',
+      'sample.avif',
+      'webp-alpha.webp',
+      'sample.gif',
+    ];
+    expect(await cardNames(page)).toEqual(order);
 
-  const doc = await PDFDocument.load(await makeAndDownload(page));
-  await expect(page.getByTestId('pdf-result')).toContainText('10 pages');
-  const pages = doc.getPages();
-  expect(pages).toHaveLength(10);
+    const doc = await PDFDocument.load(await makeAndDownload(page));
+    await expect(page.getByTestId('pdf-result')).toContainText('10 pages');
+    const pages = doc.getPages();
+    expect(pages).toHaveLength(10);
 
-  pages.forEach((p, i) => {
-    const name = order[i] ?? '';
-    const [w, h] = upright[name] ?? [1, 1];
-    const img = imageOn(p);
-    const { width, height } = p.getSize();
-    // Auto orientation: the page turns with its image (Letter for the en-US test browser).
-    expect([width, height], name).toEqual(w > h ? [792, 612] : [612, 792]);
-    // In order: the image drawn is this file's (same proportions when shown upright).
-    expect(Math.abs(shownRatio(img) / (w / h) - 1), name).toBeLessThan(0.02);
-    expectNotStretched(img);
-    // No margin: the image fills the page in one direction and stays inside it.
-    const fillsWidth = Math.abs(img.box.width - width) < 0.05;
-    const fillsHeight = Math.abs(img.box.height - height) < 0.05;
-    expect(fillsWidth || fillsHeight, name).toBe(true);
-    expect(img.box.x).toBeGreaterThanOrEqual(-0.01);
-    expect(img.box.y).toBeGreaterThanOrEqual(-0.01);
-  });
+    pages.forEach((p, i) => {
+      const name = order[i] ?? '';
+      const [w, h] = upright[name] ?? [1, 1];
+      const img = imageOn(p);
+      const { width, height } = p.getSize();
+      // Auto orientation: the page turns with its image (Letter for the en-US test browser).
+      expect([width, height], name).toEqual(w > h ? [792, 612] : [612, 792]);
+      // In order: the image drawn is this file's (same proportions when shown upright).
+      expect(Math.abs(shownRatio(img) / (w / h) - 1), name).toBeLessThan(0.02);
+      expectNotStretched(img);
+      // No margin: the image fills the page in one direction and stays inside it.
+      const fillsWidth = Math.abs(img.box.width - width) < 0.05;
+      const fillsHeight = Math.abs(img.box.height - height) < 0.05;
+      expect(fillsWidth || fillsHeight, name).toBe(true);
+      expect(img.box.x).toBeGreaterThanOrEqual(-0.01);
+      expect(img.box.y).toBeGreaterThanOrEqual(-0.01);
+    });
 
-  // PDFs hold only JPEG and PNG: HEIC/WebP/AVIF were converted, transparent ones kept as PNG.
-  const filterOf = (name: string) => imageOn(pages[order.indexOf(name)]!).filter;
-  expect(filterOf('iphone-7.heic')).toBe('DCTDecode');
-  expect(filterOf('sample.webp')).toBe('DCTDecode');
-  expect(filterOf('sample.avif')).toBe('DCTDecode');
-  expect(filterOf('webp-alpha.webp')).toBe('FlateDecode');
-  expect(filterOf('alpha.png')).toBe('FlateDecode');
-  expect(filterOf('sample.gif')).toBe('FlateDecode');
-});
+    // PDFs hold only JPEG and PNG: HEIC/WebP/AVIF were converted, transparent ones kept as PNG.
+    const filterOf = (name: string) => imageOn(pages[order.indexOf(name)]!).filter;
+    expect(filterOf('iphone-7.heic')).toBe('DCTDecode');
+    expect(filterOf('sample.webp')).toBe('DCTDecode');
+    expect(filterOf('sample.avif')).toBe('DCTDecode');
+    expect(filterOf('webp-alpha.webp')).toBe('FlateDecode');
+    expect(filterOf('alpha.png')).toBe('FlateDecode');
+    expect(filterOf('sample.gif')).toBe('FlateDecode');
+  },
+);
 
 /** A JPEG's header segments (marker + payload) and its compressed image data (from SOS on). */
 function jpegParts(bytes: Uint8Array): { segments: Array<[number, Buffer]>; scan: Buffer } {
@@ -492,45 +494,53 @@ test('page size, orientation and margin settings shape every page', async ({ pag
   ]);
 });
 
-test('reordering by keyboard is announced and keeps focus on the moved card', async ({ page }) => {
-  await open(page);
-  await pick(page, [
-    fixture('images/opaque.png', 'one.png'),
-    fixture('images/alpha.png', 'two.png'),
-    fixture('images/no-exif.jpg', 'three.jpg'),
-  ]);
-  expect(await cardNames(page)).toEqual(['one.png', 'two.png', 'three.jpg']);
+test(
+  'reordering by keyboard is announced and keeps focus on the moved card',
+  { tag: '@firefox-ci-crash' },
+  async ({ page }) => {
+    await open(page);
+    await pick(page, [
+      fixture('images/opaque.png', 'one.png'),
+      fixture('images/alpha.png', 'two.png'),
+      fixture('images/no-exif.jpg', 'three.jpg'),
+    ]);
+    expect(await cardNames(page)).toEqual(['one.png', 'two.png', 'three.jpg']);
 
-  const status = page.getByRole('status').filter({ hasText: /moved to page/ });
-  await page.getByRole('button', { name: 'Move three.jpg earlier' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(status).toHaveText('three.jpg moved to page 2 of 3');
-  expect(await cardNames(page)).toEqual(['one.png', 'three.jpg', 'two.png']);
-  await expect(page.getByRole('button', { name: 'Move three.jpg earlier' })).toBeFocused();
+    const status = page.getByRole('status').filter({ hasText: /moved to page/ });
+    await page.getByRole('button', { name: 'Move three.jpg earlier' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(status).toHaveText('three.jpg moved to page 2 of 3');
+    expect(await cardNames(page)).toEqual(['one.png', 'three.jpg', 'two.png']);
+    await expect(page.getByRole('button', { name: 'Move three.jpg earlier' })).toBeFocused();
 
-  await page.keyboard.press('Space');
-  await expect(status).toHaveText('three.jpg moved to page 1 of 3');
-  // At the front "earlier" is disabled, so focus moves to "later" on the same card.
-  await expect(page.getByRole('button', { name: 'Move three.jpg later' })).toBeFocused();
-  expect(await cardNames(page)).toEqual(['three.jpg', 'one.png', 'two.png']);
+    await page.keyboard.press('Space');
+    await expect(status).toHaveText('three.jpg moved to page 1 of 3');
+    // At the front "earlier" is disabled, so focus moves to "later" on the same card.
+    await expect(page.getByRole('button', { name: 'Move three.jpg later' })).toBeFocused();
+    expect(await cardNames(page)).toEqual(['three.jpg', 'one.png', 'two.png']);
 
-  // Order badges follow.
-  await expect(cards(page).first()).toContainText('1');
-  await page.getByRole('button', { name: 'Remove one.png' }).click();
-  expect(await cardNames(page)).toEqual(['three.jpg', 'two.png']);
-});
+    // Order badges follow.
+    await expect(cards(page).first()).toContainText('1');
+    await page.getByRole('button', { name: 'Remove one.png' }).click();
+    expect(await cardNames(page)).toEqual(['three.jpg', 'two.png']);
+  },
+);
 
-test('cards can be dragged to a new place', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'Phones reorder with the move buttons');
-  await open(page);
-  await pick(page, [
-    fixture('images/opaque.png', 'one.png'),
-    fixture('images/alpha.png', 'two.png'),
-    fixture('images/no-exif.jpg', 'three.jpg'),
-  ]);
-  await cards(page).nth(2).dragTo(cards(page).nth(0));
-  expect(await cardNames(page)).toEqual(['three.jpg', 'one.png', 'two.png']);
-});
+test(
+  'cards can be dragged to a new place',
+  { tag: '@firefox-ci-crash' },
+  async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Phones reorder with the move buttons');
+    await open(page);
+    await pick(page, [
+      fixture('images/opaque.png', 'one.png'),
+      fixture('images/alpha.png', 'two.png'),
+      fixture('images/no-exif.jpg', 'three.jpg'),
+    ]);
+    await cards(page).nth(2).dragTo(cards(page).nth(0));
+    expect(await cardNames(page)).toEqual(['three.jpg', 'one.png', 'two.png']);
+  },
+);
 
 test('images picked on the home page arrive as pages', async ({ page }) => {
   await page.goto('./');

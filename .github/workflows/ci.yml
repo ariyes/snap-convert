@@ -63,9 +63,6 @@ jobs:
       # the production build itself; CI=1 also turns on retries and the GitHub reporter.
       - name: End-to-end tests (3 browsers × 2 sizes)
         run: pnpm e2e:all
-        # Temporary: the browsers' own error output, to find why Firefox pages crash here.
-        env:
-          DEBUG: pw:browser
 
       - name: Upload Playwright traces
         if: failure()

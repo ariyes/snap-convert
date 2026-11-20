@@ -103,7 +103,7 @@ test('the drop button is named by its own text, and takes clicks anywhere in the
   expect(hits).toEqual([true, true, true, true]);
 });
 
-test('dropped files lead to the tools for them', async ({ page }) => {
+test('dropped files lead to the tools for them', { tag: '@firefox-ci-crash' }, async ({ page }) => {
   // In-memory files: WebKit's entries for them can't be opened, so this also covers the fallback
   // to the plain file in filesFromDataTransfer.
   const dt = await dataTransfer(page, [pdf('a.pdf'), pdf('b.pdf'), photo('c.jpg')]);
