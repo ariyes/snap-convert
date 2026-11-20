@@ -99,7 +99,8 @@ test('merges four PDFs in a custom order, keeping page sizes', async ({ page }) 
 
   await page.getByLabel('File name').fill('my documents');
   const { pdf, name } = await mergeAndDownload(page);
-  expect(name).toBe('my documents.pdf');
+  // The page names it "my documents.pdf"; WebKit on Linux (CI) swaps the space for "_" when saving.
+  expect(name).toMatch(/^my[ _]documents\.pdf$/);
   expect(await pageSizes(pdf)).toEqual(await expectedSizes([TEN, LETTER, A4, MIXED]));
   await expect(page.getByText(/^19 pages · /)).toBeVisible();
 });

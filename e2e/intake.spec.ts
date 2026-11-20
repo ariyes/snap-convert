@@ -125,9 +125,10 @@ test('dropped files lead to the tools for them', async ({ page }) => {
 test('a pasted image leads to the image tools, with a useful name', async ({ page }) => {
   const dt = await dataTransfer(page, [png('image.png')]);
   await page.evaluate((clipboardData) => {
-    // Some engines ignore `clipboardData` in the constructor; set it on the event directly then.
+    // Some engines ignore `clipboardData` in the constructor, and Firefox copies only its text, not
+    // its files; set it on the event directly then.
     let event = new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true });
-    if (!event.clipboardData) {
+    if (!event.clipboardData?.files.length) {
       event = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
       Object.defineProperty(event, 'clipboardData', { value: clipboardData });
     }

@@ -7,10 +7,16 @@ const phone = { viewport: { width: 375, height: 812 }, hasTouch: true };
 
 // Firefox is opt-in (E2E_FIREFOX=1 or CI): Playwright's Firefox build fails to launch on the dev Windows 10 machine (mozglue side-by-side error).
 const includeFirefox = !!process.env.CI || process.env.E2E_FIREFOX === '1';
+// Playwright only sees downloads that Firefox saves without offering to show them itself. Firefox
+// offers that for WebP, AVIF, SVG, XML and JXL (users still get the file), so turn it off here.
+const firefox = {
+  ...devices['Desktop Firefox'],
+  launchOptions: { firefoxUserPrefs: { 'browser.download.viewableInternally.enabledTypes': '' } },
+};
 const firefoxProjects = [
-  { name: 'firefox-desktop', use: { ...devices['Desktop Firefox'], ...desktop } },
+  { name: 'firefox-desktop', use: { ...firefox, ...desktop } },
   // Firefox has no mobile emulation (isMobile); phone size + touch only.
-  { name: 'firefox-phone', use: { ...devices['Desktop Firefox'], ...phone } },
+  { name: 'firefox-phone', use: { ...firefox, ...phone } },
 ];
 
 const browserProjects = [
