@@ -1,12 +1,10 @@
 # Snap Convert CI (P24). Runs every check on Linux, including the Firefox end-to-end projects that
 # can't run on the owner's Windows 10 machine (D26: Playwright's Firefox fails with a mozglue
 # side-by-side error there). Firefox coverage before and after launch comes from this workflow.
+# Manual only (owner, 2026-11-20: free GitHub plan): start it from the Actions tab, "Run workflow".
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:

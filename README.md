@@ -82,7 +82,7 @@ pnpm dev        # http://localhost:5173/snap-convert/
 | `pnpm quality`                                         | Image quality report (`tests/quality/`) in real Chromium                         |
 
 Firefox e2e is opt-in locally because Playwright's Firefox build fails to launch on the Windows 10
-dev machine (mozglue side-by-side error); CI (`.github/workflows/ci.yml`) runs all three browsers.
+dev machine (mozglue side-by-side error); CI (`.github/workflows/ci.yml`, started by hand from the Actions tab) runs all three browsers.
 
 The dev and preview servers send `Cross-Origin-Opener-Policy: same-origin` and
 `Cross-Origin-Embedder-Policy: require-corp`; production sends the same headers.
